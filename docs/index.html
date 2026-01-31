@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoL Performance Analyzer - Level Up Your Game</title>
+    <meta name="description" content="Discord-integrated League of Legends performance analysis tool with automated game reviews and personalized improvement recommendations.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #c9a227;
+            text-decoration: none;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: #c9a227;
+        }
+        
+        .hero {
+            padding: 8rem 0 4rem;
+            text-align: center;
+            color: #fff;
+        }
+        
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #c9a227, #f4d03f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #c9a227, #f4d03f);
+            color: #1a1a2e;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(201, 162, 39, 0.3);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid #c9a227;
+            color: #c9a227;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(201, 162, 39, 0.1);
+        }
+        
+        .features {
+            padding: 4rem 0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .features h2 {
+            text-align: center;
+            color: #fff;
+            font-size: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 12px;
+            transition: transform 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-card h3 {
+            color: #c9a227;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        
+        .feature-card p {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .how-it-works {
+            padding: 4rem 0;
+            color: #fff;
+        }
+        
+        .how-it-works h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        
+        .step {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #c9a227, #f4d03f);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1a1a2e;
+            margin: 0 auto 1rem;
+        }
+        
+        .step h3 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .step p {
+            opacity: 0.8;
+        }
+        
+        footer {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2rem 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        footer a {
+            color: #c9a227;
+            text-decoration: none;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+        
+        .metric {
+            text-align: center;
+            color: #fff;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #c9a227;
+        }
+        
+        .metric-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">LoL Analyzer</a>
+                <ul class="nav-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#metrics">Metrics</a></li>
+                    <li><a href="https://github.com/yd1008/lol-analyzer">GitHub</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <section class="hero">
+        <div class="container">
+            <h1>Level Up Your League Gameplay</h1>
+            <p>Automated Discord-integrated performance analysis tool that helps you improve with detailed match reviews and personalized recommendations.</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/yd1008/lol-analyzer" class="btn btn-primary">Get Started</a>
+                <a href="#features" class="btn btn-secondary">Learn More</a>
+            </div>
+        </div>
+    </section>
+    
+    <section class="features" id="features">
+        <div class="container">
+            <h2>Powerful Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>📊 Automated Analysis</h3>
+                    <p>Automatically analyzes each ranked game after completion, tracking key performance metrics without manual input.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>💡 Smart Recommendations</h3>
+                    <p>Personalized improvement tips based on your gameplay patterns, helping you identify and fix weaknesses.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔔 Discord Notifications</h3>
+                    <p>Receive detailed match reports directly in your Discord channel, complete with stats and insights.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📈 Weekly Summaries</h3>
+                    <p>Comprehensive weekly performance reports showing trends, progress, and areas for continued improvement.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎯 Comprehensive Metrics</h3>
+                    <p>Track KDA, gold efficiency, damage, vision score, CS, and team contribution for complete performance analysis.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚡ Real-Time Updates</h3>
+                    <p>Automatic detection of completed games and instant analysis delivery to your Discord server.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Connect Your Accounts</h3>
+                    <p>Set up your Riot API key and Discord bot token in the configuration file.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Play Your Games</h3>
+                    <p>Continue playing ranked games on League of Legends as you normally would.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Automatic Analysis</h3>
+                    <p>The analyzer detects completed games and processes your performance data in real-time.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Get Insights</h3>
+                    <p>Receive detailed reports and recommendations directly in your Discord channel.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="container">
+        <div id="metrics">
+            <h2 style="text-align: center; color: #fff; margin-bottom: 2rem;">Metrics Tracked</h2>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value">KDA</div>
+                    <div class="metric-label">Kill/Death/Assist Ratio</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">Gold</div>
+                    <div class="metric-label">Gold Efficiency</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">DMG</div>
+                    <div class="metric-label">Damage Dealt</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">Vision</div>
+                    <div class="metric-label">Vision Score</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">CS</div>
+                    <div class="metric-label">Creep Score</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">Win</div>
+                    <div class="metric-label">Win Rate</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <footer>
+        <div class="container">
+            <p>LoL Performance Analyzer is not affiliated with or endorsed by Riot Games.</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="https://github.com/yd1008/lol-analyzer">GitHub</a> • 
+                <a href="TERMS_OF_SERVICE.md">Terms of Service</a> • 
+                <a href="PRIVACY_POLICY.md">Privacy Policy</a>
+            </p>
+            <p style="margin-top: 1rem; font-size: 0.875rem;">
+                © 2026 LoL Performance Analyzer. All rights reserved.
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
