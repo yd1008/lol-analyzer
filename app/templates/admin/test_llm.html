@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Test LLM - Admin{% endblock %}
+
+{% block content %}
+<div class="container dashboard">
+    <div class="dashboard-header">
+        <h1>Test LLM Analysis <span class="admin-badge">Admin</span></h1>
+        <a href="{{ url_for('admin.index') }}" class="btn btn-secondary btn-sm">Back to Admin</a>
+    </div>
+
+    <!-- Step 1: Look up summoner -->
+    <div class="admin-card">
+        <h3>Step 1: Look Up Summoner</h3>
+        <p>Enter a summoner name to fetch their latest match data.</p>
+        <form method="POST" style="margin-top: 1rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="lookup">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+                <div class="form-group" style="margin: 0;">
+                    <label>Summoner Name</label>
+                    <input type="text" name="summoner_name" placeholder="e.g. Faker" value="{{ summoner_name or '' }}" required>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label>Tagline</label>
+                    <input type="text" name="tagline" placeholder="e.g. KR1" value="{{ tagline or '' }}" required>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label>Region</label>
+                    <select name="region">
+                        {% for r in ['na1','euw1','eun1','kr','br1','la1','la2','oc1','tr1','ru','jp1'] %}
+                        <option value="{{ r }}" {{ 'selected' if region == r }}>{{ r.upper() }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 1rem;">Fetch Match</button>
+        </form>
+    </div>
+
+    {% if analysis_data %}
+    <!-- Step 2: Match data preview -->
+    <div class="admin-card">
+        <h3>Step 2: Match Data</h3>
+        <div class="match-stats-grid" style="margin-bottom: 1rem;">
+            <div class="stat-card">
+                <div class="stat-label">Champion</div>
+                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.champion }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Result</div>
+                <div class="stat-value {{ 'win' if analysis_data.win else 'loss' }}" style="font-size: 1.25rem;">{{ 'Win' if analysis_data.win else 'Loss' }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">KDA</div>
+                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.kills }}/{{ analysis_data.deaths }}/{{ analysis_data.assists }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Gold/min</div>
+                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.gold_per_min }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">DMG/min</div>
+                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.damage_per_min }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Vision</div>
+                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.vision_score }}</div>
+            </div>
+        </div>
+
+        <!-- Step 3: Run LLM -->
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="run_llm">
+            <input type="hidden" name="analysis_json" value="{{ analysis_data | tojson | e }}">
+            <button type="submit" class="btn btn-primary btn-sm">Run LLM Analysis</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <!-- Step 3: LLM Result -->
+    <div class="admin-card">
+        <h3>Step 3: LLM Output</h3>
+        <div class="admin-result">{{ result }}</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

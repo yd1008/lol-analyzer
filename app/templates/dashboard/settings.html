@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - LoL Analyzer{% endblock %}
+
+{% block content %}
+<div class="container dashboard">
+    <div class="dashboard-header">
+        <h1>Settings</h1>
+    </div>
+
+    <!-- Riot Account -->
+    <div class="card settings-section">
+        <h3>Riot Account</h3>
+        {% if riot_account and riot_account.is_verified %}
+        <div class="settings-status verified">Verified: {{ riot_account.summoner_name }}#{{ riot_account.tagline }} ({{ riot_account.region.upper() }})</div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('dashboard.settings_riot') }}">
+            {{ riot_form.hidden_tag() }}
+            <div class="form-group">
+                {{ riot_form.summoner_name.label }}
+                {{ riot_form.summoner_name(placeholder="e.g. Faker") }}
+                <div class="hint">Your in-game summoner name (case-insensitive).</div>
+                {% for error in riot_form.summoner_name.errors %}
+                    <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                {{ riot_form.tagline.label }}
+                {{ riot_form.tagline(placeholder="e.g. KR1") }}
+                <div class="hint">The tag after the # in your Riot ID. Do not include the # symbol.</div>
+                {% for error in riot_form.tagline.errors %}
+                    <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                {{ riot_form.region.label }}
+                {{ riot_form.region() }}
+                <div class="hint">Select the server region where your account is registered.</div>
+                {% for error in riot_form.region.errors %}
+                    <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            {{ riot_form.submit(class="btn btn-primary btn-sm") }}
+        </form>
+    </div>
+
+    <!-- Discord -->
+    <div class="card settings-section">
+        <h3>Discord Notifications</h3>
+        {% if bot_invite_url %}
+        <p style="margin-bottom: 1rem; font-size: 0.8125rem; color: var(--text-secondary);">
+            <strong style="color: var(--text-primary);">Step 1:</strong> <a href="{{ bot_invite_url }}" target="_blank" class="btn btn-secondary btn-sm" style="margin-left: 0.5rem;">Add Bot to Server</a>
+        </p>
+        {% endif %}
+        <p style="margin-bottom: 1rem; font-size: 0.8125rem; color: var(--text-muted);">
+            <strong style="color: var(--text-primary);">Step 2:</strong> Enable Developer Mode in Discord (Settings > Advanced), right-click the target channel, and copy the Channel ID.
+        </p>
+        {% if discord_config %}
+        <div class="settings-status active">Channel: {{ discord_config.channel_id }}</div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('dashboard.settings_discord') }}">
+            {{ discord_form.hidden_tag() }}
+            <div class="form-group">
+                {{ discord_form.channel_id.label }}
+                {{ discord_form.channel_id(placeholder="e.g. 1234567890123456789") }}
+                <div class="hint">Must be a numeric ID (18-19 digits). Right-click the channel in Discord to copy it.</div>
+                {% for error in discord_form.channel_id.errors %}
+                    <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                {{ discord_form.guild_id.label }}
+                {{ discord_form.guild_id(placeholder="e.g. 1234567890123456789") }}
+                <div class="hint">Optional. Right-click your server name to copy the Server ID.</div>
+                {% for error in discord_form.guild_id.errors %}
+                    <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            {{ discord_form.submit(class="btn btn-primary btn-sm") }}
+        </form>
+    </div>
+
+    <!-- Preferences -->
+    <div class="card settings-section">
+        <h3>Preferences</h3>
+        <form method="POST" action="{{ url_for('dashboard.settings_preferences') }}">
+            {{ prefs_form.hidden_tag() }}
+            <div class="form-group">
+                {{ prefs_form.check_interval.label }}
+                {{ prefs_form.check_interval() }}
+            </div>
+            <div class="form-group">
+                {{ prefs_form.weekly_summary_day.label }}
+                {{ prefs_form.weekly_summary_day() }}
+            </div>
+            <div class="form-group">
+                {{ prefs_form.weekly_summary_time.label }}
+                {{ prefs_form.weekly_summary_time() }}
+            </div>
+            <div class="form-group form-check">
+                {{ prefs_form.notifications_enabled() }}
+                {{ prefs_form.notifications_enabled.label }}
+            </div>
+            {{ prefs_form.submit(class="btn btn-primary btn-sm") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

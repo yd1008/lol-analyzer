@@ -1,0 +1,50 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def _fix_db_url(url):
+    """Railway uses postgres:// but SQLAlchemy 2.x requires postgresql://."""
+    if url and url.startswith('postgres://'):
+        return url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_DATABASE_URI = _fix_db_url(os.environ.get('DATABASE_URL', 'sqlite:///lol_analyzer.db'))
+
+    RIOT_API_KEY = os.environ.get('RIOT_API_KEY', '')
+    DISCORD_BOT_TOKEN = os.environ.get('DISCORD_BOT_TOKEN', '')
+    DISCORD_CLIENT_ID = os.environ.get('DISCORD_CLIENT_ID', '')
+
+    RIOT_VERIFICATION_UUID = os.environ.get(
+        'RIOT_VERIFICATION_UUID', 'd0d11145-7370-4adc-804a-fe67f762154e'
+    )
+
+    CHECK_INTERVAL_MINUTES = int(os.environ.get('CHECK_INTERVAL_MINUTES', '5'))
+    WEEKLY_SUMMARY_DAY = os.environ.get('WEEKLY_SUMMARY_DAY', 'Monday')
+    WEEKLY_SUMMARY_TIME = os.environ.get('WEEKLY_SUMMARY_TIME', '09:00')
+
+    ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '')
+
+    LLM_API_KEY = os.environ.get('LLM_API_KEY', '')
+    LLM_API_URL = os.environ.get('LLM_API_URL', '')
+    LLM_MODEL = os.environ.get('LLM_MODEL', 'deepseek-chat')
+
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+
+
+class ProductionConfig(Config):
+    DEBUG = False
+
+
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'default': DevelopmentConfig,
+}
