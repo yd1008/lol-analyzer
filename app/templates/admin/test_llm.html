@@ -13,7 +13,7 @@
     <div class="admin-card">
         <h3>Step 1: Look Up Summoner</h3>
         <p>Enter a summoner name to fetch their latest match data.</p>
-        <form method="POST" style="margin-top: 1rem;">
+        <form method="POST" class="loading-form" style="margin-top: 1rem;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="lookup">
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
@@ -70,12 +70,19 @@
         </div>
 
         <!-- Step 3: Run LLM -->
-        <form method="POST">
+        <form method="POST" id="llm-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="run_llm">
             <input type="hidden" name="analysis_json" value='{{ analysis_data | tojson }}'>
-            <button type="submit" class="btn btn-primary btn-sm">Run LLM Analysis</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="llm-btn">Run LLM Analysis</button>
         </form>
+        <div id="llm-loading" class="loading-indicator" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">
+                <strong>Generating AI analysis...</strong>
+                <span class="loading-subtext">This may take 30-60 seconds with reasoning models</span>
+            </div>
+        </div>
     </div>
     {% endif %}
 
@@ -87,4 +94,34 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Loading state for LLM form
+    var llmForm = document.getElementById('llm-form');
+    if (llmForm) {
+        llmForm.addEventListener('submit', function() {
+            var btn = document.getElementById('llm-btn');
+            var loading = document.getElementById('llm-loading');
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+            btn.style.opacity = '0.5';
+            loading.style.display = 'flex';
+        });
+    }
+
+    // Loading state for all forms with class loading-form
+    document.querySelectorAll('.loading-form').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                var orig = btn.textContent;
+                btn.textContent = 'Loading...';
+                btn.style.opacity = '0.5';
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

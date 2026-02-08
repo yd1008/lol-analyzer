@@ -73,7 +73,7 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
                     {'role': 'system', 'content': system_prompt},
                     {'role': 'user', 'content': user_prompt},
                 ],
-                'max_tokens': 1500,
+                'max_tokens': 4096,
                 'temperature': 0.7,
             },
             headers={
