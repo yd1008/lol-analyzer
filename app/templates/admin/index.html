@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - LoL Analyzer{% endblock %}
+
+{% block content %}
+<div class="container dashboard">
+    <div class="dashboard-header">
+        <h1>Admin Panel <span class="admin-badge">Admin</span></h1>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Users</div>
+            <div class="stat-value">{{ users|length }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Analyses</div>
+            <div class="stat-value">{{ total_analyses }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">LLM Config</div>
+            <div class="stat-value" style="font-size: 1rem;">{{ 'OK' if config.get('LLM_API_KEY') else 'Missing' }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Discord Bot</div>
+            <div class="stat-value" style="font-size: 1rem;">{{ 'OK' if config.get('DISCORD_BOT_TOKEN') else 'Missing' }}</div>
+        </div>
+    </div>
+
+    <div class="admin-card">
+        <h3>Test LLM Analysis</h3>
+        <p>Look up a summoner, fetch their latest match, and run the LLM analysis pipeline.</p>
+        <a href="{{ url_for('admin.test_llm') }}" class="btn btn-primary btn-sm">Open LLM Test</a>
+    </div>
+
+    <div class="admin-card">
+        <h3>Test Discord Notification</h3>
+        <p>Send a test message to a Discord channel.</p>
+        <form method="POST" action="{{ url_for('admin.test_discord') }}" style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.5rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                <label style="font-size: 0.75rem;">Channel ID</label>
+                <input type="text" name="channel_id" placeholder="1234567890123456789" required>
+            </div>
+            <div class="form-group" style="margin: 0; flex: 2; min-width: 200px;">
+                <label style="font-size: 0.75rem;">Message</label>
+                <input type="text" name="message" value="Test message from LoL Analyzer admin panel.">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Send</button>
+        </form>
+    </div>
+
+    <div class="admin-card">
+        <h3>Registered Users</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Created</th>
+                    <th>Active</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
+                    <td>{{ 'Yes' if user.is_active_user else 'No' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

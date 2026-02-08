@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LoL Analyzer{% endblock %}</title>
+    <meta name="description" content="{% block description %}AI-powered League of Legends performance analysis. Get match insights and personalized coaching delivered to your Discord.{% endblock %}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="{{ url_for('main.landing') }}" class="logo">lol<span>analyzer</span></a>
+                <ul class="nav-links">
+                    <li><a href="{{ url_for('main.landing') }}#features">Features</a></li>
+                    {% if current_user.is_authenticated %}
+                        <li><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                        <li><a href="{{ url_for('dashboard.settings') }}">Settings</a></li>
+                        {% if current_user.email == config.get('ADMIN_EMAIL', '') %}
+                            <li><a href="{{ url_for('admin.index') }}">Admin</a></li>
+                        {% endif %}
+                        <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+                        <li><a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Get Started</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        <span>{{ message }}</span>
+                        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    <footer>
+        <div class="container">
+            <p>Not affiliated with or endorsed by Riot Games, Inc.</p>
+            <div class="footer-links">
+                <a href="{{ url_for('main.terms') }}">Terms</a>
+                <a href="{{ url_for('main.privacy') }}">Privacy</a>
+                <a href="https://github.com/yd1008/lol-analyzer">GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

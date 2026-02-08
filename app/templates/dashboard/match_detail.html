@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ analysis.champion }} - Match Detail{% endblock %}
+
+{% block content %}
+<div class="container dashboard">
+    <div class="match-detail-header">
+        <div>
+            <h1>{{ analysis.champion }}</h1>
+            <span class="match-result {{ 'win' if analysis.win else 'loss' }}">
+                {{ 'Victory' if analysis.win else 'Defeat' }}
+            </span>
+            <span style="color: var(--text-muted); font-size: 0.8125rem; margin-left: 0.75rem;">
+                {{ analysis.analyzed_at.strftime('%b %d, %Y at %H:%M') }}
+            </span>
+        </div>
+        <a href="{{ url_for('dashboard.matches') }}" class="btn btn-secondary btn-sm">Back</a>
+    </div>
+
+    <div class="match-stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">KDA</div>
+            <div class="stat-value">{{ analysis.kills }}/{{ analysis.deaths }}/{{ analysis.assists }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">KDA Ratio</div>
+            <div class="stat-value">{{ analysis.kda }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Gold</div>
+            <div class="stat-value">{{ analysis.gold_per_min }}/m</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Damage</div>
+            <div class="stat-value">{{ analysis.damage_per_min }}/m</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Vision</div>
+            <div class="stat-value">{{ analysis.vision_score }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">CS</div>
+            <div class="stat-value">{{ analysis.cs_total }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Duration</div>
+            <div class="stat-value">{{ analysis.game_duration }}m</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Gold Total</div>
+            <div class="stat-value">{{ '{:,}'.format(analysis.gold_earned) }}</div>
+        </div>
+    </div>
+
+    {% if analysis.llm_analysis %}
+    <div class="card">
+        <h3>AI Analysis</h3>
+        <div class="llm-analysis">{{ analysis.llm_analysis }}</div>
+    </div>
+    {% endif %}
+
+    {% if analysis.recommendations %}
+    <div class="card">
+        <h3>Quick Recommendations</h3>
+        <ul class="recommendations-list">
+            {% for rec in analysis.recommendations %}
+            <li>{{ rec }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

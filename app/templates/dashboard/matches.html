@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Match History - LoL Analyzer{% endblock %}
+
+{% block content %}
+<div class="container dashboard">
+    <div class="dashboard-header">
+        <h1>Match History</h1>
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary btn-sm">Back to Dashboard</a>
+    </div>
+
+    {% if matches %}
+    <div class="card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Champion</th>
+                    <th>Result</th>
+                    <th>KDA</th>
+                    <th>Gold/min</th>
+                    <th>DMG/min</th>
+                    <th>Vision</th>
+                    <th>CS</th>
+                    <th>Duration</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in matches %}
+                <tr>
+                    <td>{{ m.analyzed_at.strftime('%b %d') }}</td>
+                    <td>{{ m.champion }}</td>
+                    <td class="{{ 'win' if m.win else 'loss' }}">{{ 'W' if m.win else 'L' }}</td>
+                    <td>{{ m.kills }}/{{ m.deaths }}/{{ m.assists }}</td>
+                    <td>{{ m.gold_per_min }}</td>
+                    <td>{{ m.damage_per_min }}</td>
+                    <td>{{ m.vision_score }}</td>
+                    <td>{{ m.cs_total }}</td>
+                    <td>{{ m.game_duration }}m</td>
+                    <td><a href="{{ url_for('dashboard.match_detail', match_db_id=m.id) }}" class="btn btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+            <a href="{{ url_for('dashboard.matches', page=pagination.prev_num) }}">Prev</a>
+        {% endif %}
+        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+                {% if p == pagination.page %}
+                    <span class="active">{{ p }}</span>
+                {% else %}
+                    <a href="{{ url_for('dashboard.matches', page=p) }}">{{ p }}</a>
+                {% endif %}
+            {% else %}
+                <span style="color: var(--text-muted);">...</span>
+            {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+            <a href="{{ url_for('dashboard.matches', page=pagination.next_num) }}">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <p>No matches analyzed yet.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,26 +1,25 @@
-# 🎮 LoL Performance Analyzer
+# LoL Performance Analyzer
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub stars](https://img.shields.io/github/stars/yd1008/lol-analyzer)](https://github.com/yd1008/lol-analyzer/stargazers)
-[![Discord](https://img.shields.io/badge/Discord-Integration-purple.svg)](https://discord.com/)
+[![Flask](https://img.shields.io/badge/Flask-3.1-green.svg)](https://flask.palletsprojects.com/)
 
-A professional, Discord-integrated League of Legends performance analysis tool that automatically analyzes your ranked games and provides detailed improvement recommendations.
+A multi-user web platform for League of Legends performance analysis. Automatically analyzes your ranked games, provides personalized improvement recommendations, and delivers match reports to your Discord channel.
 
-## ✨ Features
+## Features
 
-- 📊 **Automated Game Analysis** - Instant analysis after each ranked match
-- 💡 **Smart Recommendations** - Personalized tips based on your gameplay
-- 🔔 **Discord Integration** - Detailed reports delivered to your server
-- 📈 **Weekly Summaries** - Comprehensive performance tracking over time
-- 🎯 **Comprehensive Metrics** - KDA, gold, damage, vision, CS, and more
-- ⚡ **Real-Time Updates** - Automatic game detection and analysis
+- **Web Dashboard** - Full match history, performance stats, and analysis accessible from your browser
+- **Automated Game Analysis** - Background worker detects and analyzes new matches automatically
+- **Smart Recommendations** - Personalized tips based on KDA, vision, gold efficiency, and damage contribution
+- **Discord Notifications** - Match reports delivered to your Discord channel via bot REST API
+- **Weekly Summaries** - Scheduled performance digests with improvement focus areas
+- **Multi-User** - Each user links their own Riot account and Discord channel
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- **Python 3.8+** - [Download here](https://www.python.org/downloads/)
+- **Python 3.10+** - [Download here](https://www.python.org/downloads/)
 - **Riot Games API Key** - [Get one here](https://developer.riotgames.com/)
 - **Discord Bot Token** - [Create one here](https://discord.com/developers/applications)
 
@@ -37,28 +36,82 @@ A professional, Discord-integrated League of Legends performance analysis tool t
    pip install -r requirements.txt
    ```
 
-3. **Configure the analyzer**
+3. **Configure environment**
    ```bash
-   python setup.py
-   ```
-   
-   Or manually edit `lol_analyzer_config.json`:
-   ```json
-   {
-     "riot_api_key": "YOUR_RIOT_API_KEY",
-     "discord_bot_token": "YOUR_DISCORD_BOT_TOKEN",
-     "discord_channel_id": "YOUR_CHANNEL_ID",
-     "summoner_name": "YourSummonerName",
-     "region": "na1"
-   }
+   cp .env.example .env
+   # Edit .env with your API keys and settings
    ```
 
-4. **Run the analyzer**
+4. **Initialize the database**
    ```bash
-   python lol_analyzer.py
+   flask db init
+   flask db migrate -m "Initial migration"
+   flask db upgrade
    ```
 
-## 📊 Metrics Tracked
+5. **Run the web server (development)**
+   ```bash
+   python run.py
+   ```
+   Visit http://localhost:5000
+
+6. **Run the background worker** (separate terminal)
+   ```bash
+   python worker_run.py
+   ```
+
+### Production Deployment
+
+```bash
+# Uses waitress as the WSGI server
+python wsgi.py
+```
+
+## Architecture
+
+```
+lol-analyzer/
+├── app/                    # Flask application
+│   ├── __init__.py         # App factory
+│   ├── config.py           # Configuration classes
+│   ├── extensions.py       # Flask extensions (db, login, migrate, csrf)
+│   ├── models.py           # SQLAlchemy models
+│   ├── auth/               # Authentication blueprint (login, register)
+│   ├── dashboard/          # Dashboard blueprint (matches, settings)
+│   ├── main/               # Public pages blueprint (landing, legal)
+│   ├── analysis/           # Analysis engine, Riot API, Discord notifier
+│   ├── templates/          # Jinja2 templates
+│   └── static/             # CSS, JS, riot.txt
+├── worker/                 # Background job scheduler
+│   ├── scheduler.py        # APScheduler config
+│   └── jobs.py             # Match checking and weekly summary jobs
+├── run.py                  # Development entry point
+├── wsgi.py                 # Production entry point
+└── worker_run.py           # Background worker entry point
+```
+
+### Key Design Decisions
+
+- **Discord REST API** instead of Gateway WebSocket - simpler multi-user message delivery without maintaining a persistent connection
+- **APScheduler** for background jobs - lightweight, no message broker required
+- **SQLAlchemy + SQLite/PostgreSQL** - SQLite for development, PostgreSQL for production
+- **Stateless analysis functions** - `analyze_match()`, `generate_recommendations()` extracted as pure functions parameterized by user
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SECRET_KEY` | Flask session secret | `dev-secret-key-change-in-production` |
+| `DATABASE_URL` | Database connection string | `sqlite:///lol_analyzer.db` |
+| `RIOT_API_KEY` | Riot Games API key | (required) |
+| `DISCORD_BOT_TOKEN` | Discord bot token | (required) |
+| `DISCORD_CLIENT_ID` | Discord application client ID | (optional, for invite URL) |
+| `RIOT_VERIFICATION_UUID` | Riot API verification UUID | (set in .env) |
+| `CHECK_INTERVAL_MINUTES` | How often to check for new matches | `5` |
+| `WEEKLY_SUMMARY_DAY` | Day of week for summary | `Monday` |
+| `WEEKLY_SUMMARY_TIME` | Time for summary (HH:MM) | `09:00` |
+
+## Metrics Tracked
 
 | Metric | Description |
 |--------|-------------|
@@ -66,82 +119,27 @@ A professional, Discord-integrated League of Legends performance analysis tool t
 | **Gold Efficiency** | Total gold and gold per minute |
 | **Damage Output** | Total damage and damage per minute |
 | **Vision Score** | Overall vision control and ward placement |
-| **CS Efficiency** | Creep score at 10/20 minutes |
-| **Team Contribution** | Win impact and objective participation |
+| **CS** | Total creep score |
+| **Team Contribution** | Gold share and damage share analysis |
 
-## 📝 Example Output
+## User Flow
 
-```
-🏆 Match Analysis Report
-**Champion**: Jinx
-**Result**: ✅ WIN
-**KDA**: 8/3/12 (6.67)
-**Gold**: 14,500 (420/min)
-**Damage**: 25,000 (720/min)
-**Vision Score**: 28
-**CS at 10m**: 85
+1. Register an account at the web dashboard
+2. Link your Riot Games summoner name (name + tagline + region)
+3. Add the Discord bot to your server and configure a channel ID
+4. Play games - the background worker automatically detects and analyzes matches
+5. View analysis in Discord and on the web dashboard
 
-💡 Recommendations:
-- Great damage output! You're carrying team fights effectively
-- Focus on CS efficiency - try to hit 80+ CS at 10 minutes
-- Excellent vision score, keep up the ward placement
-```
-
-## 🔧 Configuration Options
-
-```json
-{
-  "schedule": {
-    "game_check_interval_minutes": 5,
-    "weekly_summary_day": "Sunday",
-    "weekly_summary_time": "20:00"
-  },
-  "analysis_metrics": [
-    "kda",
-    "gold_efficiency",
-    "damage_dealt",
-    "vision_score",
-    "cs_at_10"
-  ]
-}
-```
-
-## 🏗️ Architecture
-
-- **Riot API** - Match data and player statistics
-- **Discord.py** - Bot integration and notifications
-- **riotwatcher** - Python wrapper for Riot APIs
-- **Scheduled Tasks** - Automatic game checking and weekly reports
-
-## 📖 Documentation
-
-- [Getting Started](docs/index.html)
-- [API Documentation](docs/)
-- [Terms of Service](TERMS_OF_SERVICE.md)
-- [Privacy Policy](PRIVACY_POLICY.md)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This project is not affiliated with, endorsed by, or sponsored by Riot Games, Inc. League of Legends is a trademark of Riot Games, Inc.
 
-## 📧 Contact
+## Contact
 
 - **GitHub Issues** - For bug reports and feature requests
 - **Developer** - Elliot Dang (yd1008@nyu.edu)
 - **Repository** - https://github.com/yd1008/lol-analyzer
-
-## 🌟 Star History
-
-If you find this tool helpful, please consider giving it a star on GitHub!
-
----
-
-**Happy gaming! 🎮 Level up your performance today!**
