@@ -80,6 +80,7 @@ def index():
         try:
             sync_recent_matches(current_user.id, riot_account.region, riot_account.puuid)
         except Exception as e:
+            db.session.rollback()
             logger.error("Failed to sync matches for user %d: %s", current_user.id, e)
 
     base_query = MatchAnalysis.query.filter_by(user_id=current_user.id)
