@@ -80,7 +80,7 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
                 'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json',
             },
-            timeout=30,
+            timeout=90,
         )
 
         if resp.status_code == 401:
@@ -107,6 +107,6 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
         return content.strip(), None
 
     except requests.Timeout:
-        return None, f"Request timed out after 30s. URL: {api_url}"
+        return None, f"Request timed out after 90s. URL: {api_url}"
     except requests.RequestException as e:
         return None, f"Request failed. URL: {api_url} | Error: {e}"
