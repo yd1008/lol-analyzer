@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account - LoL Analyzer{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Create your account</h2>
+    <p class="form-subtitle">Start getting AI-powered match analysis.</p>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.email.label }}
+            {{ form.email(placeholder="you@example.com") }}
+            {% for error in form.email.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="form-group">
+            {{ form.password.label }}
+            {{ form.password(placeholder="At least 8 characters") }}
+            {% for error in form.password.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="form-group">
+            {{ form.confirm_password.label }}
+            {{ form.confirm_password(placeholder="Repeat your password") }}
+            {% for error in form.confirm_password.errors %}
+                <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="form-actions">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+    <div class="form-footer">
+        Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+    </div>
+</div>
+{% endblock %}

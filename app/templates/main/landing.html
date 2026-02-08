@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}LoL Analyzer - AI-Powered Match Analysis{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <div class="hero-badge">AI-Powered Analysis</div>
+        <h1>Understand every<br><em>League match</em></h1>
+        <p>Automated performance analysis with AI-generated coaching insights delivered straight to your Discord.</p>
+        <div class="cta-buttons">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Go to Dashboard</a>
+            {% else %}
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get Started Free</a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Sign In</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="features" id="features">
+    <div class="container">
+        <div class="features-header">
+            <div class="section-label">Features</div>
+            <h2 class="section-title">Everything you need to climb</h2>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">&#9881;</div>
+                <h3>Automated Analysis</h3>
+                <p>Every ranked game analyzed automatically after completion. No manual input needed.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#9733;</div>
+                <h3>AI Coaching</h3>
+                <p>LLM-powered insights that go beyond basic stats to give you actionable, match-specific advice.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#9889;</div>
+                <h3>Discord Delivery</h3>
+                <p>Match reports sent directly to your Discord channel. Review your game without leaving your server.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#9650;</div>
+                <h3>Weekly Summaries</h3>
+                <p>Scheduled performance digests that track your progress and highlight improvement areas.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#9776;</div>
+                <h3>Full Dashboard</h3>
+                <p>Match history, stats, and AI analysis all accessible from your personal web dashboard.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">&#9673;</div>
+                <h3>Deep Metrics</h3>
+                <p>KDA, gold efficiency, damage contribution, vision score, CS - complete performance picture.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="how-it-works" id="how-it-works">
+    <div class="container">
+        <div class="how-it-works-header">
+            <div class="section-label">How it works</div>
+            <h2 class="section-title">Up and running in minutes</h2>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Create Account</h3>
+                <p>Sign up free and link your Riot Games ID.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Connect Discord</h3>
+                <p>Add the bot to your server and set a channel.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Play Games</h3>
+                <p>Keep playing League. We detect new matches automatically.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>Get Insights</h3>
+                <p>AI analysis in Discord and on your dashboard.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="metrics-section">
+    <div class="container">
+        <h2 class="section-title">Metrics Tracked</h2>
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value">KDA</div>
+                <div class="metric-label">Kill/Death/Assist</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">Gold</div>
+                <div class="metric-label">Efficiency</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">DMG</div>
+                <div class="metric-label">Damage Dealt</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">Vision</div>
+                <div class="metric-label">Ward Score</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">CS</div>
+                <div class="metric-label">Creep Score</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">Win%</div>
+                <div class="metric-label">Win Rate</div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

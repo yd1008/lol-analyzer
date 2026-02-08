@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service - LoL Analyzer{% endblock %}
+
+{% block content %}
+<div class="container legal-page">
+    <h1>Terms of Service</h1>
+    <p class="legal-updated">Last updated: February 6, 2026</p>
+
+    <h2>1. Acceptance of Terms</h2>
+    <p>By accessing or using LoL Performance Analyzer ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.</p>
+
+    <h2>2. Description of Service</h2>
+    <p>LoL Performance Analyzer is a web-based platform that helps League of Legends players improve their gameplay through automated performance analysis, personalized recommendations, and Discord notifications. Users can create accounts, link their Riot Games summoner names, and receive automated match analysis delivered to their connected Discord channels.</p>
+
+    <h2>3. User Accounts</h2>
+    <ul>
+        <li>You must provide a valid email address to create an account</li>
+        <li>You are responsible for maintaining the security of your account credentials</li>
+        <li>You may not share your account with others</li>
+        <li>You must be at least 13 years of age to use the Service</li>
+    </ul>
+
+    <h2>4. Privacy Policy</h2>
+    <p>Your privacy is important to us. Please review our <a href="{{ url_for('main.privacy') }}">Privacy Policy</a> for information on how we collect, use, and protect your data.</p>
+
+    <h2>5. User Responsibilities</h2>
+    <p>Users agree to:</p>
+    <ul>
+        <li>Use the Service in compliance with Riot Games' Terms of Service</li>
+        <li>Not use the Service for any illegal or unauthorized purpose</li>
+        <li>Not attempt to gain unauthorized access to any systems or networks</li>
+        <li>Not abuse the Service in a way that degrades performance for other users</li>
+    </ul>
+
+    <h2>6. Limitation of Liability</h2>
+    <p>The Service is provided "as is" without any warranties. We are not responsible for:</p>
+    <ul>
+        <li>Any decisions made based on the analysis provided</li>
+        <li>Any loss of data, in-game items, or account status</li>
+        <li>Service interruptions or technical issues</li>
+    </ul>
+
+    <h2>7. Intellectual Property</h2>
+    <ul>
+        <li>The Service and its original content are licensed under the MIT License</li>
+        <li>League of Legends is a trademark of Riot Games, Inc.</li>
+        <li>This project is not affiliated with, endorsed, or sponsored by Riot Games</li>
+    </ul>
+
+    <h2>8. Account Termination</h2>
+    <p>We reserve the right to suspend or terminate accounts that violate these terms. You may delete your account at any time through the dashboard settings.</p>
+
+    <h2>9. Changes to Terms</h2>
+    <p>We reserve the right to modify these terms at any time. Continued use of the Service after any changes constitutes acceptance of the new terms.</p>
+
+    <h2>10. Contact Information</h2>
+    <p>For questions about these Terms of Service, please contact:</p>
+    <ul>
+        <li>GitHub: <a href="https://github.com/yd1008/lol-analyzer">github.com/yd1008/lol-analyzer</a></li>
+        <li>Developer: Elliot Dang (yd1008@nyu.edu)</li>
+    </ul>
+</div>
+{% endblock %}

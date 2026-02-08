@@ -1,49 +1,53 @@
 # Privacy Policy
 
-**Last updated:** January 31, 2026
+**Last updated:** February 6, 2026
 
 ## 1. Introduction
 
-LoL Performance Analyzer ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our Discord bot and League of Legends performance analysis tool.
+LoL Performance Analyzer ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our web platform and League of Legends performance analysis service.
 
 ## 2. Information We Collect
 
 ### Information You Provide
-- Discord username and ID (for bot functionality)
-- League of Legends summoner name (for match analysis)
-- Riot Games API data (match statistics, gameplay data)
+- Email address (for account creation and login)
+- League of Legends summoner name and tagline (for match analysis)
+- Discord channel ID (for notification delivery)
 
 ### Information Automatically Collected
-- Bot usage statistics
-- Error logs and diagnostics
-- Usage analytics (anonymized)
+- Riot Games API data: match statistics, gameplay data, and performance metrics
+- Match analysis results and generated recommendations
+- Service usage statistics and error logs
 
 ## 3. How We Use Your Information
 
 We use the collected information to:
 - Provide match analysis and performance recommendations
-- Send automated Discord notifications
+- Send automated Discord notifications with match reports
+- Display match history and performance trends on your dashboard
+- Generate weekly performance summaries
 - Improve our analysis algorithms
 - Maintain and improve the Service
 
 ## 4. Data Storage and Security
 
-- **No permanent storage:** Match data is processed in real-time and not permanently stored
-- **No credentials stored:** API keys and tokens are used only for the current session
+- **Account data:** Email and password hash stored securely in our database
+- **Match data:** Match analysis results are stored to enable dashboard history and weekly summaries
+- **Passwords:** Stored only as cryptographic hashes, never in plain text
 - **No third-party sharing:** We do not sell or share your personal data with third parties
 
 ## 5. Data Retention
 
-- Match analysis data is not retained after processing
-- API keys are stored locally on the user's machine only
-- No user data is transmitted to external servers beyond Riot Games and Discord APIs
+- Account data is retained until you delete your account
+- Match analysis data is retained for your dashboard history
+- You may request deletion of all your data at any time
 
 ## 6. Your Rights
 
 You have the right to:
-- Request deletion of any stored data
-- Opt-out of the Service at any time
-- Request information about data collection
+- Access your personal data through the dashboard
+- Request deletion of your account and all associated data
+- Opt-out of Discord notifications at any time
+- Export your match analysis data
 
 ## 7. Children's Privacy
 
@@ -65,7 +69,7 @@ If you have questions about this Privacy Policy, please contact:
 ## 10. Third-Party Services
 
 Our Service integrates with:
-- **Riot Games API:** For League of Legends match data ( governed by Riot's Privacy Policy)
-- **Discord API:** For bot functionality (governed by Discord's Privacy Policy)
+- **Riot Games API:** For League of Legends match data (governed by Riot's Privacy Policy)
+- **Discord API:** For notification delivery (governed by Discord's Privacy Policy)
 
 We are not responsible for the privacy practices of these third-party services.

@@ -133,6 +133,10 @@ lol_analyzer_config.json
 *.pem
 *.key
 
+# App database
+*.db
+instance/
+
 # IDEs
 .vscode/
 .idea/

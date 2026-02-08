@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - LoL Analyzer{% endblock %}
+
+{% block content %}
+<div class="container dashboard">
+    <div class="dashboard-header">
+        <h1>Dashboard</h1>
+        {% if riot_account %}
+            <span style="color: var(--text-muted); font-size: 0.875rem;">{{ riot_account.summoner_name }}#{{ riot_account.tagline }}</span>
+        {% endif %}
+    </div>
+
+    {% if not riot_account %}
+    <div class="setup-prompt">
+        <div>
+            <strong>Link your Riot account to get started</strong>
+            <p>Connect your summoner name so we can start analyzing your matches.</p>
+        </div>
+        <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">Go to Settings</a>
+    </div>
+    {% endif %}
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Games</div>
+            <div class="stat-value">{{ total_games }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value">{{ win_rate }}%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Wins</div>
+            <div class="stat-value">{{ wins }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Avg KDA</div>
+            <div class="stat-value">{{ avg_kda }}</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Recent Matches</h3>
+        {% if analyses %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Champion</th>
+                    <th>Result</th>
+                    <th>KDA</th>
+                    <th>Gold/min</th>
+                    <th>DMG/min</th>
+                    <th>Vision</th>
+                    <th>Duration</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in analyses %}
+                <tr>
+                    <td>{{ m.champion }}</td>
+                    <td class="{{ 'win' if m.win else 'loss' }}">{{ 'W' if m.win else 'L' }}</td>
+                    <td>{{ m.kills }}/{{ m.deaths }}/{{ m.assists }}</td>
+                    <td>{{ m.gold_per_min }}</td>
+                    <td>{{ m.damage_per_min }}</td>
+                    <td>{{ m.vision_score }}</td>
+                    <td>{{ m.game_duration }}m</td>
+                    <td><a href="{{ url_for('dashboard.match_detail', match_db_id=m.id) }}" class="btn btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if total_games > 10 %}
+        <div style="text-align: center; margin-top: 1rem;">
+            <a href="{{ url_for('dashboard.matches') }}" class="btn btn-secondary btn-sm">View All Matches</a>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <p>No matches analyzed yet. Matches will appear here after you play games with a linked Riot account.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
