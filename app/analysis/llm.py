@@ -73,7 +73,7 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
                     {'role': 'system', 'content': system_prompt},
                     {'role': 'user', 'content': user_prompt},
                 ],
-                'max_tokens': 600,
+                'max_tokens': 1500,
                 'temperature': 0.7,
             },
             headers={
@@ -99,7 +99,8 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
         except ValueError:
             return None, f"LLM API returned non-JSON response. URL: {api_url} | Body: {raw_body[:300]}"
 
-        content = data.get('choices', [{}])[0].get('message', {}).get('content')
+        message = data.get('choices', [{}])[0].get('message', {})
+        content = message.get('content') or message.get('reasoning_content') or ''
         if not content:
             return None, f"LLM API response missing choices/content. URL: {api_url} | Body: {raw_body[:300]}"
 
