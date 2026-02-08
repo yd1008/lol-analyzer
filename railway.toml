@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "gunicorn wsgi:app --bind 0.0.0.0:$PORT"
+startCommand = "gunicorn wsgi:app --bind 0.0.0.0:$PORT --timeout 120"
 healthcheckPath = "/riot.txt"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
