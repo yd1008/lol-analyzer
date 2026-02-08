@@ -1,0 +1,131 @@
+"""Tests for auth and basic routes."""
+
+from app.models import User
+
+
+class TestLandingPage:
+    def test_landing_page_loads(self, client):
+        resp = client.get("/")
+        assert resp.status_code == 200
+
+    def test_riot_txt(self, client, app):
+        resp = client.get("/riot.txt")
+        assert resp.status_code == 200
+        assert resp.data.decode() == app.config["RIOT_VERIFICATION_UUID"]
+
+    def test_terms_page(self, client):
+        resp = client.get("/terms")
+        assert resp.status_code == 200
+
+    def test_privacy_page(self, client):
+        resp = client.get("/privacy")
+        assert resp.status_code == 200
+
+
+class TestRegister:
+    def test_register_page_loads(self, client):
+        resp = client.get("/auth/register")
+        assert resp.status_code == 200
+
+    def test_register_success(self, client, db):
+        resp = client.post("/auth/register", data={
+            "email": "newuser@example.com",
+            "password": "securepass123",
+            "confirm_password": "securepass123",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+
+        user = User.query.filter_by(email="newuser@example.com").first()
+        assert user is not None
+        assert user.settings is not None
+
+    def test_register_duplicate_email(self, client, user):
+        resp = client.post("/auth/register", data={
+            "email": "test@example.com",
+            "password": "anotherpass123",
+            "confirm_password": "anotherpass123",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        assert User.query.filter_by(email="test@example.com").count() == 1
+
+    def test_register_password_mismatch(self, client, db):
+        resp = client.post("/auth/register", data={
+            "email": "mismatch@example.com",
+            "password": "password123",
+            "confirm_password": "different123",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        assert User.query.filter_by(email="mismatch@example.com").first() is None
+
+
+class TestLogin:
+    def test_login_page_loads(self, client):
+        resp = client.get("/auth/login")
+        assert resp.status_code == 200
+
+    def test_login_success(self, client, user):
+        resp = client.post("/auth/login", data={
+            "email": "test@example.com",
+            "password": "testpass123",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+
+    def test_login_wrong_password(self, client, user):
+        resp = client.post("/auth/login", data={
+            "email": "test@example.com",
+            "password": "wrongpassword",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        assert b"Invalid" in resp.data
+
+    def test_login_nonexistent_user(self, client, db):
+        resp = client.post("/auth/login", data={
+            "email": "nobody@example.com",
+            "password": "testpass123",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        assert b"Invalid" in resp.data
+
+
+class TestLogout:
+    def test_logout(self, auth_client):
+        resp = auth_client.get("/auth/logout", follow_redirects=True)
+        assert resp.status_code == 200
+
+
+class TestDashboardAccess:
+    def test_dashboard_requires_login(self, client):
+        resp = client.get("/dashboard/")
+        assert resp.status_code in (302, 401)
+
+    def test_dashboard_accessible_when_logged_in(self, auth_client):
+        resp = auth_client.get("/dashboard/")
+        assert resp.status_code == 200
+
+    def test_settings_requires_login(self, client):
+        resp = client.get("/dashboard/settings")
+        assert resp.status_code in (302, 401)
+
+
+class TestAdminAccess:
+    def test_admin_requires_login(self, client):
+        resp = client.get("/admin/")
+        assert resp.status_code in (302, 401)
+
+    def test_admin_requires_admin_email(self, auth_client):
+        resp = auth_client.get("/admin/", follow_redirects=True)
+        assert resp.status_code == 200
+        # Non-admin user should be redirected with "Access denied"
+
+    def test_admin_accessible_for_admin(self, client, db, app):
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={
+            "email": "admin@test.com",
+            "password": "adminpass",
+        })
+        resp = client.get("/admin/")
+        assert resp.status_code == 200

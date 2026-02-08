@@ -73,7 +73,7 @@
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="run_llm">
-            <input type="hidden" name="analysis_json" value="{{ analysis_data | tojson | e }}">
+            <input type="hidden" name="analysis_json" value='{{ analysis_data | tojson }}'>
             <button type="submit" class="btn btn-primary btn-sm">Run LLM Analysis</button>
         </form>
     </div>
