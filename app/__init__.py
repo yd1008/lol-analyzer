@@ -30,6 +30,9 @@ def create_app(config_name=None):
 
     from app.models import User, RiotAccount, DiscordConfig, MatchAnalysis, WeeklySummary, UserSettings
 
+    with app.app_context():
+        db.create_all()
+
     @app.errorhandler(404)
     def not_found(e):
         return render_template('errors/404.html'), 404
