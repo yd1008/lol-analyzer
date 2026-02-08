@@ -90,13 +90,22 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
         if resp.status_code != 200:
             return None, f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
 
-        data = resp.json()
-        content = data['choices'][0]['message']['content']
+        raw_body = resp.text
+        if not raw_body or not raw_body.strip():
+            return None, f"LLM API returned empty response body. URL: {api_url} | Model: {model}"
+
+        try:
+            data = resp.json()
+        except ValueError:
+            return None, f"LLM API returned non-JSON response. URL: {api_url} | Body: {raw_body[:300]}"
+
+        content = data.get('choices', [{}])[0].get('message', {}).get('content')
+        if not content:
+            return None, f"LLM API response missing choices/content. URL: {api_url} | Body: {raw_body[:300]}"
+
         return content.strip(), None
 
     except requests.Timeout:
         return None, f"Request timed out after 30s. URL: {api_url}"
-    except (KeyError, IndexError) as e:
-        return None, f"Unexpected response format: {e}. Response: {resp.text[:300]}"
     except requests.RequestException as e:
-        return None, f"Request failed: {e}"
+        return None, f"Request failed. URL: {api_url} | Error: {e}"
