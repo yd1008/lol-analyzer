@@ -5,7 +5,7 @@ from app.admin import admin_bp
 from app.models import User, RiotAccount, MatchAnalysis
 from app.analysis.riot_api import get_watcher, get_routing_value, resolve_puuid, get_recent_matches
 from app.analysis.engine import analyze_match
-from app.analysis.llm import get_llm_analysis
+from app.analysis.llm import get_llm_analysis_detailed
 from app.extensions import db
 
 
@@ -82,9 +82,9 @@ def test_llm():
                 flash('Invalid analysis data.', 'error')
                 return redirect(url_for('admin.test_llm'))
 
-            result = get_llm_analysis(analysis_data)
-            if not result:
-                flash('LLM returned no response. Check your LLM_API_KEY and LLM_API_URL in .env.', 'error')
+            result, llm_error = get_llm_analysis_detailed(analysis_data)
+            if llm_error:
+                flash(f'LLM error: {llm_error}', 'error')
 
             return render_template('admin/test_llm.html',
                 analysis_data=analysis_data,
