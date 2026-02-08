@@ -28,10 +28,7 @@ def create_app(config_name=None):
     from app.admin import admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
 
-    from app.models import User, RiotAccount, DiscordConfig, MatchAnalysis, WeeklySummary, UserSettings
-
-    with app.app_context():
-        db.create_all()
+    from app.models import User, RiotAccount, DiscordConfig, MatchAnalysis, WeeklySummary, UserSettings  # noqa: F401
 
     @app.errorhandler(404)
     def not_found(e):
