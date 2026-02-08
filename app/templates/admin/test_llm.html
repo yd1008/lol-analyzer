@@ -12,7 +12,7 @@
     <!-- Step 1: Look up summoner -->
     <div class="admin-card">
         <h3>Step 1: Look Up Summoner</h3>
-        <p>Enter a summoner name to fetch their latest match data.</p>
+        <p>Enter a summoner name to fetch their recent matches.</p>
         <form method="POST" class="loading-form" style="margin-top: 1rem;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="lookup">
@@ -34,14 +34,57 @@
                     </select>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 1rem;">Fetch Match</button>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 1rem;">Fetch Matches</button>
         </form>
     </div>
 
-    {% if analysis_data %}
-    <!-- Step 2: Match data preview -->
+    {% if match_list %}
+    <!-- Step 2: Select a match -->
     <div class="admin-card">
-        <h3>Step 2: Match Data</h3>
+        <h3>Step 2: Select a Match</h3>
+        <p>Choose a match to analyze with the LLM.</p>
+        <table class="match-select-table">
+            <thead>
+                <tr>
+                    <th>Champion</th>
+                    <th>Result</th>
+                    <th>KDA</th>
+                    <th>Duration</th>
+                    <th>Queue</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for match in match_list %}
+                <tr>
+                    <td>{{ match.champion }}</td>
+                    <td><span class="{{ 'win' if match.win else 'loss' }}">{{ 'Win' if match.win else 'Loss' }}</span></td>
+                    <td>{{ match.kills }}/{{ match.deaths }}/{{ match.assists }}</td>
+                    <td>{{ match.game_duration }} min</td>
+                    <td>{{ match.queue_type }}</td>
+                    <td>
+                        <form method="POST" class="loading-form" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="select">
+                            <input type="hidden" name="match_id" value="{{ match.match_id }}">
+                            <input type="hidden" name="puuid" value="{{ puuid }}">
+                            <input type="hidden" name="region" value="{{ region }}">
+                            <input type="hidden" name="summoner_name" value="{{ summoner_name }}">
+                            <input type="hidden" name="tagline" value="{{ tagline }}">
+                            <button type="submit" class="btn btn-primary btn-sm">Select</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if analysis_data %}
+    <!-- Step 3: Match data preview -->
+    <div class="admin-card">
+        <h3>Step 3: Match Data</h3>
         <div class="match-stats-grid" style="margin-bottom: 1rem;">
             <div class="stat-card">
                 <div class="stat-label">Champion</div>
@@ -69,7 +112,7 @@
             </div>
         </div>
 
-        <!-- Step 3: Run LLM -->
+        <!-- Step 4: Run LLM -->
         <form method="POST" id="llm-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="run_llm">
@@ -87,9 +130,9 @@
     {% endif %}
 
     {% if result %}
-    <!-- Step 3: LLM Result -->
+    <!-- Step 5: LLM Result -->
     <div class="admin-card">
-        <h3>Step 3: LLM Output</h3>
+        <h3>Step 4: LLM Output</h3>
         <div class="admin-result">{{ result }}</div>
     </div>
     {% endif %}

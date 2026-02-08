@@ -75,6 +75,7 @@ def auth_client(client, user):
 SAMPLE_MATCH_DETAIL = {
     "info": {
         "gameDuration": 1800,
+        "queueId": 420,
         "participants": [
             {
                 "puuid": "test-puuid-123",

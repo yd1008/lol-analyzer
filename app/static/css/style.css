@@ -979,6 +979,51 @@ footer a:hover {
     line-height: 1.7;
 }
 
+/* Match select table */
+.match-select-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.75rem;
+}
+
+.match-select-table th,
+.match-select-table td {
+    padding: 0.625rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
+}
+
+.match-select-table th {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.match-select-table tbody tr {
+    transition: background 0.15s;
+}
+
+.match-select-table tbody tr:hover {
+    background: var(--bg-card-hover);
+}
+
+.match-select-table .win {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.match-select-table .loss {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.match-select-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
 /* Loading indicator */
 .loading-indicator {
     display: flex;

@@ -3,11 +3,100 @@
 from unittest.mock import MagicMock
 from app.analysis.engine import (
     analyze_match,
+    get_match_summary,
     generate_recommendations,
     format_analysis_report,
     generate_weekly_summary,
 )
 from tests.conftest import SAMPLE_MATCH_DETAIL, SAMPLE_ANALYSIS
+
+
+class TestGetMatchSummary:
+    def test_successful_summary(self):
+        watcher = MagicMock()
+        watcher.match.by_id.return_value = SAMPLE_MATCH_DETAIL
+
+        result = get_match_summary(watcher, "americas", "test-puuid-123", "NA1_123")
+
+        assert result is not None
+        assert result["match_id"] == "NA1_123"
+        assert result["champion"] == "Ahri"
+        assert result["win"] is True
+        assert result["kills"] == 8
+        assert result["deaths"] == 3
+        assert result["assists"] == 12
+        assert result["game_duration"] == 30.0
+        assert result["queue_type"] == "Ranked Solo"
+
+    def test_player_not_found(self):
+        watcher = MagicMock()
+        watcher.match.by_id.return_value = SAMPLE_MATCH_DETAIL
+
+        result = get_match_summary(watcher, "americas", "nonexistent-puuid", "NA1_123")
+
+        assert result is None
+
+    def test_api_error_returns_none(self):
+        from riotwatcher import ApiError
+
+        watcher = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+        watcher.match.by_id.side_effect = ApiError("error", mock_resp)
+
+        result = get_match_summary(watcher, "americas", "test-puuid-123", "NA1_123")
+
+        assert result is None
+
+    def test_unknown_queue_id(self):
+        match_data = {
+            "info": {
+                "gameDuration": 900,
+                "queueId": 9999,
+                "participants": [
+                    {
+                        "puuid": "test-puuid",
+                        "championName": "Zed",
+                        "kills": 5,
+                        "deaths": 2,
+                        "assists": 3,
+                        "win": True,
+                    },
+                ],
+            }
+        }
+        watcher = MagicMock()
+        watcher.match.by_id.return_value = match_data
+
+        result = get_match_summary(watcher, "americas", "test-puuid", "NA1_456")
+
+        assert result is not None
+        assert result["queue_type"] == "Other"
+
+    def test_missing_queue_id(self):
+        match_data = {
+            "info": {
+                "gameDuration": 600,
+                "participants": [
+                    {
+                        "puuid": "test-puuid",
+                        "championName": "Lux",
+                        "kills": 1,
+                        "deaths": 0,
+                        "assists": 10,
+                        "win": False,
+                    },
+                ],
+            }
+        }
+        watcher = MagicMock()
+        watcher.match.by_id.return_value = match_data
+
+        result = get_match_summary(watcher, "americas", "test-puuid", "NA1_789")
+
+        assert result is not None
+        assert result["queue_type"] == "Other"
+        assert result["game_duration"] == 10.0
 
 
 class TestAnalyzeMatch:

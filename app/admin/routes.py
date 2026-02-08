@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app.admin import admin_bp
 from app.models import User, RiotAccount, MatchAnalysis
 from app.analysis.riot_api import get_watcher, get_routing_value, resolve_puuid, get_recent_matches
-from app.analysis.engine import analyze_match
+from app.analysis.engine import analyze_match, get_match_summary
 from app.analysis.llm import get_llm_analysis_detailed
 from app.extensions import db
 
@@ -52,17 +52,50 @@ def test_llm():
                 flash(error, 'error')
                 return redirect(url_for('admin.test_llm'))
 
-            matches = get_recent_matches(region, puuid, count=5)
+            matches = get_recent_matches(region, puuid, count=10)
             if not matches:
                 flash('No recent matches found for this summoner.', 'warning')
                 return redirect(url_for('admin.test_llm'))
 
             watcher = get_watcher()
             routing = get_routing_value(region)
-            analysis_data = analyze_match(watcher, routing, puuid, matches[0])
+            match_list = []
+            for mid in matches:
+                summary = get_match_summary(watcher, routing, puuid, mid)
+                if summary:
+                    match_list.append(summary)
+
+            if not match_list:
+                flash('Failed to fetch match details.', 'error')
+                return redirect(url_for('admin.test_llm'))
+
+            return render_template('admin/test_llm.html',
+                match_list=match_list,
+                puuid=puuid,
+                summoner_name=summoner,
+                tagline=tagline,
+                region=region,
+                analysis_data=None,
+                result=None,
+            )
+
+        elif action == 'select':
+            match_id = request.form.get('match_id', '').strip()
+            puuid = request.form.get('puuid', '').strip()
+            region = request.form.get('region', 'na1').strip()
+            summoner = request.form.get('summoner_name', '').strip()
+            tagline = request.form.get('tagline', '').strip()
+
+            if not match_id or not puuid:
+                flash('Missing match or player information.', 'error')
+                return redirect(url_for('admin.test_llm'))
+
+            watcher = get_watcher()
+            routing = get_routing_value(region)
+            analysis_data = analyze_match(watcher, routing, puuid, match_id)
 
             if not analysis_data:
-                flash('Failed to analyze the most recent match.', 'error')
+                flash('Failed to analyze the selected match.', 'error')
                 return redirect(url_for('admin.test_llm'))
 
             return render_template('admin/test_llm.html',
@@ -70,6 +103,7 @@ def test_llm():
                 summoner_name=summoner,
                 tagline=tagline,
                 region=region,
+                match_list=None,
                 result=None,
             )
 
@@ -91,10 +125,11 @@ def test_llm():
                 summoner_name=analysis_data.get('champion', ''),
                 tagline='',
                 region='',
+                match_list=None,
                 result=result,
             )
 
-    return render_template('admin/test_llm.html', analysis_data=None, result=None)
+    return render_template('admin/test_llm.html', analysis_data=None, match_list=None, result=None)
 
 
 @admin_bp.route('/test-discord', methods=['POST'])

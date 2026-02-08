@@ -9,6 +9,56 @@ from riotwatcher import LolWatcher, ApiError
 logger = logging.getLogger(__name__)
 
 
+QUEUE_TYPES = {
+    400: "Normal Draft",
+    420: "Ranked Solo",
+    430: "Normal Blind",
+    440: "Ranked Flex",
+    450: "ARAM",
+    700: "Clash",
+    900: "ARURF",
+    1020: "One for All",
+    1300: "Nexus Blitz",
+    1400: "Ultimate Spellbook",
+}
+
+
+def get_match_summary(watcher: LolWatcher, region: str, puuid: str, match_id: str) -> dict | None:
+    """Fetch match detail and return lightweight summary for list view."""
+    try:
+        match_detail = watcher.match.by_id(region, match_id)
+
+        player_data = None
+        for participant in match_detail['info']['participants']:
+            if participant['puuid'] == puuid:
+                player_data = participant
+                break
+
+        if player_data is None:
+            logger.error("Player not found in match %s", match_id)
+            return None
+
+        game_duration = match_detail['info']['gameDuration']
+        queue_id = match_detail['info'].get('queueId', 0)
+
+        return {
+            'match_id': match_id,
+            'champion': player_data['championName'],
+            'win': player_data['win'],
+            'kills': player_data['kills'],
+            'deaths': player_data['deaths'],
+            'assists': player_data['assists'],
+            'game_duration': round(game_duration / 60, 1),
+            'queue_type': QUEUE_TYPES.get(queue_id, "Other"),
+        }
+    except ApiError as e:
+        logger.error("Riot API error fetching summary for match %s: %s", match_id, e)
+        return None
+    except Exception as e:
+        logger.error("Error fetching summary for match %s: %s", match_id, e)
+        return None
+
+
 def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -> dict | None:
     """Analyze a single match and return insights."""
     try:
