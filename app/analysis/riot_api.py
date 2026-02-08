@@ -1,6 +1,7 @@
 """Riot API helper functions for multi-user usage."""
 
 import logging
+import requests as http_requests
 from flask import current_app
 from riotwatcher import LolWatcher, ApiError
 
@@ -58,25 +59,28 @@ def resolve_puuid(summoner_name: str, tagline: str, region: str) -> tuple[str | 
         return None, "Riot API key is not configured. Please contact the site administrator."
 
     try:
-        watcher = get_watcher()
+        api_key = current_app.config['RIOT_API_KEY']
         routing = get_routing_value(region)
-        account = watcher.account.by_riot_id(routing, summoner_name, tagline)
-        return account['puuid'], None
-    except ApiError as e:
-        if e.response.status_code == 404:
-            display = REGION_DISPLAY.get(region, region.upper())
+        url = f"https://{routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{summoner_name}/{tagline}"
+        resp = http_requests.get(url, headers={"X-Riot-Token": api_key}, timeout=10)
+
+        if resp.status_code == 200:
+            return resp.json()['puuid'], None
+
+        display = REGION_DISPLAY.get(region, region.upper())
+        if resp.status_code == 404:
             return None, (
                 f'Summoner "{summoner_name}#{tagline}" was not found on {display}. '
                 f'Make sure your Riot ID is spelled correctly (case-insensitive) '
                 f'and that you selected the right region. '
                 f'Your Riot ID is shown at the top of your League client.'
             )
-        if e.response.status_code == 403:
+        if resp.status_code == 403:
             return None, "Riot API key is invalid or expired. Please contact the site administrator."
-        if e.response.status_code == 429:
+        if resp.status_code == 429:
             return None, "Too many requests to Riot API. Please wait a minute and try again."
-        logger.error("Riot API error resolving PUUID for %s#%s: %s", summoner_name, tagline, e)
-        return None, f"Riot API returned an error (code {e.response.status_code}). Please try again later."
+        logger.error("Riot API error resolving PUUID for %s#%s: status %d", summoner_name, tagline, resp.status_code)
+        return None, f"Riot API returned an error (code {resp.status_code}). Please try again later."
     except ValueError as e:
         return None, str(e)
     except Exception as e:
