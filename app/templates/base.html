@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}LoL Analyzer{% endblock %}</title>
     <meta name="description" content="{% block description %}AI-powered League of Legends performance analysis. Get match insights and personalized coaching delivered to your Discord.{% endblock %}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>

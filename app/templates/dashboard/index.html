@@ -42,45 +42,75 @@
 
     <div class="card">
         <h3>Recent Matches</h3>
-        {% if analyses %}
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Champion</th>
-                    <th>Result</th>
-                    <th>KDA</th>
-                    <th>Gold/min</th>
-                    <th>DMG/min</th>
-                    <th>Vision</th>
-                    <th>Duration</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in analyses %}
-                <tr>
-                    <td>{{ m.champion }}</td>
-                    <td class="{{ 'win' if m.win else 'loss' }}">{{ 'W' if m.win else 'L' }}</td>
-                    <td>{{ m.kills }}/{{ m.deaths }}/{{ m.assists }}</td>
-                    <td>{{ m.gold_per_min }}</td>
-                    <td>{{ m.damage_per_min }}</td>
-                    <td>{{ m.vision_score }}</td>
-                    <td>{{ m.game_duration }}m</td>
-                    <td><a href="{{ url_for('dashboard.match_detail', match_db_id=m.id) }}" class="btn btn-ghost btn-sm">View</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% if total_games > 10 %}
-        <div style="text-align: center; margin-top: 1rem;">
-            <a href="{{ url_for('dashboard.matches') }}" class="btn btn-secondary btn-sm">View All Matches</a>
+
+        <div class="match-filter-bar" id="match-filter-bar">
+            <button class="filter-btn active" data-queue="">All</button>
+            <button class="filter-btn" data-queue="Ranked Solo">Ranked Solo</button>
+            <button class="filter-btn" data-queue="Ranked Flex">Ranked Flex</button>
+            <button class="filter-btn" data-queue="Normal Draft">Normal</button>
         </div>
-        {% endif %}
-        {% else %}
-        <div class="empty-state">
-            <p>No matches analyzed yet. Matches will appear here after you play games with a linked Riot account.</p>
+
+        <div id="match-list">
+            {% if analyses %}
+            {% for m in analyses %}
+            <div class="match-box {{ 'match-win' if m.win else 'match-loss' }}" data-match-id="{{ m.id }}">
+                <div class="match-box-indicator"></div>
+                <div class="match-box-main">
+                    <div class="match-box-header">
+                        <span class="match-champion">{{ m.champion }}</span>
+                        <span class="match-result-tag">{{ 'Victory' if m.win else 'Defeat' }}</span>
+                        {% if m.queue_type %}<span class="match-queue">{{ m.queue_type }}</span>{% endif %}
+                        <span class="match-duration">{{ m.game_duration }}m</span>
+                    </div>
+                    <div class="match-box-stats">
+                        <span class="match-kda">{{ m.kills }}/{{ m.deaths }}/{{ m.assists }}<span class="match-kda-ratio">{{ m.kda }} KDA</span></span>
+                        <div class="match-stat-pills">
+                            <span class="stat-pill">{{ m.gold_per_min }} G/m</span>
+                            <span class="stat-pill">{{ m.damage_per_min }} D/m</span>
+                            <span class="stat-pill">{{ m.vision_score }} VS</span>
+                            <span class="stat-pill">{{ m.cs_total }} CS</span>
+                        </div>
+                    </div>
+                    {% if m.participants_json %}
+                    {% set ns = namespace(player_team=None) %}
+                    {% for p in m.participants_json %}
+                        {% if p.is_player %}{% set ns.player_team = p.team_id %}{% endif %}
+                    {% endfor %}
+                    <div class="match-box-enemies">
+                        <span class="match-box-enemies-label">vs</span>
+                        {% for p in m.participants_json %}
+                            {% if p.team_id != ns.player_team %}
+                            <span class="enemy-tag" title="{{ p.summoner_name }}#{{ p.tagline }}">{{ p.champion }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="match-box-actions">
+                    <a href="{{ url_for('dashboard.match_detail', match_db_id=m.id) }}" class="btn btn-ghost btn-sm">Details</a>
+                    <button class="ai-btn{{ ' has-analysis' if m.llm_analysis else '' }}" data-match-id="{{ m.id }}">
+                        {{ 'AI Analysis' if m.llm_analysis else 'Run AI Analysis' }}
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <p>No matches analyzed yet. Matches will appear here after you play games with a linked Riot account.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if total_games > 10 %}
+        <div class="load-more-container" id="load-more-container">
+            <button class="btn btn-secondary btn-sm" id="load-more-btn">Load More</button>
         </div>
         {% endif %}
     </div>
 </div>
+
+<script>
+    window.__initialMatchCount = {{ analyses|length }};
+    window.__totalGames = {{ total_games }};
+</script>
 {% endblock %}

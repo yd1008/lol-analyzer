@@ -11,38 +11,46 @@
 
     {% if matches %}
     <div class="card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Champion</th>
-                    <th>Result</th>
-                    <th>KDA</th>
-                    <th>Gold/min</th>
-                    <th>DMG/min</th>
-                    <th>Vision</th>
-                    <th>CS</th>
-                    <th>Duration</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in matches %}
-                <tr>
-                    <td>{{ m.analyzed_at.strftime('%b %d') }}</td>
-                    <td>{{ m.champion }}</td>
-                    <td class="{{ 'win' if m.win else 'loss' }}">{{ 'W' if m.win else 'L' }}</td>
-                    <td>{{ m.kills }}/{{ m.deaths }}/{{ m.assists }}</td>
-                    <td>{{ m.gold_per_min }}</td>
-                    <td>{{ m.damage_per_min }}</td>
-                    <td>{{ m.vision_score }}</td>
-                    <td>{{ m.cs_total }}</td>
-                    <td>{{ m.game_duration }}m</td>
-                    <td><a href="{{ url_for('dashboard.match_detail', match_db_id=m.id) }}" class="btn btn-ghost btn-sm">View</a></td>
-                </tr>
+        {% for m in matches %}
+        <div class="match-box {{ 'match-win' if m.win else 'match-loss' }}" data-match-id="{{ m.id }}">
+            <div class="match-box-indicator"></div>
+            <div class="match-box-main">
+                <div class="match-box-header">
+                    <span class="match-champion">{{ m.champion }}</span>
+                    <span class="match-result-tag">{{ 'Victory' if m.win else 'Defeat' }}</span>
+                    {% if m.queue_type %}<span class="match-queue">{{ m.queue_type }}</span>{% endif %}
+                    <span class="match-duration">{{ m.game_duration }}m</span>
+                    <span class="match-duration">{{ m.analyzed_at.strftime('%b %d') }}</span>
+                </div>
+                <div class="match-box-stats">
+                    <span class="match-kda">{{ m.kills }}/{{ m.deaths }}/{{ m.assists }}<span class="match-kda-ratio">{{ m.kda }} KDA</span></span>
+                    <div class="match-stat-pills">
+                        <span class="stat-pill">{{ m.gold_per_min }} G/m</span>
+                        <span class="stat-pill">{{ m.damage_per_min }} D/m</span>
+                        <span class="stat-pill">{{ m.vision_score }} VS</span>
+                        <span class="stat-pill">{{ m.cs_total }} CS</span>
+                    </div>
+                </div>
+                {% if m.participants_json %}
+                {% set ns = namespace(player_team=None) %}
+                {% for p in m.participants_json %}
+                    {% if p.is_player %}{% set ns.player_team = p.team_id %}{% endif %}
                 {% endfor %}
-            </tbody>
-        </table>
+                <div class="match-box-enemies">
+                    <span class="match-box-enemies-label">vs</span>
+                    {% for p in m.participants_json %}
+                        {% if p.team_id != ns.player_team %}
+                        <span class="enemy-tag" title="{{ p.summoner_name }}#{{ p.tagline }}">{{ p.champion }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="match-box-actions">
+                <a href="{{ url_for('dashboard.match_detail', match_db_id=m.id) }}" class="btn btn-ghost btn-sm">Details</a>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 
     {% if pagination.pages > 1 %}

@@ -90,6 +90,25 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
 
         win = player_data['win']
 
+        queue_id = match_detail['info'].get('queueId', 0)
+        queue_type = QUEUE_TYPES.get(queue_id, "Other")
+
+        participants = []
+        for p in match_detail['info']['participants']:
+            participants.append({
+                'champion': p['championName'],
+                'summoner_name': p.get('riotIdGameName') or p.get('summonerName', ''),
+                'tagline': p.get('riotIdTagline', ''),
+                'team_id': p.get('teamId', 0),
+                'kills': p['kills'],
+                'deaths': p['deaths'],
+                'assists': p['assists'],
+                'win': p['win'],
+                'is_player': p['puuid'] == puuid,
+            })
+
+        game_start_timestamp = match_detail['info'].get('gameStartTimestamp')
+
         analysis = {
             'match_id': match_id,
             'champion': player_data['championName'],
@@ -106,6 +125,9 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
             'win': win,
             'game_duration': round(game_duration_minutes, 1),
             'recommendations': generate_recommendations(player_data, match_detail),
+            'queue_type': queue_type,
+            'participants': participants,
+            'game_start_timestamp': game_start_timestamp,
         }
 
         return analysis

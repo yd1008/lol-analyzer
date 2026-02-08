@@ -187,6 +187,40 @@ class TestAnalyzeMatch:
         assert result["kda"] == 22.0  # (2+20)/max(1,0) = 22
 
 
+    def test_analyze_returns_queue_type(self):
+        watcher = MagicMock()
+        watcher.match.by_id.return_value = SAMPLE_MATCH_DETAIL
+
+        result = analyze_match(watcher, "americas", "test-puuid-123", "NA1_123")
+
+        assert result["queue_type"] == "Ranked Solo"
+
+    def test_analyze_returns_participants(self):
+        watcher = MagicMock()
+        watcher.match.by_id.return_value = SAMPLE_MATCH_DETAIL
+
+        result = analyze_match(watcher, "americas", "test-puuid-123", "NA1_123")
+
+        assert len(result["participants"]) == 10
+        player_entries = [p for p in result["participants"] if p["is_player"]]
+        assert len(player_entries) == 1
+        assert player_entries[0]["champion"] == "Ahri"
+        assert player_entries[0]["summoner_name"] == "TestPlayer"
+        assert player_entries[0]["tagline"] == "NA1"
+        assert player_entries[0]["team_id"] == 100
+
+        non_players = [p for p in result["participants"] if not p["is_player"]]
+        assert len(non_players) == 9
+
+    def test_analyze_returns_game_start_timestamp(self):
+        watcher = MagicMock()
+        watcher.match.by_id.return_value = SAMPLE_MATCH_DETAIL
+
+        result = analyze_match(watcher, "americas", "test-puuid-123", "NA1_123")
+
+        assert result["game_start_timestamp"] == 1700000000000
+
+
 class TestGenerateRecommendations:
     def test_low_kda_recommendation(self):
         player = {

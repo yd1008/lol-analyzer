@@ -76,6 +76,7 @@ SAMPLE_MATCH_DETAIL = {
     "info": {
         "gameDuration": 1800,
         "queueId": 420,
+        "gameStartTimestamp": 1700000000000,
         "participants": [
             {
                 "puuid": "test-puuid-123",
@@ -89,6 +90,9 @@ SAMPLE_MATCH_DETAIL = {
                 "totalMinionsKilled": 180,
                 "neutralMinionsKilled": 20,
                 "win": True,
+                "teamId": 100,
+                "riotIdGameName": "TestPlayer",
+                "riotIdTagline": "NA1",
             },
             *[
                 {
@@ -103,6 +107,9 @@ SAMPLE_MATCH_DETAIL = {
                     "totalMinionsKilled": 120,
                     "neutralMinionsKilled": 0,
                     "win": False,
+                    "teamId": 200,
+                    "riotIdGameName": f"Enemy{i}",
+                    "riotIdTagline": "EUW",
                 }
                 for i in range(9)
             ],

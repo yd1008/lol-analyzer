@@ -74,6 +74,9 @@ class MatchAnalysis(db.Model):
     game_duration = db.Column(db.Float)
     recommendations = db.Column(db.JSON)
     llm_analysis = db.Column(db.Text)
+    queue_type = db.Column(db.String(32), nullable=True)
+    participants_json = db.Column(db.JSON, nullable=True)
+    game_start_timestamp = db.Column(db.BigInteger, nullable=True)
     analyzed_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 

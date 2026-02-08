@@ -1,12 +1,13 @@
 import logging
 
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.dashboard import dashboard_bp
 from app.dashboard.forms import RiotAccountForm, DiscordConfigForm, PreferencesForm
 from app.models import RiotAccount, DiscordConfig, MatchAnalysis, UserSettings
 from app.analysis.riot_api import resolve_puuid, get_watcher, get_routing_value, get_recent_matches
 from app.analysis.engine import analyze_match
+from app.analysis.llm import get_llm_analysis_detailed
 from app.analysis.discord_notifier import get_bot_invite_url
 from app.extensions import db
 
@@ -55,6 +56,9 @@ def sync_recent_matches(user_id, region, puuid):
             cs_total=analysis['cs_total'],
             game_duration=analysis['game_duration'],
             recommendations=analysis['recommendations'],
+            queue_type=analysis.get('queue_type'),
+            participants_json=analysis.get('participants'),
+            game_start_timestamp=analysis.get('game_start_timestamp'),
         )
         db.session.add(row)
         saved += 1
@@ -78,18 +82,23 @@ def index():
         except Exception as e:
             logger.error("Failed to sync matches for user %d: %s", current_user.id, e)
 
-    analyses = MatchAnalysis.query.filter_by(user_id=current_user.id)\
+    base_query = MatchAnalysis.query.filter_by(user_id=current_user.id)
+
+    analyses = base_query\
         .order_by(MatchAnalysis.analyzed_at.desc()).limit(10).all()
 
-    total_games = MatchAnalysis.query.filter_by(user_id=current_user.id).count()
+    total_games = base_query.count()
     wins = MatchAnalysis.query.filter_by(user_id=current_user.id, win=True).count()
     win_rate = round((wins / total_games) * 100, 1) if total_games > 0 else 0
 
-    all_matches = MatchAnalysis.query.filter_by(user_id=current_user.id).all()
+    all_matches = base_query.all()
     avg_kda = round(sum(m.kda for m in all_matches) / len(all_matches), 2) if all_matches else 0
+
+    initial_matches = _serialize_matches(analyses)
 
     return render_template('dashboard/index.html',
         analyses=analyses,
+        initial_matches_json=initial_matches,
         total_games=total_games,
         wins=wins,
         win_rate=win_rate,
@@ -97,6 +106,110 @@ def index():
         riot_account=riot_account,
         discord_config=discord_config,
     )
+
+
+def _serialize_match(m):
+    """Serialize a MatchAnalysis row to a dict for JSON responses."""
+    participants = m.participants_json or []
+    player_team = None
+    for p in participants:
+        if p.get('is_player'):
+            player_team = p.get('team_id')
+            break
+
+    enemies = []
+    if player_team is not None:
+        enemies = [
+            {'champion': p['champion'], 'summoner_name': p.get('summoner_name', ''), 'tagline': p.get('tagline', '')}
+            for p in participants
+            if p.get('team_id') != player_team
+        ]
+
+    return {
+        'id': m.id,
+        'match_id': m.match_id,
+        'champion': m.champion,
+        'win': m.win,
+        'kills': m.kills,
+        'deaths': m.deaths,
+        'assists': m.assists,
+        'kda': m.kda,
+        'gold_per_min': m.gold_per_min,
+        'damage_per_min': m.damage_per_min,
+        'vision_score': m.vision_score,
+        'cs_total': m.cs_total,
+        'game_duration': m.game_duration,
+        'queue_type': m.queue_type or '',
+        'has_llm_analysis': bool(m.llm_analysis),
+        'enemies': enemies,
+        'analyzed_at': m.analyzed_at.isoformat() if m.analyzed_at else '',
+    }
+
+
+def _serialize_matches(match_list):
+    """Serialize a list of MatchAnalysis rows."""
+    return [_serialize_match(m) for m in match_list]
+
+
+@dashboard_bp.route('/api/matches')
+@login_required
+def api_matches():
+    """JSON endpoint for match list with pagination and queue filter."""
+    offset = request.args.get('offset', 0, type=int)
+    limit = request.args.get('limit', 10, type=int)
+    limit = min(limit, 50)
+    queue = request.args.get('queue', '', type=str)
+
+    query = MatchAnalysis.query.filter_by(user_id=current_user.id)
+
+    if queue:
+        query = query.filter(MatchAnalysis.queue_type == queue)
+
+    total = query.count()
+
+    matches_list = query.order_by(MatchAnalysis.analyzed_at.desc())\
+        .offset(offset).limit(limit).all()
+
+    return jsonify({
+        'matches': _serialize_matches(matches_list),
+        'total': total,
+        'has_more': offset + limit < total,
+    })
+
+
+@dashboard_bp.route('/api/matches/<int:match_db_id>/ai-analysis', methods=['POST'])
+@login_required
+def api_ai_analysis(match_db_id):
+    """Run or return cached AI analysis for a match."""
+    match = MatchAnalysis.query.filter_by(id=match_db_id, user_id=current_user.id).first_or_404()
+
+    if match.llm_analysis:
+        return jsonify({'analysis': match.llm_analysis, 'cached': True})
+
+    analysis_dict = {
+        'champion': match.champion,
+        'win': match.win,
+        'kills': match.kills,
+        'deaths': match.deaths,
+        'assists': match.assists,
+        'kda': match.kda,
+        'gold_earned': match.gold_earned,
+        'gold_per_min': match.gold_per_min,
+        'total_damage': match.total_damage,
+        'damage_per_min': match.damage_per_min,
+        'vision_score': match.vision_score,
+        'cs_total': match.cs_total,
+        'game_duration': match.game_duration,
+    }
+
+    result, error = get_llm_analysis_detailed(analysis_dict)
+    if error:
+        return jsonify({'error': error}), 500
+
+    match.llm_analysis = result
+    db.session.commit()
+
+    return jsonify({'analysis': result, 'cached': False})
 
 
 @dashboard_bp.route('/matches')
