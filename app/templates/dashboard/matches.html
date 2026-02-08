@@ -9,78 +9,76 @@
         <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary btn-sm">Back to Dashboard</a>
     </div>
 
-    {% if matches %}
     <div class="card">
-        {% for m in matches %}
-        <div class="match-box {{ 'match-win' if m.win else 'match-loss' }}" data-match-id="{{ m.id }}">
-            <div class="match-box-indicator"></div>
-            <div class="match-box-main">
-                <div class="match-box-header">
-                    <span class="match-champion">{{ m.champion }}</span>
-                    <span class="match-result-tag">{{ 'Victory' if m.win else 'Defeat' }}</span>
-                    {% if m.queue_type %}<span class="match-queue">{{ m.queue_type }}</span>{% endif %}
-                    <span class="match-duration">{{ m.game_duration }}m</span>
-                    <span class="match-duration">{{ m.analyzed_at.strftime('%b %d') }}</span>
-                </div>
-                <div class="match-box-stats">
-                    <span class="match-kda">{{ m.kills }}/{{ m.deaths }}/{{ m.assists }}<span class="match-kda-ratio">{{ m.kda }} KDA</span></span>
-                    <div class="match-stat-pills">
-                        <span class="stat-pill">{{ m.gold_per_min }} G/m</span>
-                        <span class="stat-pill">{{ m.damage_per_min }} D/m</span>
-                        <span class="stat-pill">{{ m.vision_score }} VS</span>
-                        <span class="stat-pill">{{ m.cs_total }} CS</span>
+        <div class="match-filter-bar" id="match-filter-bar">
+            <button class="filter-btn active" data-queue="">All</button>
+            <button class="filter-btn" data-queue="Ranked Solo">Ranked Solo</button>
+            <button class="filter-btn" data-queue="Ranked Flex">Ranked Flex</button>
+            <button class="filter-btn" data-queue="Normal Draft,Normal Blind">Normal</button>
+        </div>
+
+        <div id="match-list">
+            {% if matches %}
+            {% for m in matches %}
+            <div class="match-box {{ 'match-win' if m.win else 'match-loss' }}" data-match-id="{{ m.id }}">
+                <div class="match-box-indicator"></div>
+                <div class="match-box-main">
+                    <div class="match-box-header">
+                        <span class="match-champion">{{ m.champion }}</span>
+                        <span class="match-result-tag">{{ 'Victory' if m.win else 'Defeat' }}</span>
+                        {% if m.queue_type %}<span class="match-queue">{{ m.queue_type }}</span>{% endif %}
+                        <span class="match-duration">{{ m.game_duration }}m</span>
+                        <span class="match-duration">{{ m.analyzed_at.strftime('%b %d') }}</span>
                     </div>
-                </div>
-                {% if m.participants_json %}
-                {% set ns = namespace(player_team=None) %}
-                {% for p in m.participants_json %}
-                    {% if p.is_player %}{% set ns.player_team = p.team_id %}{% endif %}
-                {% endfor %}
-                <div class="match-box-enemies">
-                    <span class="match-box-enemies-label">vs</span>
+                    <div class="match-box-stats">
+                        <span class="match-kda">{{ m.kills }}/{{ m.deaths }}/{{ m.assists }}<span class="match-kda-ratio">{{ m.kda }} KDA</span></span>
+                        <div class="match-stat-pills">
+                            <span class="stat-pill">{{ m.gold_per_min }} G/m</span>
+                            <span class="stat-pill">{{ m.damage_per_min }} D/m</span>
+                            <span class="stat-pill">{{ m.vision_score }} VS</span>
+                            <span class="stat-pill">{{ m.cs_total }} CS</span>
+                        </div>
+                    </div>
+                    {% if m.participants_json %}
+                    {% set ns = namespace(player_team=None) %}
                     {% for p in m.participants_json %}
-                        {% if p.team_id != ns.player_team %}
-                        <span class="enemy-tag" title="{{ p.summoner_name }}#{{ p.tagline }}">{{ p.champion }}</span>
-                        {% endif %}
+                        {% if p.is_player %}{% set ns.player_team = p.team_id %}{% endif %}
                     {% endfor %}
+                    <div class="match-box-enemies">
+                        <span class="match-box-enemies-label">vs</span>
+                        {% for p in m.participants_json %}
+                            {% if p.team_id != ns.player_team %}
+                            <span class="enemy-tag" title="{{ p.summoner_name }}#{{ p.tagline }}">{{ p.champion }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
+                <div class="match-box-actions">
+                    <a href="{{ url_for('dashboard.match_detail', match_db_id=m.id) }}" class="btn btn-ghost btn-sm">Details</a>
+                    <button class="ai-btn{{ ' has-analysis' if m.llm_analysis else '' }}" data-match-id="{{ m.id }}">
+                        {{ 'AI Analysis' if m.llm_analysis else 'Run AI Analysis' }}
+                    </button>
+                </div>
             </div>
-            <div class="match-box-actions">
-                <a href="{{ url_for('dashboard.match_detail', match_db_id=m.id) }}" class="btn btn-ghost btn-sm">Details</a>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    {% if pagination.pages > 1 %}
-    <div class="pagination">
-        {% if pagination.has_prev %}
-            <a href="{{ url_for('dashboard.matches', page=pagination.prev_num) }}">Prev</a>
-        {% endif %}
-        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-            {% if p %}
-                {% if p == pagination.page %}
-                    <span class="active">{{ p }}</span>
-                {% else %}
-                    <a href="{{ url_for('dashboard.matches', page=p) }}">{{ p }}</a>
-                {% endif %}
+            {% endfor %}
             {% else %}
-                <span style="color: var(--text-muted);">...</span>
+            <div class="empty-state">
+                <p>No matches analyzed yet.</p>
+            </div>
             {% endif %}
-        {% endfor %}
-        {% if pagination.has_next %}
-            <a href="{{ url_for('dashboard.matches', page=pagination.next_num) }}">Next</a>
+        </div>
+
+        {% if pagination.total > matches|length %}
+        <div class="load-more-container" id="load-more-container">
+            <button class="btn btn-secondary btn-sm" id="load-more-btn">Load More</button>
+        </div>
         {% endif %}
     </div>
-    {% endif %}
-
-    {% else %}
-    <div class="card">
-        <div class="empty-state">
-            <p>No matches analyzed yet.</p>
-        </div>
-    </div>
-    {% endif %}
 </div>
+
+<script>
+    window.__initialMatchCount = {{ matches|length }};
+    window.__totalGames = {{ pagination.total }};
+</script>
 {% endblock %}

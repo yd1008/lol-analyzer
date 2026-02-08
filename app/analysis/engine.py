@@ -78,7 +78,7 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
 
         kda = (player_data['kills'] + player_data['assists']) / max(1, player_data['deaths'])
         gold_earned = player_data['goldEarned']
-        total_damage = player_data['totalDamageDealt']
+        total_damage = player_data.get('totalDamageDealtToChampions', player_data.get('totalDamageDealt', 0))
         vision_score = player_data['visionScore']
         cs_total = player_data['totalMinionsKilled'] + player_data['neutralMinionsKilled']
 
@@ -160,9 +160,9 @@ def generate_recommendations(player_data: dict, match_detail: dict) -> list[str]
         elif gold_share < 0.15:
             recs.append("Consider focusing more on farming or looking for opportunities to help your team.")
 
-    team_damage = sum(p['totalDamageDealt'] for p in match_detail['info']['participants'][:5])
+    team_damage = sum(p.get('totalDamageDealtToChampions', p.get('totalDamageDealt', 0)) for p in match_detail['info']['participants'][:5])
     if team_damage > 0:
-        damage_share = player_data['totalDamageDealt'] / team_damage
+        damage_share = player_data.get('totalDamageDealtToChampions', player_data.get('totalDamageDealt', 0)) / team_damage
         if damage_share > 0.25:
             recs.append("High damage output - great job carrying!")
         elif damage_share < 0.15:

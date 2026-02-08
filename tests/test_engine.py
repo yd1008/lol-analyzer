@@ -154,6 +154,7 @@ class TestAnalyzeMatch:
                         "assists": 20,
                         "goldEarned": 8000,
                         "totalDamageDealt": 30000,
+                        "totalDamageDealtToChampions": 8000,
                         "visionScore": 50,
                         "totalMinionsKilled": 30,
                         "neutralMinionsKilled": 0,
@@ -168,6 +169,7 @@ class TestAnalyzeMatch:
                             "assists": 4,
                             "goldEarned": 9000,
                             "totalDamageDealt": 60000,
+                            "totalDamageDealtToChampions": 18000,
                             "visionScore": 10,
                             "totalMinionsKilled": 120,
                             "neutralMinionsKilled": 0,
@@ -225,12 +227,12 @@ class TestGenerateRecommendations:
     def test_low_kda_recommendation(self):
         player = {
             "kills": 1, "deaths": 8, "assists": 2,
-            "visionScore": 20, "goldEarned": 8000, "totalDamageDealt": 50000,
+            "visionScore": 20, "goldEarned": 8000, "totalDamageDealtToChampions": 50000,
         }
         match = {"info": {"participants": [
             {**player, "puuid": "p"},
-            *[{"goldEarned": 10000, "totalDamageDealt": 50000, "puuid": f"t{i}"} for i in range(4)],
-            *[{"goldEarned": 10000, "totalDamageDealt": 50000, "puuid": f"e{i}"} for i in range(5)],
+            *[{"goldEarned": 10000, "totalDamageDealtToChampions": 50000, "puuid": f"t{i}"} for i in range(4)],
+            *[{"goldEarned": 10000, "totalDamageDealtToChampions": 50000, "puuid": f"e{i}"} for i in range(5)],
         ]}}
 
         recs = generate_recommendations(player, match)
@@ -240,12 +242,12 @@ class TestGenerateRecommendations:
     def test_high_kda_recommendation(self):
         player = {
             "kills": 15, "deaths": 2, "assists": 10,
-            "visionScore": 30, "goldEarned": 15000, "totalDamageDealt": 100000,
+            "visionScore": 30, "goldEarned": 15000, "totalDamageDealtToChampions": 100000,
         }
         match = {"info": {"participants": [
             {**player, "puuid": "p"},
-            *[{"goldEarned": 10000, "totalDamageDealt": 50000, "puuid": f"t{i}"} for i in range(4)],
-            *[{"goldEarned": 10000, "totalDamageDealt": 50000, "puuid": f"e{i}"} for i in range(5)],
+            *[{"goldEarned": 10000, "totalDamageDealtToChampions": 50000, "puuid": f"t{i}"} for i in range(4)],
+            *[{"goldEarned": 10000, "totalDamageDealtToChampions": 50000, "puuid": f"e{i}"} for i in range(5)],
         ]}}
 
         recs = generate_recommendations(player, match)
@@ -255,12 +257,12 @@ class TestGenerateRecommendations:
     def test_low_vision_recommendation(self):
         player = {
             "kills": 5, "deaths": 5, "assists": 5,
-            "visionScore": 5, "goldEarned": 10000, "totalDamageDealt": 60000,
+            "visionScore": 5, "goldEarned": 10000, "totalDamageDealtToChampions": 60000,
         }
         match = {"info": {"participants": [
             {**player, "puuid": "p"},
-            *[{"goldEarned": 10000, "totalDamageDealt": 50000, "puuid": f"t{i}"} for i in range(4)],
-            *[{"goldEarned": 10000, "totalDamageDealt": 50000, "puuid": f"e{i}"} for i in range(5)],
+            *[{"goldEarned": 10000, "totalDamageDealtToChampions": 50000, "puuid": f"t{i}"} for i in range(4)],
+            *[{"goldEarned": 10000, "totalDamageDealtToChampions": 50000, "puuid": f"e{i}"} for i in range(5)],
         ]}}
 
         recs = generate_recommendations(player, match)
@@ -270,12 +272,12 @@ class TestGenerateRecommendations:
     def test_solid_performance_fallback(self):
         player = {
             "kills": 4, "deaths": 2, "assists": 4,
-            "visionScore": 30, "goldEarned": 10000, "totalDamageDealt": 50000,
+            "visionScore": 30, "goldEarned": 10000, "totalDamageDealtToChampions": 50000,
         }
         match = {"info": {"participants": [
             {**player, "puuid": "p"},
-            *[{"goldEarned": 10000, "totalDamageDealt": 50000, "puuid": f"t{i}"} for i in range(4)],
-            *[{"goldEarned": 10000, "totalDamageDealt": 50000, "puuid": f"e{i}"} for i in range(5)],
+            *[{"goldEarned": 10000, "totalDamageDealtToChampions": 50000, "puuid": f"t{i}"} for i in range(4)],
+            *[{"goldEarned": 10000, "totalDamageDealtToChampions": 50000, "puuid": f"e{i}"} for i in range(5)],
         ]}}
 
         recs = generate_recommendations(player, match)

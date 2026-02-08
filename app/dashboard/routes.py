@@ -2,6 +2,7 @@ import logging
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from app.dashboard import dashboard_bp
 from app.dashboard.forms import RiotAccountForm, DiscordConfigForm, PreferencesForm
 from app.models import RiotAccount, DiscordConfig, MatchAnalysis, UserSettings
@@ -12,6 +13,12 @@ from app.analysis.discord_notifier import get_bot_invite_url
 from app.extensions import db
 
 logger = logging.getLogger(__name__)
+
+# Order matches by game time (newest first), falling back to analyzed_at for old data
+_match_order = (
+    func.coalesce(MatchAnalysis.game_start_timestamp, 0).desc(),
+    MatchAnalysis.analyzed_at.desc(),
+)
 
 
 def sync_recent_matches(user_id, region, puuid):
@@ -86,7 +93,7 @@ def index():
     base_query = MatchAnalysis.query.filter_by(user_id=current_user.id)
 
     analyses = base_query\
-        .order_by(MatchAnalysis.analyzed_at.desc()).limit(10).all()
+        .order_by(*_match_order).limit(10).all()
 
     total_games = base_query.count()
     wins = MatchAnalysis.query.filter_by(user_id=current_user.id, win=True).count()
@@ -164,11 +171,12 @@ def api_matches():
     query = MatchAnalysis.query.filter_by(user_id=current_user.id)
 
     if queue:
-        query = query.filter(MatchAnalysis.queue_type == queue)
+        queue_list = [q.strip() for q in queue.split(',')]
+        query = query.filter(MatchAnalysis.queue_type.in_(queue_list))
 
     total = query.count()
 
-    matches_list = query.order_by(MatchAnalysis.analyzed_at.desc())\
+    matches_list = query.order_by(*_match_order)\
         .offset(offset).limit(limit).all()
 
     return jsonify({
@@ -219,7 +227,7 @@ def matches():
     page = request.args.get('page', 1, type=int)
     per_page = 20
     pagination = MatchAnalysis.query.filter_by(user_id=current_user.id)\
-        .order_by(MatchAnalysis.analyzed_at.desc())\
+        .order_by(*_match_order)\
         .paginate(page=page, per_page=per_page, error_out=False)
 
     return render_template('dashboard/matches.html',
