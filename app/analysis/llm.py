@@ -7,27 +7,84 @@ from flask import current_app
 logger = logging.getLogger(__name__)
 
 
+def _format_position(pos: str) -> str:
+    """Convert Riot position code to readable label."""
+    return {'TOP': 'Top', 'JUNGLE': 'Jungle', 'MIDDLE': 'Mid', 'BOTTOM': 'Bot', 'UTILITY': 'Support'}.get(pos, pos)
+
+
 def _build_prompt(analysis: dict) -> tuple[str, str]:
     """Build the system and user prompts for LLM analysis."""
     result_str = "Victory" if analysis['win'] else "Defeat"
     system = "You are a concise, expert League of Legends performance coach. Give specific, data-driven advice."
+
+    position = analysis.get('player_position', '')
+    position_line = f"- Position: {_format_position(position)}\n" if position else ""
+
+    # Lane opponent section
+    opponent_section = ""
+    lane_opp = analysis.get('lane_opponent')
+    if lane_opp:
+        opp_kda = f"{lane_opp.get('kills', 0)}/{lane_opp.get('deaths', 0)}/{lane_opp.get('assists', 0)}"
+        opponent_section = (
+            "\nLane Opponent:\n"
+            f"- Champion: {lane_opp.get('champion', '?')}\n"
+            f"- KDA: {opp_kda}\n"
+            f"- Gold: {lane_opp.get('gold_earned', '?')}\n"
+            f"- Damage: {lane_opp.get('total_damage', '?')}\n"
+            f"- CS: {lane_opp.get('cs', '?')}\n"
+            f"- Vision Score: {lane_opp.get('vision_score', '?')}\n"
+        )
+
+    # Team composition sections
+    team_section = ""
+    participants = analysis.get('participants')
+    if participants:
+        player_team = None
+        for p in participants:
+            if p.get('is_player'):
+                player_team = p.get('team_id')
+                break
+        if player_team is not None:
+            allies = [p for p in participants if p.get('team_id') == player_team and not p.get('is_player')]
+            enemies = [p for p in participants if p.get('team_id') != player_team]
+            if allies:
+                ally_str = ", ".join(
+                    f"{p.get('champion', '?')}({_format_position(p.get('position', ''))})" if p.get('position') else p.get('champion', '?')
+                    for p in allies
+                )
+                team_section += f"\nAlly Team: {ally_str}\n"
+            if enemies:
+                enemy_str = ", ".join(
+                    f"{p.get('champion', '?')}({_format_position(p.get('position', ''))})" if p.get('position') else p.get('champion', '?')
+                    for p in enemies
+                )
+                team_section += f"Enemy Team: {enemy_str}\n"
+
+    matchup_instruction = ""
+    if lane_opp:
+        matchup_instruction = "2. Lane matchup performance — how did you do vs your direct opponent?\n"
+
     user = (
         "You are an expert League of Legends coach. Analyze this match performance "
         "and provide specific, actionable coaching advice.\n\n"
         "Match Data:\n"
         f"- Champion: {analysis['champion']}\n"
+        f"{position_line}"
         f"- Result: {result_str}\n"
         f"- KDA: {analysis['kills']}/{analysis['deaths']}/{analysis['assists']} (Ratio: {analysis['kda']})\n"
         f"- Gold: {analysis['gold_earned']} total ({analysis['gold_per_min']}/min)\n"
         f"- Damage: {analysis['total_damage']} total ({analysis['damage_per_min']}/min)\n"
         f"- Vision Score: {analysis['vision_score']}\n"
         f"- CS: {analysis['cs_total']}\n"
-        f"- Game Duration: {analysis['game_duration']} minutes\n\n"
+        f"- Game Duration: {analysis['game_duration']} minutes\n"
+        f"{opponent_section}"
+        f"{team_section}\n"
         "Provide a concise analysis (3-5 paragraphs) covering:\n"
         "1. Overall performance assessment for this champion\n"
-        "2. Key strengths shown in this match\n"
-        "3. Specific areas to improve with actionable advice\n"
-        "4. One concrete thing to practice in the next game\n\n"
+        f"{matchup_instruction}"
+        f"{'3' if lane_opp else '2'}. Key strengths shown in this match\n"
+        f"{'4' if lane_opp else '3'}. Specific areas to improve with actionable advice\n"
+        f"{'5' if lane_opp else '4'}. One concrete thing to practice in the next game\n\n"
         "Keep it direct and specific to this match data. No generic advice."
     )
     return system, user

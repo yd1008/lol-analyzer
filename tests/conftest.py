@@ -72,6 +72,21 @@ def auth_client(client, user):
     return client
 
 
+_ALLY_DATA = [
+    {"puuid": "ally-1", "championName": "Garen", "teamPosition": "TOP", "kills": 5, "deaths": 4, "assists": 7, "goldEarned": 11000, "totalDamageDealt": 70000, "totalDamageDealtToChampions": 18000, "visionScore": 12, "totalMinionsKilled": 160, "neutralMinionsKilled": 10, "win": True, "teamId": 100, "riotIdGameName": "Ally1", "riotIdTagline": "NA1"},
+    {"puuid": "ally-2", "championName": "LeeSin", "teamPosition": "JUNGLE", "kills": 6, "deaths": 3, "assists": 10, "goldEarned": 10500, "totalDamageDealt": 55000, "totalDamageDealtToChampions": 14000, "visionScore": 20, "totalMinionsKilled": 40, "neutralMinionsKilled": 120, "win": True, "teamId": 100, "riotIdGameName": "Ally2", "riotIdTagline": "NA1"},
+    {"puuid": "ally-3", "championName": "Jinx", "teamPosition": "BOTTOM", "kills": 10, "deaths": 2, "assists": 8, "goldEarned": 14000, "totalDamageDealt": 100000, "totalDamageDealtToChampions": 28000, "visionScore": 15, "totalMinionsKilled": 200, "neutralMinionsKilled": 0, "win": True, "teamId": 100, "riotIdGameName": "Ally3", "riotIdTagline": "NA1"},
+    {"puuid": "ally-4", "championName": "Thresh", "teamPosition": "UTILITY", "kills": 1, "deaths": 5, "assists": 18, "goldEarned": 7500, "totalDamageDealt": 20000, "totalDamageDealtToChampions": 6000, "visionScore": 45, "totalMinionsKilled": 25, "neutralMinionsKilled": 0, "win": True, "teamId": 100, "riotIdGameName": "Ally4", "riotIdTagline": "NA1"},
+]
+
+_ENEMY_DATA = [
+    {"puuid": "enemy-0", "championName": "Darius", "teamPosition": "TOP", "kills": 4, "deaths": 6, "assists": 3, "goldEarned": 9500, "totalDamageDealt": 65000, "totalDamageDealtToChampions": 16000, "visionScore": 8, "totalMinionsKilled": 150, "neutralMinionsKilled": 5, "win": False, "teamId": 200, "riotIdGameName": "Enemy0", "riotIdTagline": "EUW"},
+    {"puuid": "enemy-1", "championName": "Elise", "teamPosition": "JUNGLE", "kills": 3, "deaths": 7, "assists": 5, "goldEarned": 8500, "totalDamageDealt": 50000, "totalDamageDealtToChampions": 12000, "visionScore": 14, "totalMinionsKilled": 30, "neutralMinionsKilled": 100, "win": False, "teamId": 200, "riotIdGameName": "Enemy1", "riotIdTagline": "EUW"},
+    {"puuid": "enemy-2", "championName": "Syndra", "teamPosition": "MIDDLE", "kills": 5, "deaths": 5, "assists": 4, "goldEarned": 10000, "totalDamageDealt": 75000, "totalDamageDealtToChampions": 20000, "visionScore": 10, "totalMinionsKilled": 170, "neutralMinionsKilled": 0, "win": False, "teamId": 200, "riotIdGameName": "Enemy2", "riotIdTagline": "EUW"},
+    {"puuid": "enemy-3", "championName": "Ezreal", "teamPosition": "BOTTOM", "kills": 6, "deaths": 4, "assists": 3, "goldEarned": 11000, "totalDamageDealt": 80000, "totalDamageDealtToChampions": 22000, "visionScore": 9, "totalMinionsKilled": 190, "neutralMinionsKilled": 0, "win": False, "teamId": 200, "riotIdGameName": "Enemy3", "riotIdTagline": "EUW"},
+    {"puuid": "enemy-4", "championName": "Lulu", "teamPosition": "UTILITY", "kills": 1, "deaths": 6, "assists": 8, "goldEarned": 7000, "totalDamageDealt": 18000, "totalDamageDealtToChampions": 5000, "visionScore": 35, "totalMinionsKilled": 20, "neutralMinionsKilled": 0, "win": False, "teamId": 200, "riotIdGameName": "Enemy4", "riotIdTagline": "EUW"},
+]
+
 SAMPLE_MATCH_DETAIL = {
     "info": {
         "gameDuration": 1800,
@@ -81,6 +96,7 @@ SAMPLE_MATCH_DETAIL = {
             {
                 "puuid": "test-puuid-123",
                 "championName": "Ahri",
+                "teamPosition": "MIDDLE",
                 "kills": 8,
                 "deaths": 3,
                 "assists": 12,
@@ -95,26 +111,8 @@ SAMPLE_MATCH_DETAIL = {
                 "riotIdGameName": "TestPlayer",
                 "riotIdTagline": "NA1",
             },
-            *[
-                {
-                    "puuid": f"enemy-{i}",
-                    "championName": "Garen",
-                    "kills": 3,
-                    "deaths": 5,
-                    "assists": 4,
-                    "goldEarned": 9000,
-                    "totalDamageDealt": 60000,
-                    "totalDamageDealtToChampions": 15000,
-                    "visionScore": 10,
-                    "totalMinionsKilled": 120,
-                    "neutralMinionsKilled": 0,
-                    "win": False,
-                    "teamId": 200,
-                    "riotIdGameName": f"Enemy{i}",
-                    "riotIdTagline": "EUW",
-                }
-                for i in range(9)
-            ],
+            *_ALLY_DATA,
+            *_ENEMY_DATA,
         ],
     }
 }
@@ -134,5 +132,6 @@ SAMPLE_ANALYSIS = {
     "vision_score": 25,
     "cs_total": 200,
     "game_duration": 30.0,
+    "player_position": "MIDDLE",
     "recommendations": ["Great KDA! Consider taking more calculated risks to snowball games."],
 }

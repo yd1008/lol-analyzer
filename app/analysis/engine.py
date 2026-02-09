@@ -59,6 +59,31 @@ def get_match_summary(watcher: LolWatcher, region: str, puuid: str, match_id: st
         return None
 
 
+def derive_lane_context(participants: list[dict]) -> tuple[str, dict | None]:
+    """Return (player_position, lane_opponent_dict_or_None).
+
+    Finds the player's position and the enemy participant with the same
+    position.  Returns ('', None) when position data is missing.
+    """
+    player = None
+    for p in participants:
+        if p.get('is_player'):
+            player = p
+            break
+
+    if player is None or not player.get('position'):
+        return '', None
+
+    player_position = player['position']
+    player_team = player.get('team_id')
+
+    for p in participants:
+        if p.get('team_id') != player_team and p.get('position') == player_position:
+            return player_position, p
+
+    return player_position, None
+
+
 def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -> dict | None:
     """Analyze a single match and return insights."""
     try:
@@ -105,9 +130,16 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
                 'assists': p['assists'],
                 'win': p['win'],
                 'is_player': p['puuid'] == puuid,
+                'position': p.get('teamPosition', ''),
+                'gold_earned': p.get('goldEarned', 0),
+                'total_damage': p.get('totalDamageDealtToChampions', p.get('totalDamageDealt', 0)),
+                'cs': p.get('totalMinionsKilled', 0) + p.get('neutralMinionsKilled', 0),
+                'vision_score': p.get('visionScore', 0),
             })
 
         game_start_timestamp = match_detail['info'].get('gameStartTimestamp')
+
+        player_position, lane_opponent = derive_lane_context(participants)
 
         analysis = {
             'match_id': match_id,
@@ -128,6 +160,8 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
             'queue_type': queue_type,
             'participants': participants,
             'game_start_timestamp': game_start_timestamp,
+            'player_position': player_position,
+            'lane_opponent': lane_opponent,
         }
 
         return analysis

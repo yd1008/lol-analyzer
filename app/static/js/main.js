@@ -26,17 +26,25 @@ document.addEventListener('DOMContentLoaded', function () {
         return div.innerHTML;
     }
 
+    var POSITION_MAP = {TOP: 'TOP', JUNGLE: 'JGL', MIDDLE: 'MID', BOTTOM: 'BOT', UTILITY: 'SUP'};
+
     function renderMatchBox(m) {
         var winClass = m.win ? 'match-win' : 'match-loss';
         var resultText = m.win ? 'Victory' : 'Defeat';
         var queueHtml = m.queue_type ? '<span class="match-queue">' + escapeHtml(m.queue_type) + '</span>' : '';
+        var positionBadge = m.player_position && POSITION_MAP[m.player_position]
+            ? '<span class="position-badge">' + POSITION_MAP[m.player_position] + '</span>'
+            : '';
 
         var enemiesHtml = '';
         if (m.enemies && m.enemies.length > 0) {
             enemiesHtml = '<div class="match-box-enemies"><span class="match-box-enemies-label">vs</span>';
             m.enemies.forEach(function (e) {
                 var title = escapeHtml((e.summoner_name || '') + '#' + (e.tagline || ''));
-                enemiesHtml += '<span class="enemy-tag" title="' + title + '">' + escapeHtml(e.champion) + '</span>';
+                var laneLabel = e.position && POSITION_MAP[e.position]
+                    ? '<span class="lane-label">' + POSITION_MAP[e.position] + '</span>'
+                    : '';
+                enemiesHtml += '<span class="enemy-tag" title="' + title + '">' + laneLabel + escapeHtml(e.champion) + '</span>';
             });
             enemiesHtml += '</div>';
         }
@@ -49,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="match-box-main">' +
                 '<div class="match-box-header">' +
                     '<span class="match-champion">' + escapeHtml(m.champion) + '</span>' +
+                    positionBadge +
                     '<span class="match-result-tag">' + resultText + '</span>' +
                     queueHtml +
                     '<span class="match-duration">' + m.game_duration + 'm</span>' +

@@ -7,7 +7,7 @@ from app.dashboard import dashboard_bp
 from app.dashboard.forms import RiotAccountForm, DiscordConfigForm, PreferencesForm
 from app.models import RiotAccount, DiscordConfig, MatchAnalysis, UserSettings
 from app.analysis.riot_api import resolve_puuid, get_watcher, get_routing_value, get_recent_matches
-from app.analysis.engine import analyze_match
+from app.analysis.engine import analyze_match, derive_lane_context
 from app.analysis.llm import get_llm_analysis_detailed
 from app.analysis.discord_notifier import get_bot_invite_url
 from app.extensions import db
@@ -116,22 +116,37 @@ def index():
     )
 
 
+_LANE_ORDER = {'TOP': 0, 'JUNGLE': 1, 'MIDDLE': 2, 'BOTTOM': 3, 'UTILITY': 4}
+
+
+def _lane_sort_key(p):
+    return _LANE_ORDER.get(p.get('position', ''), 9)
+
+
 def _serialize_match(m):
     """Serialize a MatchAnalysis row to a dict for JSON responses."""
     participants = m.participants_json or []
     player_team = None
+    player_position = ''
     for p in participants:
         if p.get('is_player'):
             player_team = p.get('team_id')
+            player_position = p.get('position', '')
             break
 
     enemies = []
+    allies = []
     if player_team is not None:
-        enemies = [
-            {'champion': p['champion'], 'summoner_name': p.get('summoner_name', ''), 'tagline': p.get('tagline', '')}
+        enemies = sorted([
+            {'champion': p['champion'], 'summoner_name': p.get('summoner_name', ''), 'tagline': p.get('tagline', ''), 'position': p.get('position', '')}
             for p in participants
             if p.get('team_id') != player_team
-        ]
+        ], key=_lane_sort_key)
+        allies = sorted([
+            {'champion': p['champion'], 'summoner_name': p.get('summoner_name', ''), 'tagline': p.get('tagline', ''), 'position': p.get('position', '')}
+            for p in participants
+            if p.get('team_id') == player_team and not p.get('is_player')
+        ], key=_lane_sort_key)
 
     return {
         'id': m.id,
@@ -149,7 +164,9 @@ def _serialize_match(m):
         'game_duration': m.game_duration,
         'queue_type': m.queue_type or '',
         'has_llm_analysis': bool(m.llm_analysis),
+        'player_position': player_position,
         'enemies': enemies,
+        'allies': allies,
         'analyzed_at': m.analyzed_at.isoformat() if m.analyzed_at else '',
     }
 
@@ -195,6 +212,9 @@ def api_ai_analysis(match_db_id):
     if match.llm_analysis:
         return jsonify({'analysis': match.llm_analysis, 'cached': True})
 
+    participants = match.participants_json or []
+    player_position, lane_opponent = derive_lane_context(participants)
+
     analysis_dict = {
         'champion': match.champion,
         'win': match.win,
@@ -209,6 +229,9 @@ def api_ai_analysis(match_db_id):
         'vision_score': match.vision_score,
         'cs_total': match.cs_total,
         'game_duration': match.game_duration,
+        'player_position': player_position,
+        'lane_opponent': lane_opponent,
+        'participants': participants,
     }
 
     result, error = get_llm_analysis_detailed(analysis_dict)

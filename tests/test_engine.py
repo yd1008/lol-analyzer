@@ -7,6 +7,7 @@ from app.analysis.engine import (
     generate_recommendations,
     format_analysis_report,
     generate_weekly_summary,
+    derive_lane_context,
 )
 from tests.conftest import SAMPLE_MATCH_DETAIL, SAMPLE_ANALYSIS
 
@@ -120,6 +121,9 @@ class TestAnalyzeMatch:
         assert result["gold_per_min"] > 0
         assert result["damage_per_min"] > 0
         assert isinstance(result["recommendations"], list)
+        assert result["player_position"] == "MIDDLE"
+        assert result["lane_opponent"] is not None
+        assert result["lane_opponent"]["champion"] == "Syndra"
 
     def test_player_not_found_in_match(self):
         watcher = MagicMock()
@@ -211,8 +215,13 @@ class TestAnalyzeMatch:
         assert player_entries[0]["tagline"] == "NA1"
         assert player_entries[0]["team_id"] == 100
 
+        assert player_entries[0]["position"] == "MIDDLE"
+
         non_players = [p for p in result["participants"] if not p["is_player"]]
         assert len(non_players) == 9
+        # Check enemies have positions
+        enemies = [p for p in non_players if p["team_id"] == 200]
+        assert all(p["position"] for p in enemies)
 
     def test_analyze_returns_game_start_timestamp(self):
         watcher = MagicMock()
@@ -332,3 +341,48 @@ class TestGenerateWeeklySummary:
         result = generate_weekly_summary(analyses)
 
         assert "Improvement Focus" in result["summary_text"]
+
+
+class TestDeriveLaneContext:
+    def test_finds_lane_opponent(self):
+        participants = [
+            {"is_player": True, "position": "MIDDLE", "team_id": 100, "champion": "Ahri"},
+            {"is_player": False, "position": "MIDDLE", "team_id": 200, "champion": "Syndra"},
+            {"is_player": False, "position": "TOP", "team_id": 200, "champion": "Darius"},
+        ]
+        pos, opponent = derive_lane_context(participants)
+        assert pos == "MIDDLE"
+        assert opponent is not None
+        assert opponent["champion"] == "Syndra"
+
+    def test_no_position_data(self):
+        participants = [
+            {"is_player": True, "position": "", "team_id": 100, "champion": "Ahri"},
+            {"is_player": False, "position": "", "team_id": 200, "champion": "Syndra"},
+        ]
+        pos, opponent = derive_lane_context(participants)
+        assert pos == ""
+        assert opponent is None
+
+    def test_missing_position_key(self):
+        participants = [
+            {"is_player": True, "team_id": 100, "champion": "Ahri"},
+            {"is_player": False, "team_id": 200, "champion": "Syndra"},
+        ]
+        pos, opponent = derive_lane_context(participants)
+        assert pos == ""
+        assert opponent is None
+
+    def test_empty_list(self):
+        pos, opponent = derive_lane_context([])
+        assert pos == ""
+        assert opponent is None
+
+    def test_no_matching_enemy_position(self):
+        participants = [
+            {"is_player": True, "position": "MIDDLE", "team_id": 100, "champion": "Ahri"},
+            {"is_player": False, "position": "TOP", "team_id": 200, "champion": "Darius"},
+        ]
+        pos, opponent = derive_lane_context(participants)
+        assert pos == "MIDDLE"
+        assert opponent is None

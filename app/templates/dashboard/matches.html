@@ -25,6 +25,14 @@
                 <div class="match-box-main">
                     <div class="match-box-header">
                         <span class="match-champion">{{ m.champion }}</span>
+                        {% set pos_map = {'TOP': 'TOP', 'JUNGLE': 'JGL', 'MIDDLE': 'MID', 'BOTTOM': 'BOT', 'UTILITY': 'SUP'} %}
+                        {% if m.participants_json %}
+                            {% for p in m.participants_json %}
+                                {% if p.is_player and p.get('position') and p.position in pos_map %}
+                                    <span class="position-badge">{{ pos_map[p.position] }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                         <span class="match-result-tag">{{ 'Victory' if m.win else 'Defeat' }}</span>
                         {% if m.queue_type %}<span class="match-queue">{{ m.queue_type }}</span>{% endif %}
                         <span class="match-duration">{{ m.game_duration }}m</span>
@@ -48,7 +56,7 @@
                         <span class="match-box-enemies-label">vs</span>
                         {% for p in m.participants_json %}
                             {% if p.team_id != ns.player_team %}
-                            <span class="enemy-tag" title="{{ p.summoner_name }}#{{ p.tagline }}">{{ p.champion }}</span>
+                            <span class="enemy-tag" title="{{ p.summoner_name }}#{{ p.tagline }}">{% if p.get('position') and p.position in pos_map %}<span class="lane-label">{{ pos_map[p.position] }}</span>{% endif %}{{ p.champion }}</span>
                             {% endif %}
                         {% endfor %}
                     </div>
