@@ -894,20 +894,34 @@ def _build_prompt(analysis: dict) -> tuple[str, str]:
 
 def _request_body_variants(api_url: str, base_body: dict) -> list[dict]:
     """Build provider-specific fallback payload variants for resilience."""
-    variants = [dict(base_body)]
+    variants: list[dict] = []
+    seen: set[str] = set()
+
+    def add_variant(payload: dict) -> None:
+        key = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+        if key in seen:
+            return
+        seen.add(key)
+        variants.append(payload)
+
+    add_variant(dict(base_body))
     if not _is_opencode_zen_url(api_url):
         return variants
 
     # OpenCode occasionally returns 500 for some models when usage accounting fails.
     no_temperature = dict(base_body)
     no_temperature.pop('temperature', None)
-    if no_temperature != variants[-1]:
-        variants.append(no_temperature)
+    add_variant(no_temperature)
 
-    default_model_variant = dict(no_temperature)
-    default_model_variant['model'] = _OPENCODE_ZEN_DEFAULT_CHAT_MODEL
-    if default_model_variant != variants[-1]:
-        variants.append(default_model_variant)
+    minimal_current_model = dict(no_temperature)
+    minimal_current_model.pop('max_tokens', None)
+    add_variant(minimal_current_model)
+
+    fallback_models = [_OPENCODE_ZEN_DEFAULT_CHAT_MODEL, *_OPENCODE_ZEN_CHAT_HINT_MODELS]
+    for fallback_model in fallback_models:
+        fallback_variant = dict(minimal_current_model)
+        fallback_variant['model'] = fallback_model
+        add_variant(fallback_variant)
 
     return variants
 

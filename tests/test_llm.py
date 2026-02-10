@@ -383,7 +383,7 @@ class TestGetLlmAnalysisDetailed:
             "choices": [{"message": {"content": "Recovered with model fallback"}}]
         }
         success_resp.text = '{"choices":[{"message":{"content":"Recovered with model fallback"}}]}'
-        mock_post.side_effect = [crash_resp, crash_resp, success_resp]
+        mock_post.side_effect = [crash_resp, crash_resp, crash_resp, success_resp]
 
         with app.app_context():
             original_url = app.config["LLM_API_URL"]
@@ -396,10 +396,15 @@ class TestGetLlmAnalysisDetailed:
 
         assert error is None
         assert result == "Recovered with model fallback"
-        assert mock_post.call_count == 3
+        assert mock_post.call_count == 4
         third_json = mock_post.call_args_list[2][1]["json"]
-        assert third_json["model"] == "glm-4.7-free"
+        fourth_json = mock_post.call_args_list[3][1]["json"]
+        assert third_json["model"] == "big-pickle"
         assert "temperature" not in third_json
+        assert "max_tokens" not in third_json
+        assert fourth_json["model"] == "glm-4.7-free"
+        assert "temperature" not in fourth_json
+        assert "max_tokens" not in fourth_json
 
     @patch("app.analysis.llm.requests.post")
     def test_prompt_includes_length_budget_instruction_when_configured(self, mock_post, app):
