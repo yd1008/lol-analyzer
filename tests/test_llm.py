@@ -210,6 +210,27 @@ class TestGetLlmAnalysisDetailed:
         assert call_kwargs[1]["timeout"] == 12
         assert call_kwargs[1]["json"]["max_tokens"] == 1234
 
+    @patch("app.analysis.llm.requests.post")
+    def test_response_token_target_caps_max_tokens(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Detailed analysis"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"Detailed analysis"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            app.config["LLM_MAX_TOKENS"] = 1200
+            app.config["LLM_RESPONSE_TOKEN_TARGET"] = 300
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_RESPONSE_TOKEN_TARGET"] = 0
+
+        assert error is None
+        assert result == "Detailed analysis"
+        call_kwargs = mock_post.call_args
+        assert call_kwargs[1]["json"]["max_tokens"] == 300
+
     @patch("app.analysis.llm.time.sleep", return_value=None)
     @patch("app.analysis.llm.requests.post")
     def test_retries_once_after_timeout(self, mock_post, _mock_sleep, app):
@@ -232,3 +253,91 @@ class TestGetLlmAnalysisDetailed:
         assert error is None
         assert result == "Recovered analysis"
         assert mock_post.call_count == 2
+
+    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm.requests.get")
+    def test_opencode_zen_deepseek_falls_back_to_glm(self, mock_get, mock_post, app):
+        models_resp = MagicMock()
+        models_resp.status_code = 200
+        models_resp.json.return_value = {
+            "data": [{"id": "glm-4.7-free"}, {"id": "big-pickle"}]
+        }
+        mock_get.return_value = models_resp
+
+        completion_resp = MagicMock()
+        completion_resp.status_code = 200
+        completion_resp.json.return_value = {
+            "choices": [{"message": {"content": "Fallback model response"}}]
+        }
+        completion_resp.text = '{"choices":[{"message":{"content":"Fallback model response"}}]}'
+        mock_post.return_value = completion_resp
+
+        with app.app_context():
+            original_url = app.config["LLM_API_URL"]
+            original_model = app.config["LLM_MODEL"]
+            app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/chat/completions"
+            app.config["LLM_MODEL"] = "deepseek-chat"
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_API_URL"] = original_url
+            app.config["LLM_MODEL"] = original_model
+
+        assert error is None
+        assert result == "Fallback model response"
+        call_kwargs = mock_post.call_args
+        assert call_kwargs[1]["json"]["model"] == "glm-4.7-free"
+
+    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm.requests.get")
+    def test_opencode_zen_rejects_responses_model_on_chat_completions(self, mock_get, mock_post, app):
+        models_resp = MagicMock()
+        models_resp.status_code = 200
+        models_resp.json.return_value = {
+            "data": [{"id": "gpt-5.2"}, {"id": "glm-4.7-free"}]
+        }
+        mock_get.return_value = models_resp
+
+        with app.app_context():
+            original_url = app.config["LLM_API_URL"]
+            original_model = app.config["LLM_MODEL"]
+            app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/chat/completions"
+            app.config["LLM_MODEL"] = "gpt-5.2"
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_API_URL"] = original_url
+            app.config["LLM_MODEL"] = original_model
+
+        assert result is None
+        assert "not compatible with /chat/completions" in error
+        mock_post.assert_not_called()
+
+    def test_opencode_zen_non_chat_endpoint_returns_configuration_error(self, app):
+        with app.app_context():
+            original_url = app.config["LLM_API_URL"]
+            original_model = app.config["LLM_MODEL"]
+            app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/responses"
+            app.config["LLM_MODEL"] = "gpt-5.2"
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_API_URL"] = original_url
+            app.config["LLM_MODEL"] = original_model
+
+        assert result is None
+        assert "set llm_api_url to https://opencode.ai/zen/v1/chat/completions" in error.lower()
+
+    @patch("app.analysis.llm.requests.post")
+    def test_prompt_includes_length_budget_instruction_when_configured(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Detailed analysis"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"Detailed analysis"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            app.config["LLM_RESPONSE_TOKEN_TARGET"] = 280
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_RESPONSE_TOKEN_TARGET"] = 0
+
+        assert error is None
+        assert result == "Detailed analysis"
+        user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
+        assert "under about 280 tokens" in user_prompt

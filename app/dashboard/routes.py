@@ -430,7 +430,17 @@ def api_ai_analysis(match_db_id):
                 'stale': True,
                 'error': error,
             }), 200
-        status = 504 if 'timed out' in error.lower() else 502
+        error_l = error.lower()
+        if 'timed out' in error_l:
+            status = 504
+        elif (
+            'not compatible with /chat/completions' in error_l
+            or 'not available on opencode zen' in error_l
+            or 'llm_' in error_l
+        ):
+            status = 400
+        else:
+            status = 502
         return jsonify({'error': error}), status
 
     match.llm_analysis = result
