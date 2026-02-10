@@ -1,6 +1,8 @@
 """Tests for auth and basic routes."""
 
-from app.models import User
+from unittest.mock import patch
+
+from app.models import User, MatchAnalysis
 
 
 class TestLandingPage:
@@ -129,3 +131,267 @@ class TestAdminAccess:
         })
         resp = client.get("/admin/")
         assert resp.status_code == 200
+
+
+class TestAiAnalysisRoute:
+    def test_ai_analysis_non_object_payload_does_not_crash(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_non_object_payload",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="cached analysis",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp = auth_client.post(
+            f"/dashboard/api/matches/{match.id}/ai-analysis",
+            json=[1],
+        )
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload["cached"] is True
+        assert payload["analysis"] == "cached analysis"
+
+    def test_ai_analysis_force_regenerates(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_test",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="cached analysis",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp_cached = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={})
+        assert resp_cached.status_code == 200
+        cached_json = resp_cached.get_json()
+        assert cached_json["cached"] is True
+        assert cached_json["analysis"] == "cached analysis"
+
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("fresh analysis", None)):
+            resp_force = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis",
+                json={"force": True},
+            )
+
+        assert resp_force.status_code == 200
+        force_json = resp_force.get_json()
+        assert force_json["cached"] is False
+        assert force_json["regenerated"] is True
+        assert force_json["analysis"] == "fresh analysis"
+
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis == "fresh analysis"
+
+    def test_ai_analysis_timeout_returns_504_without_cached_analysis(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_timeout_no_cache",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Request timed out after 30s. URL: https://example.test/v1/chat/completions"),
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={"force": True})
+
+        assert resp.status_code == 504
+        payload = resp.get_json()
+        assert "timed out" in payload["error"].lower()
+
+    def test_ai_analysis_timeout_returns_stale_cached_analysis(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_timeout_with_cache",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="existing cached analysis",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Request timed out after 30s. URL: https://example.test/v1/chat/completions"),
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={"force": True})
+
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload["cached"] is True
+        assert payload["stale"] is True
+        assert payload["analysis"] == "existing cached analysis"
+        assert "timed out" in payload["error"].lower()
+
+    def test_ai_analysis_configuration_error_returns_400_without_cached_analysis(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_bad_model",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Model 'gpt-5.2' on OpenCode Zen is not compatible with /chat/completions."),
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={"force": True})
+
+        assert resp.status_code == 400
+        payload = resp.get_json()
+        assert "not compatible with /chat/completions" in payload["error"]
+
+
+class TestMatchDetailRoute:
+    @patch("app.dashboard.routes.champion_icon_url", return_value="")
+    @patch("app.dashboard.routes.item_icon_url", return_value="")
+    @patch("app.dashboard.routes.rune_icons", return_value={"primary": "", "secondary": ""})
+    def test_match_detail_handles_null_gold_total(
+        self,
+        _mock_runes,
+        _mock_item_icon,
+        _mock_champion_icon,
+        auth_client,
+        db,
+        user,
+    ):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_null_gold",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=None,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {
+                    "is_player": True,
+                    "team_id": 100,
+                    "position": "MIDDLE",
+                    "champion": "Ahri",
+                    "summoner_name": "TestPlayer",
+                    "item_ids": [],
+                },
+                {
+                    "is_player": False,
+                    "team_id": 200,
+                    "position": "MIDDLE",
+                    "champion": "Syndra",
+                    "summoner_name": "EnemyPlayer",
+                    "item_ids": [],
+                },
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp = auth_client.get(f"/dashboard/matches/{match.id}")
+        assert resp.status_code == 200
+        assert b"Gold Total" in resp.data

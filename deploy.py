@@ -8,7 +8,6 @@ INITIAL_REVISION = '6d9f34b1d861'
 LLM_REVISION = '104d8bc0e838'
 LATEST_REVISION = 'a3b7c9d2e4f6'
 
-
 def _determine_stamp_revision(table_names: set[str], match_columns: set[str]) -> str | None:
     """Choose Alembic revision to stamp for pre-existing schemas without version tracking."""
     if not table_names:
@@ -43,7 +42,6 @@ def main() -> None:
         if not revision:
             print("No alembic_version table found on empty/unknown schema. Skipping stamp.")
             return
-
         from flask_migrate import stamp
         print(f"No alembic_version table found. Stamping database at {revision}...")
         stamp(revision=revision)
