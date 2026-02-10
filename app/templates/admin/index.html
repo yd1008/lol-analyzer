@@ -19,11 +19,11 @@
         </div>
         <div class="stat-card">
             <div class="stat-label">LLM Config</div>
-            <div class="stat-value" style="font-size: 1rem;">{{ 'OK' if config.get('LLM_API_KEY') else 'Missing' }}</div>
+            <div class="stat-value stat-value-sm">{{ 'OK' if config.get('LLM_API_KEY') else 'Missing' }}</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Discord Bot</div>
-            <div class="stat-value" style="font-size: 1rem;">{{ 'OK' if config.get('DISCORD_BOT_TOKEN') else 'Missing' }}</div>
+            <div class="stat-value stat-value-sm">{{ 'OK' if config.get('DISCORD_BOT_TOKEN') else 'Missing' }}</div>
         </div>
     </div>
 
@@ -36,14 +36,14 @@
     <div class="admin-card">
         <h3>Test Discord Notification</h3>
         <p>Send a test message to a Discord channel.</p>
-        <form method="POST" action="{{ url_for('admin.test_discord') }}" style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.5rem;">
+        <form method="POST" action="{{ url_for('admin.test_discord') }}" class="admin-inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
-                <label style="font-size: 0.75rem;">Channel ID</label>
+            <div class="form-group compact-field">
+                <label class="field-label-inline">Channel ID</label>
                 <input type="text" name="channel_id" placeholder="1234567890123456789" required>
             </div>
-            <div class="form-group" style="margin: 0; flex: 2; min-width: 200px;">
-                <label style="font-size: 0.75rem;">Message</label>
+            <div class="form-group compact-field wide-field">
+                <label class="field-label-inline">Message</label>
                 <input type="text" name="message" value="Test message from LoL Analyzer admin panel.">
             </div>
             <button type="submit" class="btn btn-primary btn-sm">Send</button>

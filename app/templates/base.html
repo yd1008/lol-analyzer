@@ -10,11 +10,13 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <header>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
         <div class="container">
-            <nav>
-                <a href="{{ url_for('main.landing') }}" class="logo">lol<span>analyzer</span></a>
+            <nav class="site-nav" aria-label="Primary">
+                <a href="{{ url_for('main.landing') }}" class="logo">lane<span>scope</span></a>
                 <ul class="nav-links">
+                    <li><a href="{{ url_for('main.landing') }}#workflow">How It Works</a></li>
                     <li><a href="{{ url_for('main.landing') }}#features">Features</a></li>
                     {% if current_user.is_authenticated %}
                         <li><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
@@ -45,9 +47,11 @@
         {% endif %}
     {% endwith %}
 
-    {% block content %}{% endblock %}
+    <main class="site-main" id="main-content">
+        {% block content %}{% endblock %}
+    </main>
 
-    <footer>
+    <footer class="site-footer">
         <div class="container">
             <p>Not affiliated with or endorsed by Riot Games, Inc.</p>
             <div class="footer-links">

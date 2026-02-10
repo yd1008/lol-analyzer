@@ -4,17 +4,60 @@
 
 {% block content %}
 <section class="hero">
-    <div class="container">
-        <div class="hero-badge">AI-Powered Analysis</div>
-        <h1>Understand every<br><em>League match</em></h1>
-        <p>Automated performance analysis with AI-generated coaching insights delivered straight to your Discord.</p>
-        <div class="cta-buttons">
+    <div class="container hero-shell">
+        <div class="hero-copy">
+            <div class="hero-badge">Minimal Match Intelligence</div>
+            <h1>Know exactly <em>why</em><br>you won or lost</h1>
+            <p>Link your Riot ID once. Then every match is translated into clear coaching points, delivered on web and Discord.</p>
+            <div class="cta-buttons">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Open Dashboard</a>
+                    <a href="{{ url_for('dashboard.settings') }}" class="btn btn-secondary">Update Settings</a>
+                {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Start Free</a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Sign In</a>
+                {% endif %}
+            </div>
+            <div class="signal-row">
+                <span class="signal-pill">Auto match sync</span>
+                <span class="signal-pill">Role-aware insights</span>
+                <span class="signal-pill">Discord delivery</span>
+            </div>
+        </div>
+        <aside class="hero-panel">
+            <h2>How to use this site</h2>
+            <ol class="flow-list">
+                <li><span>1</span>Connect Riot account in Settings</li>
+                <li><span>2</span>Add Discord channel for notifications</li>
+                <li><span>3</span>Play and review AI coaching after each game</li>
+            </ol>
             {% if current_user.is_authenticated %}
-                <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Go to Dashboard</a>
+            <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">Go to Setup</a>
             {% else %}
-                <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get Started Free</a>
-                <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Sign In</a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Create Account</a>
             {% endif %}
+        </aside>
+    </div>
+</section>
+
+<section class="workflow-strip" id="workflow">
+    <div class="container">
+        <div class="workflow-track">
+            <div class="workflow-node">
+                <div class="workflow-kicker">Setup</div>
+                <h3>Link Once</h3>
+                <p>Riot ID + Discord channel in under 2 minutes.</p>
+            </div>
+            <div class="workflow-node">
+                <div class="workflow-kicker">Collection</div>
+                <h3>Auto Sync</h3>
+                <p>New matches are fetched and analyzed in background.</p>
+            </div>
+            <div class="workflow-node">
+                <div class="workflow-kicker">Improve</div>
+                <h3>Act Fast</h3>
+                <p>Get one clear focus for your very next game.</p>
+            </div>
         </div>
     </div>
 </section>
@@ -23,69 +66,54 @@
     <div class="container">
         <div class="features-header">
             <div class="section-label">Features</div>
-            <h2 class="section-title">Everything you need to climb</h2>
+            <h2 class="section-title">Built for fast decisions, not noise</h2>
         </div>
-        <div class="features-grid">
+        <div class="features-grid feature-min-grid">
             <div class="feature-card">
-                <div class="feature-icon">&#9881;</div>
-                <h3>Automated Analysis</h3>
-                <p>Every ranked game analyzed automatically after completion. No manual input needed.</p>
+                <div class="feature-icon">A</div>
+                <h3>Automatic Match Import</h3>
+                <p>Your recent games sync without copy-pasting match IDs.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">&#9733;</div>
-                <h3>AI Coaching</h3>
-                <p>LLM-powered insights that go beyond basic stats to give you actionable, match-specific advice.</p>
+                <div class="feature-icon">B</div>
+                <h3>Context-Aware Coaching</h3>
+                <p>Advice considers lane matchup, composition, and performance deltas.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">&#9889;</div>
-                <h3>Discord Delivery</h3>
-                <p>Match reports sent directly to your Discord channel. Review your game without leaving your server.</p>
+                <div class="feature-icon">C</div>
+                <h3>Discord + Web</h3>
+                <p>Read short insights in Discord, then deep dive from the dashboard.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">&#9650;</div>
-                <h3>Weekly Summaries</h3>
-                <p>Scheduled performance digests that track your progress and highlight improvement areas.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">&#9776;</div>
-                <h3>Full Dashboard</h3>
-                <p>Match history, stats, and AI analysis all accessible from your personal web dashboard.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">&#9673;</div>
-                <h3>Deep Metrics</h3>
-                <p>KDA, gold efficiency, damage contribution, vision score, CS - complete performance picture.</p>
+                <div class="feature-icon">D</div>
+                <h3>Weekly Trends</h3>
+                <p>Track consistency and spot recurring mistakes over time.</p>
             </div>
         </div>
     </div>
 </section>
 
-<section class="how-it-works" id="how-it-works">
+<section class="how-it-works">
     <div class="container">
         <div class="how-it-works-header">
-            <div class="section-label">How it works</div>
-            <h2 class="section-title">Up and running in minutes</h2>
+            <div class="section-label">First Look</div>
+            <h2 class="section-title">What you get at a glance</h2>
         </div>
         <div class="steps">
             <div class="step">
-                <div class="step-number">1</div>
-                <h3>Create Account</h3>
-                <p>Sign up free and link your Riot Games ID.</p>
+                <div class="step-number">I</div>
+                <h3>Current Form</h3>
+                <p>KDA, CS, gold/min, damage/min, vision, and role context.</p>
             </div>
             <div class="step">
-                <div class="step-number">2</div>
-                <h3>Connect Discord</h3>
-                <p>Add the bot to your server and set a channel.</p>
+                <div class="step-number">II</div>
+                <h3>Matchup Clarity</h3>
+                <p>Lane and team composition snapshots with performance deltas.</p>
             </div>
             <div class="step">
-                <div class="step-number">3</div>
-                <h3>Play Games</h3>
-                <p>Keep playing League. We detect new matches automatically.</p>
-            </div>
-            <div class="step">
-                <div class="step-number">4</div>
-                <h3>Get Insights</h3>
-                <p>AI analysis in Discord and on your dashboard.</p>
+                <div class="step-number">III</div>
+                <h3>Next Focus</h3>
+                <p>One practical adjustment to apply in your next queue.</p>
             </div>
         </div>
     </div>
@@ -93,31 +121,31 @@
 
 <section class="metrics-section">
     <div class="container">
-        <h2 class="section-title">Metrics Tracked</h2>
+        <h2 class="section-title">Core Signals Tracked Every Match</h2>
         <div class="metrics">
             <div class="metric">
                 <div class="metric-value">KDA</div>
-                <div class="metric-label">Kill/Death/Assist</div>
+                <div class="metric-label">Fight Efficiency</div>
             </div>
             <div class="metric">
                 <div class="metric-value">Gold</div>
-                <div class="metric-label">Efficiency</div>
+                <div class="metric-label">Economy Pace</div>
             </div>
             <div class="metric">
                 <div class="metric-value">DMG</div>
-                <div class="metric-label">Damage Dealt</div>
+                <div class="metric-label">Damage Pressure</div>
             </div>
             <div class="metric">
                 <div class="metric-value">Vision</div>
-                <div class="metric-label">Ward Score</div>
+                <div class="metric-label">Map Control</div>
             </div>
             <div class="metric">
                 <div class="metric-value">CS</div>
-                <div class="metric-label">Creep Score</div>
+                <div class="metric-label">Farm Tempo</div>
             </div>
             <div class="metric">
                 <div class="metric-value">Win%</div>
-                <div class="metric-label">Win Rate</div>
+                <div class="metric-label">Outcome Trend</div>
             </div>
         </div>
     </div>

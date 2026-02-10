@@ -5,26 +5,36 @@
 {% block content %}
 <div class="container dashboard">
     <div class="match-detail-header">
-        <div>
+        <div class="match-headline">
+            <div class="page-eyebrow">Match Breakdown</div>
             <h1>{{ analysis.champion }}</h1>
-            <span class="match-result {{ 'win' if analysis.win else 'loss' }}">
-                {{ 'Victory' if analysis.win else 'Defeat' }}
-            </span>
-            <span style="color: var(--text-muted); font-size: 0.8125rem; margin-left: 0.75rem;">
-                {{ analysis.analyzed_at.strftime('%b %d, %Y at %H:%M') }}
-            </span>
+            <div class="match-head-meta">
+                <span class="match-result {{ 'win' if analysis.win else 'loss' }}">
+                    {{ 'Victory' if analysis.win else 'Defeat' }}
+                </span>
+                <span class="match-date">{{ analysis.analyzed_at.strftime('%b %d, %Y at %H:%M') }}</span>
+            </div>
         </div>
         <a href="{{ url_for('dashboard.matches') }}" class="btn btn-secondary btn-sm">Back</a>
     </div>
 
-    <div class="detail-tabs" id="detail-tabs">
-        <button class="detail-tab-btn active" data-tab="overview">Overview</button>
-        <button class="detail-tab-btn" data-tab="visuals">Visuals</button>
-        <button class="detail-tab-btn" data-tab="ai">AI Analysis</button>
+    <div class="card page-usage">
+        <h3>Read This Match in 3 Moves</h3>
+        <div class="quick-guide-grid">
+            <div class="quick-guide-step"><span>1</span>Start in Overview for comp and lane context.</div>
+            <div class="quick-guide-step"><span>2</span>Use Visuals to compare against team and lobby baselines.</div>
+            <div class="quick-guide-step"><span>3</span>Run AI Analysis and apply one focus next queue.</div>
+        </div>
+    </div>
+
+    <div class="detail-tabs" id="detail-tabs" role="tablist" aria-label="Match detail sections">
+        <button class="detail-tab-btn active" id="detail-tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="detail-panel-overview">Overview</button>
+        <button class="detail-tab-btn" id="detail-tab-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="detail-panel-visuals" tabindex="-1">Visuals</button>
+        <button class="detail-tab-btn" id="detail-tab-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="detail-panel-ai" tabindex="-1">AI Analysis</button>
     </div>
 
     <div class="detail-tab-stage">
-        <div class="detail-tab-panel active" data-panel="overview">
+        <div class="detail-tab-panel active" id="detail-panel-overview" data-panel="overview" role="tabpanel" aria-labelledby="detail-tab-overview">
             <div class="match-stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">KDA</div>
@@ -219,16 +229,16 @@
             {% endif %}
         </div>
 
-        <div class="detail-tab-panel" data-panel="visuals">
+        <div class="detail-tab-panel" id="detail-panel-visuals" data-panel="visuals" role="tabpanel" aria-labelledby="detail-tab-visuals" hidden>
             <div class="card">
                 <h3>Performance Visuals</h3>
-                <div class="visual-toggle-bar" id="detail-visual-toggle">
-                    <button class="visual-toggle-btn active" data-group="compare">Compare</button>
-                    <button class="visual-toggle-btn" data-group="shares">Shares</button>
-                    <button class="visual-toggle-btn" data-group="lane">Lane</button>
+                <div class="visual-toggle-bar" id="detail-visual-toggle" role="tablist" aria-label="Visualization groups">
+                    <button class="visual-toggle-btn active" id="detail-visual-tab-compare" data-group="compare" role="tab" aria-selected="true" aria-controls="detail-visual-group-compare">Compare</button>
+                    <button class="visual-toggle-btn" id="detail-visual-tab-shares" data-group="shares" role="tab" aria-selected="false" aria-controls="detail-visual-group-shares" tabindex="-1">Shares</button>
+                    <button class="visual-toggle-btn" id="detail-visual-tab-lane" data-group="lane" role="tab" aria-selected="false" aria-controls="detail-visual-group-lane" tabindex="-1">Lane</button>
                 </div>
 
-                <div class="visual-group active" data-group="compare">
+                <div class="visual-group active" id="detail-visual-group-compare" data-group="compare" role="tabpanel" aria-labelledby="detail-visual-tab-compare">
                     <div class="visuals-grid">
                         {% set visual_labels = {'gold_per_min': 'Gold / Min', 'damage_per_min': 'Damage / Min', 'cs_per_min': 'CS / Min', 'vision_per_min': 'Vision / Min', 'kda': 'KDA'} %}
                         {% for metric, label in visual_labels.items() %}
@@ -253,7 +263,7 @@
                     </div>
                 </div>
 
-                <div class="visual-group" data-group="shares">
+                <div class="visual-group" id="detail-visual-group-shares" data-group="shares" role="tabpanel" aria-labelledby="detail-visual-tab-shares" hidden>
                     {% set shares = match_view.visuals.shares %}
                     <div class="share-grid">
                         {% for key, label in [('gold_share_pct','Gold Share'), ('damage_share_pct','Damage Share'), ('cs_share_pct','CS Share'), ('vision_share_pct','Vision Share'), ('kill_participation_pct','Kill Part.')] %}
@@ -266,7 +276,7 @@
                     </div>
                 </div>
 
-                <div class="visual-group" data-group="lane">
+                <div class="visual-group" id="detail-visual-group-lane" data-group="lane" role="tabpanel" aria-labelledby="detail-visual-tab-lane" hidden>
                     {% set lane = match_view.visuals.lane %}
                     {% if lane and lane.get('opponent') %}
                     <div class="lane-chart-head">
@@ -295,7 +305,7 @@
             </div>
         </div>
 
-        <div class="detail-tab-panel" data-panel="ai">
+        <div class="detail-tab-panel" id="detail-panel-ai" data-panel="ai" role="tabpanel" aria-labelledby="detail-tab-ai" hidden>
             <div class="card">
                 <h3>AI Match Analysis</h3>
                 <div id="detail-ai-content" class="detail-ai-scroll">
@@ -346,16 +356,40 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(node);
     }
 
+    function syncTabState(buttons, panels, activeKey, buttonAttr, panelAttr) {
+        buttons.forEach(function (button) {
+            var isActive = button.getAttribute(buttonAttr) === activeKey;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            button.tabIndex = isActive ? 0 : -1;
+        });
+        panels.forEach(function (panel) {
+            var isActive = panel.getAttribute(panelAttr) === activeKey;
+            panel.classList.toggle('active', isActive);
+            panel.hidden = !isActive;
+        });
+    }
+
+    function activateTab(tab) {
+        if (!tabs) return;
+        var buttons = tabs.querySelectorAll('.detail-tab-btn');
+        syncTabState(buttons, panels, tab, 'data-tab', 'data-panel');
+    }
+
+    function activateVisual(group) {
+        if (!visualToggle) return;
+        var toggleButtons = visualToggle.querySelectorAll('.visual-toggle-btn');
+        var visualPanel = visualToggle.closest('.card');
+        if (!visualPanel) return;
+        var groups = visualPanel.querySelectorAll('.visual-group');
+        syncTabState(toggleButtons, groups, group, 'data-group', 'data-group');
+    }
+
     if (tabs) {
         tabs.addEventListener('click', function (e) {
             var btn = e.target.closest('.detail-tab-btn');
             if (!btn) return;
-            var tab = btn.getAttribute('data-tab');
-            tabs.querySelectorAll('.detail-tab-btn').forEach(function (b) { b.classList.remove('active'); });
-            btn.classList.add('active');
-            panels.forEach(function (p) {
-                p.classList.toggle('active', p.getAttribute('data-panel') === tab);
-            });
+            activateTab(btn.getAttribute('data-tab'));
         });
     }
 
@@ -363,15 +397,12 @@ document.addEventListener('DOMContentLoaded', function () {
         visualToggle.addEventListener('click', function (e) {
             var btn = e.target.closest('.visual-toggle-btn');
             if (!btn) return;
-            var group = btn.getAttribute('data-group');
-            visualToggle.querySelectorAll('.visual-toggle-btn').forEach(function (b) { b.classList.remove('active'); });
-            btn.classList.add('active');
-            var visualPanel = visualToggle.closest('.card');
-            visualPanel.querySelectorAll('.visual-group').forEach(function (g) {
-                g.classList.toggle('active', g.getAttribute('data-group') === group);
-            });
+            activateVisual(btn.getAttribute('data-group'));
         });
     }
+
+    activateTab('overview');
+    activateVisual('compare');
 
     var aiBtn = document.getElementById('detail-ai-btn');
     var aiContent = document.getElementById('detail-ai-content');
