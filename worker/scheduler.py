@@ -43,7 +43,7 @@ def create_scheduler(app):
         id='refresh_game_assets',
         name='Refresh game assets cache',
         replace_existing=True,
-        next_run_time=datetime.utcnow(),
+        next_run_time=datetime.now(scheduler.timezone),
     )
 
     return scheduler

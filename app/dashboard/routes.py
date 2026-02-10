@@ -389,8 +389,8 @@ def api_ai_analysis(match_db_id):
     """Run or return cached AI analysis for a match."""
     match = MatchAnalysis.query.filter_by(id=match_db_id, user_id=current_user.id).first_or_404()
     riot_account = RiotAccount.query.filter_by(user_id=current_user.id).first()
-    payload = request.get_json(silent=True) or {}
-    force = bool(payload.get('force'))
+    payload = request.get_json(silent=True)
+    force = bool(payload.get('force')) if isinstance(payload, dict) else False
 
     if match.llm_analysis and not force:
         return jsonify({'analysis': match.llm_analysis, 'cached': True})

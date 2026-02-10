@@ -56,7 +56,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Gold Total</div>
-                    <div class="stat-value">{{ '{:,}'.format(analysis.gold_earned) }}</div>
+                    <div class="stat-value">{{ '{:,}'.format(analysis.gold_earned or 0) }}</div>
                 </div>
             </div>
 
@@ -191,7 +191,7 @@
                                 <td>{{ row.cs }}</td>
                                 <td>
                                     <div class="summary-items">
-                                        {% for it in row.items %}
+                                        {% for it in row['items'] %}
                                             {% if it.icon %}
                                             <img class="item-icon" src="{{ it.icon }}" alt="Item {{ it.id }}">
                                             {% else %}

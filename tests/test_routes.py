@@ -134,6 +134,43 @@ class TestAdminAccess:
 
 
 class TestAiAnalysisRoute:
+    def test_ai_analysis_non_object_payload_does_not_crash(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_non_object_payload",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="cached analysis",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp = auth_client.post(
+            f"/dashboard/api/matches/{match.id}/ai-analysis",
+            json=[1],
+        )
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload["cached"] is True
+        assert payload["analysis"] == "cached analysis"
+
     def test_ai_analysis_force_regenerates(self, auth_client, db, user):
         match = MatchAnalysis(
             user_id=user.id,
@@ -182,3 +219,62 @@ class TestAiAnalysisRoute:
 
         reloaded = db.session.get(MatchAnalysis, match.id)
         assert reloaded.llm_analysis == "fresh analysis"
+
+
+class TestMatchDetailRoute:
+    @patch("app.dashboard.routes.champion_icon_url", return_value="")
+    @patch("app.dashboard.routes.item_icon_url", return_value="")
+    @patch("app.dashboard.routes.rune_icons", return_value={"primary": "", "secondary": ""})
+    def test_match_detail_handles_null_gold_total(
+        self,
+        _mock_runes,
+        _mock_item_icon,
+        _mock_champion_icon,
+        auth_client,
+        db,
+        user,
+    ):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_null_gold",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=None,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {
+                    "is_player": True,
+                    "team_id": 100,
+                    "position": "MIDDLE",
+                    "champion": "Ahri",
+                    "summoner_name": "TestPlayer",
+                    "item_ids": [],
+                },
+                {
+                    "is_player": False,
+                    "team_id": 200,
+                    "position": "MIDDLE",
+                    "champion": "Syndra",
+                    "summoner_name": "EnemyPlayer",
+                    "item_ids": [],
+                },
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp = auth_client.get(f"/dashboard/matches/{match.id}")
+        assert resp.status_code == 200
+        assert b"Gold Total" in resp.data
