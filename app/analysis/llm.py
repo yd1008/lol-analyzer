@@ -37,6 +37,9 @@ _RANKED_QUEUE_MAP = {
 _DDRAGON_VERSIONS_URL = 'https://ddragon.leagueoflegends.com/api/versions.json'
 _DDRAGON_CHAMPIONS_URL = 'https://ddragon.leagueoflegends.com/cdn/{patch}/data/en_US/champion.json'
 _DDRAGON_ITEMS_URL = 'https://ddragon.leagueoflegends.com/cdn/{patch}/data/en_US/item.json'
+_OPENCODE_ZEN_MODELS_URL = 'https://opencode.ai/zen/v1/models'
+_OPENCODE_ZEN_DEFAULT_CHAT_MODEL = 'glm-4.7-free'
+_OPENCODE_ZEN_CHAT_HINT_MODELS = ('glm-4.7-free', 'kimi-k2.5-free', 'big-pickle')
 _LOCAL_KNOWLEDGE_DEFAULT = Path(__file__).with_name('knowledge').joinpath('game_knowledge.json')
 
 _CACHE_LOCK = threading.Lock()
@@ -44,6 +47,7 @@ _PATCH_CACHE = {'expires_at': 0.0, 'value': ''}
 _DDRAGON_CACHE = {}
 _RANK_CACHE = {}
 _LOCAL_KNOWLEDGE_CACHE = {'path': None, 'mtime': None, 'data': {}}
+_OPENCODE_MODELS_CACHE = {'expires_at': 0.0, 'models': set()}
 
 
 def _external_knowledge_enabled() -> bool:
@@ -55,6 +59,76 @@ def _external_knowledge_enabled() -> bool:
 def _format_position(pos: str) -> str:
     """Convert Riot position code to readable label."""
     return {'TOP': 'Top', 'JUNGLE': 'Jungle', 'MIDDLE': 'Mid', 'BOTTOM': 'Bot', 'UTILITY': 'Support'}.get(pos, pos)
+
+
+def _is_opencode_zen_url(api_url: str) -> bool:
+    return 'opencode.ai/zen/' in (api_url or '').strip().lower()
+
+
+def _fetch_opencode_zen_models() -> set[str]:
+    """Fetch available OpenCode Zen model ids with short-lived cache."""
+    now = time.time()
+    with _CACHE_LOCK:
+        if _OPENCODE_MODELS_CACHE['expires_at'] > now:
+            return set(_OPENCODE_MODELS_CACHE['models'])
+
+    models: set[str] = set()
+    try:
+        resp = requests.get(_OPENCODE_ZEN_MODELS_URL, timeout=4)
+        if resp.status_code == 200:
+            data = resp.json().get('data', [])
+            if isinstance(data, list):
+                for row in data:
+                    model_id = str((row or {}).get('id', '')).strip()
+                    if model_id:
+                        models.add(model_id)
+    except requests.RequestException:
+        models = set()
+
+    with _CACHE_LOCK:
+        _OPENCODE_MODELS_CACHE['models'] = set(models)
+        _OPENCODE_MODELS_CACHE['expires_at'] = now + 900
+    return models
+
+
+def _resolve_provider_model(api_url: str, model: str) -> tuple[str | None, str | None]:
+    """Validate/adapt model for provider endpoint quirks."""
+    model = (model or '').strip()
+    if not model:
+        return None, 'LLM_MODEL is not set.'
+
+    normalized_url = (api_url or '').strip().lower()
+    if not _is_opencode_zen_url(normalized_url):
+        return model, None
+
+    if not normalized_url.endswith('/chat/completions'):
+        return None, (
+            "OpenCode Zen endpoint is not chat-completions compatible for this app. "
+            "Set LLM_API_URL to https://opencode.ai/zen/v1/chat/completions."
+        )
+
+    if model == 'deepseek-chat':
+        logger.warning(
+            "LLM_MODEL=deepseek-chat is unavailable on OpenCode Zen. Falling back to %s.",
+            _OPENCODE_ZEN_DEFAULT_CHAT_MODEL,
+        )
+        model = _OPENCODE_ZEN_DEFAULT_CHAT_MODEL
+
+    if model.startswith(('gpt-', 'claude-', 'gemini-')):
+        hint = ', '.join(_OPENCODE_ZEN_CHAT_HINT_MODELS)
+        return None, (
+            f"Model '{model}' on OpenCode Zen is not compatible with /chat/completions. "
+            f"Use a chat-completions model such as: {hint}."
+        )
+
+    available_models = _fetch_opencode_zen_models()
+    if available_models and model not in available_models:
+        hint = ', '.join(_OPENCODE_ZEN_CHAT_HINT_MODELS)
+        return None, (
+            f"LLM model '{model}' is not available on OpenCode Zen. "
+            f"Choose a model listed by {_OPENCODE_ZEN_MODELS_URL} (for example: {hint})."
+        )
+    return model, None
 
 
 def _normalize_text(value: str) -> str:
@@ -801,6 +875,9 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
         return None, 'LLM_API_KEY is not set.'
     if not api_url:
         return None, 'LLM_API_URL is not set.'
+    model, model_error = _resolve_provider_model(api_url, model)
+    if model_error:
+        return None, model_error
 
     system_prompt, user_prompt = _build_prompt(analysis)
     body = {
@@ -856,7 +933,7 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
         except requests.Timeout:
             last_error = (
                 f"Request timed out after {timeout_seconds}s (attempt {attempt + 1}/{attempts}). "
-                f"URL: {api_url}"
+                f"URL: {api_url} | Model: {model}"
             )
             if attempt < retries:
                 if retry_backoff > 0:
