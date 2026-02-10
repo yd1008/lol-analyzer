@@ -53,6 +53,7 @@ def check_all_users_matches(app):
                     analysis = analyze_match(watcher, routing, riot_account.puuid, match_id)
                     if not analysis:
                         continue
+                    analysis['platform_region'] = riot_account.region
 
                     # Run LLM analysis
                     llm_text = None

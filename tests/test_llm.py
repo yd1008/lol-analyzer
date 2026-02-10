@@ -94,6 +94,7 @@ class TestGetLlmAnalysis:
         assert "Ahri" in user_message
         assert "8/3/12" in user_message
         assert "Victory" in user_message
+        assert "Knowledge Context" in user_message
 
     @patch("app.analysis.llm.requests.post")
     def test_loss_result_in_prompt(self, mock_post, app):
@@ -111,6 +112,7 @@ class TestGetLlmAnalysis:
         call_kwargs = mock_post.call_args
         user_message = call_kwargs[1]["json"]["messages"][1]["content"]
         assert "Defeat" in user_message
+        assert "Current Data Dragon patch" in user_message
 
 
 class TestGetLlmAnalysisDetailed:

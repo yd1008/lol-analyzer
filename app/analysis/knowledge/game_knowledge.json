@@ -1,0 +1,51 @@
+{
+  "default_patch_notes": [
+    "If explicit patch notes are not loaded for the detected version, do not invent specific buffs or nerfs.",
+    "Prioritize concrete in-match evidence (item timings, damage share, lane stats, comp shape) over patch speculation."
+  ],
+  "champion_phase_overrides": {
+    "kayle": {
+      "early": "weak",
+      "mid": "average",
+      "late": "strong",
+      "notes": "Scaling pick: protect lanes and resources until key level/item breakpoints."
+    },
+    "draven": {
+      "early": "strong",
+      "mid": "average",
+      "late": "average",
+      "notes": "Snowball-focused lane bully that needs tempo conversion."
+    },
+    "nasus": {
+      "early": "weak",
+      "mid": "average",
+      "late": "strong",
+      "notes": "Farm-to-scale profile with strong side lane pressure later."
+    },
+    "lee sin": {
+      "early": "strong",
+      "mid": "strong",
+      "late": "average",
+      "notes": "Early agency jungler that benefits from proactive tempo and setup."
+    }
+  },
+  "synergy_pairs": [
+    {
+      "champions": ["Yasuo", "Malphite"],
+      "reason": "Reliable knock-up chain enables clean all-in execution."
+    },
+    {
+      "champions": ["Miss Fortune", "Amumu"],
+      "reason": "Layered AoE engage can decide grouped objective fights."
+    },
+    {
+      "champions": ["Kai'Sa", "Nautilus"],
+      "reason": "Point-and-click engage gives dependable dive access."
+    }
+  ],
+  "patch_notes": {
+    "15": [
+      "Use objective setup and reset timing as a major coaching lens for post-lane decisions."
+    ]
+  }
+}

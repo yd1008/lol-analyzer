@@ -100,6 +100,7 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
             return None
 
         player_data = match_detail['info']['participants'][player_index]
+        player_item_ids = [player_data.get(f'item{i}', 0) for i in range(7) if player_data.get(f'item{i}', 0)]
 
         kda = (player_data['kills'] + player_data['assists']) / max(1, player_data['deaths'])
         gold_earned = player_data['goldEarned']
@@ -121,7 +122,10 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
         participants = []
         for p in match_detail['info']['participants']:
             participants.append({
+                'puuid': p.get('puuid', ''),
+                'summoner_id': p.get('summonerId', ''),
                 'champion': p['championName'],
+                'champion_id': p.get('championId'),
                 'summoner_name': p.get('riotIdGameName') or p.get('summonerName', ''),
                 'tagline': p.get('riotIdTagline', ''),
                 'team_id': p.get('teamId', 0),
@@ -135,6 +139,8 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
                 'total_damage': p.get('totalDamageDealtToChampions', p.get('totalDamageDealt', 0)),
                 'cs': p.get('totalMinionsKilled', 0) + p.get('neutralMinionsKilled', 0),
                 'vision_score': p.get('visionScore', 0),
+                'level': p.get('champLevel', 0),
+                'item_ids': [p.get(f'item{i}', 0) for i in range(7) if p.get(f'item{i}', 0)],
             })
 
         game_start_timestamp = match_detail['info'].get('gameStartTimestamp')
@@ -158,6 +164,11 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
             'game_duration': round(game_duration_minutes, 1),
             'recommendations': generate_recommendations(player_data, match_detail),
             'queue_type': queue_type,
+            'queue_id': queue_id,
+            'routing_region': region,
+            'player_puuid': puuid,
+            'player_summoner_id': player_data.get('summonerId', ''),
+            'item_ids': player_item_ids,
             'participants': participants,
             'game_start_timestamp': game_start_timestamp,
             'player_position': player_position,

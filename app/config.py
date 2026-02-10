@@ -11,6 +11,12 @@ def _fix_db_url(url):
     return url
 
 
+def _to_bool(value: str, default: bool = False) -> bool:
+    if value is None:
+        return default
+    return str(value).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -33,6 +39,8 @@ class Config:
     LLM_API_KEY = os.environ.get('LLM_API_KEY', '')
     LLM_API_URL = os.environ.get('LLM_API_URL', '')
     LLM_MODEL = os.environ.get('LLM_MODEL', 'deepseek-chat')
+    LLM_KNOWLEDGE_EXTERNAL = _to_bool(os.environ.get('LLM_KNOWLEDGE_EXTERNAL'), True)
+    LLM_KNOWLEDGE_FILE = os.environ.get('LLM_KNOWLEDGE_FILE', '')
 
 
 class DevelopmentConfig(Config):
