@@ -41,6 +41,7 @@ class Config:
     LLM_MODEL = os.environ.get('LLM_MODEL', 'deepseek-chat')
     LLM_KNOWLEDGE_EXTERNAL = _to_bool(os.environ.get('LLM_KNOWLEDGE_EXTERNAL'), True)
     LLM_KNOWLEDGE_FILE = os.environ.get('LLM_KNOWLEDGE_FILE', '')
+    LLM_PATCH_NOTES_LOCALE = os.environ.get('LLM_PATCH_NOTES_LOCALE', 'en-us')
 
 
 class DevelopmentConfig(Config):

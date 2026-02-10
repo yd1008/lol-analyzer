@@ -114,6 +114,41 @@ class TestGetLlmAnalysis:
         assert "Defeat" in user_message
         assert "Current Data Dragon patch" in user_message
 
+    @patch("app.analysis.llm._fetch_ddragon_data")
+    @patch("app.analysis.llm._fetch_current_patch")
+    @patch("app.analysis.llm._fetch_riot_patch_summary")
+    @patch("app.analysis.llm.requests.post")
+    def test_prompt_includes_live_riot_patch_notes(
+        self,
+        mock_post,
+        mock_fetch_patch_summary,
+        mock_fetch_current_patch,
+        mock_fetch_ddragon_data,
+        app,
+    ):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"choices": [{"message": {"content": "Analysis"}}]}
+        mock_post.return_value = mock_resp
+        mock_fetch_current_patch.return_value = "26.3.1"
+        mock_fetch_ddragon_data.return_value = ({}, {})
+        mock_fetch_patch_summary.return_value = {
+            "title": "Patch 26.3 Notes",
+            "url": "https://www.leagueoflegends.com/en-us/news/game-updates/patch-26-3-notes/",
+            "published_at": "2026-02-03",
+            "highlights": ["Champions touched (3): Ahri, Diana, Yone"],
+        }
+
+        with app.app_context():
+            app.config["LLM_KNOWLEDGE_EXTERNAL"] = True
+            get_llm_analysis(SAMPLE_ANALYSIS)
+            app.config["LLM_KNOWLEDGE_EXTERNAL"] = False
+
+        call_kwargs = mock_post.call_args
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Latest official Riot patch notes: Patch 26.3 Notes" in user_message
+        assert "Champions touched (3): Ahri, Diana, Yone" in user_message
+
 
 class TestGetLlmAnalysisDetailed:
     @patch("app.analysis.llm.requests.post")

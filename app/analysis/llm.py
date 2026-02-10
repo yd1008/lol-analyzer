@@ -1,5 +1,6 @@
 """LLM-powered match analysis with a knowledge-enriched prompt pipeline."""
 
+import html as html_lib
 import json
 import logging
 import re
@@ -37,6 +38,8 @@ _RANKED_QUEUE_MAP = {
 _DDRAGON_VERSIONS_URL = 'https://ddragon.leagueoflegends.com/api/versions.json'
 _DDRAGON_CHAMPIONS_URL = 'https://ddragon.leagueoflegends.com/cdn/{patch}/data/en_US/champion.json'
 _DDRAGON_ITEMS_URL = 'https://ddragon.leagueoflegends.com/cdn/{patch}/data/en_US/item.json'
+_RIOT_PATCH_NOTES_URL_TEMPLATE = 'https://www.leagueoflegends.com/{locale}/news/tags/patch-notes/'
+_RIOT_PATCH_NOTES_BASE_URL = 'https://www.leagueoflegends.com'
 _LOCAL_KNOWLEDGE_DEFAULT = Path(__file__).with_name('knowledge').joinpath('game_knowledge.json')
 
 _CACHE_LOCK = threading.Lock()
@@ -44,6 +47,7 @@ _PATCH_CACHE = {'expires_at': 0.0, 'value': ''}
 _DDRAGON_CACHE = {}
 _RANK_CACHE = {}
 _LOCAL_KNOWLEDGE_CACHE = {'path': None, 'mtime': None, 'data': {}}
+_RIOT_PATCH_NOTES_CACHE = {}
 
 
 def _external_knowledge_enabled() -> bool:
@@ -62,7 +66,9 @@ def _normalize_text(value: str) -> str:
 
 
 def _strip_html(text: str) -> str:
-    return re.sub(r'<[^>]+>', '', text or '').replace('\n', ' ').strip()
+    cleaned = re.sub(r'<[^>]+>', '', text or '')
+    cleaned = html_lib.unescape(cleaned)
+    return re.sub(r'\s+', ' ', cleaned).strip()
 
 
 def _clamp(value: int, minimum: int, maximum: int) -> int:
@@ -244,6 +250,161 @@ def _fetch_ddragon_data(patch: str) -> tuple[dict, dict]:
             'items': item_lookup,
         }
     return champion_lookup, item_lookup
+
+
+def _extract_next_data(html: str) -> dict:
+    match = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', html, re.S)
+    if not match:
+        return {}
+    try:
+        data = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _to_absolute_riot_url(url: str, locale: str) -> str:
+    if not url:
+        return ''
+    if url.startswith('http://') or url.startswith('https://'):
+        return url
+    if not url.startswith('/'):
+        url = f'/{locale}/news/game-updates/{url.strip("/")}'
+    return f'{_RIOT_PATCH_NOTES_BASE_URL}{url}'
+
+
+def _parse_headings_by_section(body_html: str) -> tuple[dict[str, list[str]], str]:
+    headings = re.findall(r'<h([23])[^>]*>(.*?)</h\1>', body_html or '', re.S | re.I)
+    sections: dict[str, list[str]] = {}
+    current_h2 = ''
+    for level, raw_text in headings:
+        text = _strip_html(raw_text)
+        if not text:
+            continue
+        if level == '2':
+            current_h2 = text
+            sections.setdefault(current_h2, [])
+        elif current_h2:
+            sections.setdefault(current_h2, []).append(text)
+
+    intro = ''
+    intro_match = re.search(r'<blockquote[^>]*class=[\'"]blockquote context[\'"][^>]*>(.*?)</blockquote>', body_html or '', re.S | re.I)
+    if intro_match:
+        intro = _strip_html(intro_match.group(1))
+    return sections, intro
+
+
+def _preview_names(names: list[str], limit: int = 10) -> str:
+    if not names:
+        return 'none'
+    if len(names) <= limit:
+        return ', '.join(names)
+    shown = ', '.join(names[:limit])
+    return f"{shown} (+{len(names) - limit} more)"
+
+
+def _extract_latest_patch_card(locale: str) -> dict:
+    if not _external_knowledge_enabled():
+        return {}
+
+    url = _RIOT_PATCH_NOTES_URL_TEMPLATE.format(locale=locale)
+    now = time.time()
+    cache_key = ('listing', locale)
+    with _CACHE_LOCK:
+        cached = _RIOT_PATCH_NOTES_CACHE.get(cache_key)
+        if cached and cached['expires_at'] > now:
+            return cached['value']
+
+    value: dict = {}
+    try:
+        resp = requests.get(url, timeout=8)
+        if resp.status_code == 200:
+            data = _extract_next_data(resp.text)
+            blades = data.get('props', {}).get('pageProps', {}).get('page', {}).get('blades', [])
+            grid = next((b for b in blades if isinstance(b, dict) and b.get('type') == 'articleCardGrid'), {})
+            items = grid.get('items', []) if isinstance(grid, dict) else []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                title = item.get('title', '')
+                if 'patch' not in title.lower() or 'notes' not in title.lower():
+                    continue
+                rel_url = item.get('action', {}).get('payload', {}).get('url', '')
+                published_at = item.get('publishedAt') or item.get('analytics', {}).get('publishDate', '')
+                description = _strip_html((item.get('description') or {}).get('body', ''))
+                value = {
+                    'title': title,
+                    'url': _to_absolute_riot_url(rel_url, locale),
+                    'published_at': published_at,
+                    'description': description,
+                }
+                break
+    except requests.RequestException:
+        value = {}
+
+    with _CACHE_LOCK:
+        _RIOT_PATCH_NOTES_CACHE[cache_key] = {'expires_at': now + 6 * 3600, 'value': value}
+    return value
+
+
+def _fetch_riot_patch_summary(locale: str) -> dict:
+    if not _external_knowledge_enabled():
+        return {}
+
+    card = _extract_latest_patch_card(locale)
+    article_url = card.get('url', '')
+    if not article_url:
+        return {}
+
+    now = time.time()
+    cache_key = ('article', article_url)
+    with _CACHE_LOCK:
+        cached = _RIOT_PATCH_NOTES_CACHE.get(cache_key)
+        if cached and cached['expires_at'] > now:
+            return cached['value']
+
+    value: dict = {}
+    try:
+        resp = requests.get(article_url, timeout=10)
+        if resp.status_code == 200:
+            data = _extract_next_data(resp.text)
+            page = data.get('props', {}).get('pageProps', {}).get('page', {})
+            blades = page.get('blades', []) if isinstance(page, dict) else []
+            rich_blade = next((b for b in blades if isinstance(b, dict) and b.get('type') == 'patchNotesRichText'), {})
+            body = (rich_blade.get('richText') or {}).get('body', '') if isinstance(rich_blade, dict) else ''
+            sections, intro = _parse_headings_by_section(body)
+
+            champions = sections.get('Champions', [])
+            items = sections.get('Items', [])
+            runes = sections.get('Runes', [])
+            excluded = {'Mid-Patch Updates', 'Patch Highlights', 'Champions', 'Items', 'Runes', 'Upcoming Skins & Chromas'}
+            system_sections = [name for name in sections.keys() if name not in excluded]
+
+            highlights = []
+            if intro:
+                highlights.append(f"Patch focus: {intro[:220]}{'...' if len(intro) > 220 else ''}")
+            if champions:
+                highlights.append(f"Champions touched ({len(champions)}): {_preview_names(champions)}")
+            if items:
+                highlights.append(f"Items touched ({len(items)}): {_preview_names(items)}")
+            if runes:
+                highlights.append(f"Runes touched ({len(runes)}): {_preview_names(runes)}")
+            if system_sections:
+                highlights.append(f"Systems touched: {_preview_names(system_sections, limit=8)}")
+
+            title = page.get('title') or card.get('title', '')
+            value = {
+                'title': title,
+                'url': page.get('url', article_url),
+                'published_at': page.get('displayedPublishDate') or card.get('published_at', ''),
+                'highlights': highlights,
+            }
+    except requests.RequestException:
+        value = {}
+
+    with _CACHE_LOCK:
+        _RIOT_PATCH_NOTES_CACHE[cache_key] = {'expires_at': now + 6 * 3600, 'value': value}
+    return value
 
 
 def _resolve_champion(champion_name: str, champion_lookup: dict) -> dict | None:
@@ -571,12 +732,15 @@ def _build_champion_context(analysis: dict, champion_lookup: dict, local_knowled
 
 def _build_patch_context(local_knowledge: dict) -> dict:
     patch = _fetch_current_patch()
+    locale = (current_app.config.get('LLM_PATCH_NOTES_LOCALE') or 'en-us').strip().lower()
+    riot_patch = _fetch_riot_patch_summary(locale) if _external_knowledge_enabled() else {}
     patch_notes_map = local_knowledge.get('patch_notes', {})
     if not isinstance(patch_notes_map, dict):
         patch_notes_map = {}
-    notes = []
+    notes = list(riot_patch.get('highlights', []))
     if patch:
-        notes.extend(patch_notes_map.get(patch, []))
+        if not notes:
+            notes.extend(patch_notes_map.get(patch, []))
         patch_mm = '.'.join(patch.split('.')[:2])
         if not notes and patch_mm:
             notes.extend(patch_notes_map.get(patch_mm, []))
@@ -586,7 +750,13 @@ def _build_patch_context(local_knowledge: dict) -> dict:
     default_notes = local_knowledge.get('default_patch_notes', [])
     if not notes and isinstance(default_notes, list):
         notes = default_notes
-    return {'current_patch': patch, 'notes': notes}
+    return {
+        'current_patch': patch,
+        'notes': notes,
+        'riot_patch_title': riot_patch.get('title', ''),
+        'riot_patch_url': riot_patch.get('url', ''),
+        'riot_patch_published_at': riot_patch.get('published_at', ''),
+    }
 
 
 def _build_match_timestamp_context(analysis: dict) -> str:
@@ -637,6 +807,13 @@ def _format_knowledge_context(context: dict) -> str:
     patch = context.get('patch', {})
     patch_version = patch.get('current_patch', '') or 'unknown'
     lines.append(f"- Current Data Dragon patch: {patch_version}")
+    riot_patch_title = patch.get('riot_patch_title', '')
+    riot_patch_url = patch.get('riot_patch_url', '')
+    riot_patch_published = patch.get('riot_patch_published_at', '')
+    if riot_patch_title:
+        when = f" ({riot_patch_published})" if riot_patch_published else ''
+        link = f" [{riot_patch_url}]" if riot_patch_url else ''
+        lines.append(f"- Latest official Riot patch notes: {riot_patch_title}{when}{link}")
     patch_notes = patch.get('notes', [])
     if patch_notes:
         lines.append(f"- Patch-specific notes: {' | '.join(patch_notes)}")
