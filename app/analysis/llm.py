@@ -65,6 +65,14 @@ def _is_opencode_zen_url(api_url: str) -> bool:
     return 'opencode.ai/zen/' in (api_url or '').strip().lower()
 
 
+def _is_prompt_tokens_500_error(api_url: str, status_code: int, response_text: str) -> bool:
+    if status_code < 500:
+        return False
+    if not _is_opencode_zen_url(api_url):
+        return False
+    return 'prompt_tokens' in (response_text or '').lower()
+
+
 def _fetch_opencode_zen_models() -> set[str]:
     """Fetch available OpenCode Zen model ids with short-lived cache."""
     now = time.time()
@@ -884,6 +892,40 @@ def _build_prompt(analysis: dict) -> tuple[str, str]:
     return system, user
 
 
+def _request_body_variants(api_url: str, base_body: dict) -> list[dict]:
+    """Build provider-specific fallback payload variants for resilience."""
+    variants: list[dict] = []
+    seen: set[str] = set()
+
+    def add_variant(payload: dict) -> None:
+        key = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+        if key in seen:
+            return
+        seen.add(key)
+        variants.append(payload)
+
+    add_variant(dict(base_body))
+    if not _is_opencode_zen_url(api_url):
+        return variants
+
+    # OpenCode occasionally returns 500 for some models when usage accounting fails.
+    no_temperature = dict(base_body)
+    no_temperature.pop('temperature', None)
+    add_variant(no_temperature)
+
+    minimal_current_model = dict(no_temperature)
+    minimal_current_model.pop('max_tokens', None)
+    add_variant(minimal_current_model)
+
+    fallback_models = [_OPENCODE_ZEN_DEFAULT_CHAT_MODEL, *_OPENCODE_ZEN_CHAT_HINT_MODELS]
+    for fallback_model in fallback_models:
+        fallback_variant = dict(minimal_current_model)
+        fallback_variant['model'] = fallback_model
+        add_variant(fallback_variant)
+
+    return variants
+
+
 def get_llm_analysis(analysis: dict) -> str | None:
     """Generate deep AI analysis for a match using the LLM API."""
     result, error = get_llm_analysis_detailed(analysis)
@@ -910,7 +952,7 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
         return None, model_error
 
     system_prompt, user_prompt = _build_prompt(analysis)
-    body = {
+    base_body = {
         'model': model,
         'messages': [
             {'role': 'system', 'content': system_prompt},
@@ -926,59 +968,70 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
 
     last_error = ''
     attempts = retries + 1
-    for attempt in range(attempts):
-        try:
-            resp = requests.post(
-                api_url,
-                json=body,
-                headers=headers,
-                timeout=timeout_seconds,
-            )
-            if resp.status_code == 401:
-                return None, f"Authentication failed (401). Check your LLM_API_KEY. Response: {resp.text[:200]}"
-            if resp.status_code == 404:
-                return None, f"Endpoint not found (404). Check your LLM_API_URL: {api_url}"
-            if resp.status_code >= 500:
-                last_error = f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
+    body_variants = _request_body_variants(api_url, base_body)
+    for variant_index, body in enumerate(body_variants):
+        variant_model = body.get('model', model)
+        for attempt in range(attempts):
+            try:
+                resp = requests.post(
+                    api_url,
+                    json=body,
+                    headers=headers,
+                    timeout=timeout_seconds,
+                )
+                if resp.status_code == 401:
+                    return None, f"Authentication failed (401). Check your LLM_API_KEY. Response: {resp.text[:200]}"
+                if resp.status_code == 404:
+                    return None, f"Endpoint not found (404). Check your LLM_API_URL: {api_url}"
+                if resp.status_code >= 500:
+                    last_error = f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
+                    if _is_prompt_tokens_500_error(api_url, resp.status_code, resp.text) and variant_index < (len(body_variants) - 1):
+                        logger.warning(
+                            "OpenCode returned prompt_tokens 500 for model '%s'. Trying fallback payload variant %d/%d.",
+                            variant_model,
+                            variant_index + 2,
+                            len(body_variants),
+                        )
+                        break
+                    if attempt < retries:
+                        if retry_backoff > 0:
+                            time.sleep(retry_backoff * (2 ** attempt))
+                        continue
+                    return None, last_error
+                if resp.status_code != 200:
+                    return None, f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
+
+                raw_body = resp.text
+                if not raw_body or not raw_body.strip():
+                    return None, f"LLM API returned empty response body. URL: {api_url} | Model: {variant_model}"
+                try:
+                    data = resp.json()
+                except ValueError:
+                    return None, f"LLM API returned non-JSON response. URL: {api_url} | Body: {raw_body[:300]}"
+                message = data.get('choices', [{}])[0].get('message', {})
+                content = message.get('content') or message.get('reasoning_content') or ''
+                if not content:
+                    return None, f"LLM API response missing choices/content. URL: {api_url} | Body: {raw_body[:300]}"
+                return _soft_text_clean(content), None
+            except requests.Timeout:
+                last_error = (
+                    f"Request timed out after {timeout_seconds}s (attempt {attempt + 1}/{attempts}). "
+                    f"URL: {api_url} | Model: {variant_model}"
+                )
+                if attempt < retries:
+                    if retry_backoff > 0:
+                        time.sleep(retry_backoff * (2 ** attempt))
+                    continue
+                return None, (
+                    f"{last_error} Consider lowering LLM_MAX_TOKENS/LLM_RESPONSE_TOKEN_TARGET "
+                    "or verifying provider latency/endpoint."
+                )
+            except requests.RequestException as e:
+                last_error = f"Request failed. URL: {api_url} | Error: {e}"
                 if attempt < retries:
                     if retry_backoff > 0:
                         time.sleep(retry_backoff * (2 ** attempt))
                     continue
                 return None, last_error
-            if resp.status_code != 200:
-                return None, f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
-
-            raw_body = resp.text
-            if not raw_body or not raw_body.strip():
-                return None, f"LLM API returned empty response body. URL: {api_url} | Model: {model}"
-            try:
-                data = resp.json()
-            except ValueError:
-                return None, f"LLM API returned non-JSON response. URL: {api_url} | Body: {raw_body[:300]}"
-            message = data.get('choices', [{}])[0].get('message', {})
-            content = message.get('content') or message.get('reasoning_content') or ''
-            if not content:
-                return None, f"LLM API response missing choices/content. URL: {api_url} | Body: {raw_body[:300]}"
-            return _soft_text_clean(content), None
-        except requests.Timeout:
-            last_error = (
-                f"Request timed out after {timeout_seconds}s (attempt {attempt + 1}/{attempts}). "
-                f"URL: {api_url} | Model: {model}"
-            )
-            if attempt < retries:
-                if retry_backoff > 0:
-                    time.sleep(retry_backoff * (2 ** attempt))
-                continue
-            return None, (
-                f"{last_error} Consider lowering LLM_MAX_TOKENS/LLM_RESPONSE_TOKEN_TARGET "
-                "or verifying provider latency/endpoint."
-            )
-        except requests.RequestException as e:
-            last_error = f"Request failed. URL: {api_url} | Error: {e}"
-            if attempt < retries:
-                if retry_backoff > 0:
-                    time.sleep(retry_backoff * (2 ** attempt))
-                continue
-            return None, last_error
 
     return None, last_error or 'Unknown LLM request failure.'
