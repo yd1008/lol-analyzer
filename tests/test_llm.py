@@ -211,7 +211,7 @@ class TestGetLlmAnalysisDetailed:
         assert call_kwargs[1]["json"]["max_tokens"] == 1234
 
     @patch("app.analysis.llm.requests.post")
-    def test_response_token_target_caps_max_tokens(self, mock_post, app):
+    def test_response_token_target_is_soft_guidance_not_hard_cap(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {
@@ -229,7 +229,7 @@ class TestGetLlmAnalysisDetailed:
         assert error is None
         assert result == "Detailed analysis"
         call_kwargs = mock_post.call_args
-        assert call_kwargs[1]["json"]["max_tokens"] == 300
+        assert call_kwargs[1]["json"]["max_tokens"] == 1200
 
     @patch("app.analysis.llm.time.sleep", return_value=None)
     @patch("app.analysis.llm.requests.post")
@@ -340,4 +340,21 @@ class TestGetLlmAnalysisDetailed:
         assert error is None
         assert result == "Detailed analysis"
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
-        assert "under about 280 tokens" in user_prompt
+        assert "Target length: about 280 tokens" in user_prompt
+        assert "Output plain text only" in user_prompt
+
+    @patch("app.analysis.llm.requests.post")
+    def test_response_text_is_normalized_from_markdownish_content(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "# Overall\n- **Good** lane control\n1. `Practice` wave timing"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"# Overall\\n- **Good** lane control\\n1. `Practice` wave timing"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert error is None
+        assert result == "Overall\nGood lane control\nPractice wave timing"

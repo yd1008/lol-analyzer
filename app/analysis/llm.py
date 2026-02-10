@@ -139,6 +139,25 @@ def _strip_html(text: str) -> str:
     return re.sub(r'<[^>]+>', '', text or '').replace('\n', ' ').strip()
 
 
+def _soft_text_clean(value: str) -> str:
+    """Convert markdown-ish formatting to plain text for UI-safe rendering."""
+    text = (value or '').replace('\r\n', '\n').replace('\r', '\n').strip()
+    if not text:
+        return ''
+
+    text = re.sub(r'^\s{0,3}#{1,6}\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*>\s?', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*[-*+]\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*\d+[.)]\s+', '', text, flags=re.MULTILINE)
+
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+    text = re.sub(r'__(.*?)__', r'\1', text)
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+    text = re.sub(r'[*_]{1,3}([^*_]+)[*_]{1,3}', r'\1', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 def _clamp(value: int, minimum: int, maximum: int) -> int:
     return max(minimum, min(maximum, value))
 
@@ -826,12 +845,13 @@ def _build_prompt(analysis: dict) -> tuple[str, str]:
         matchup_instruction = '2. Lane matchup performance and matchup dynamics across game phases\n'
     response_token_target = max(0, int(current_app.config.get('LLM_RESPONSE_TOKEN_TARGET', 0) or 0))
     if response_token_target > 0:
+        approx_words = max(60, int(response_token_target * 0.75))
         length_instruction = (
-            f"Hard output budget: keep the response under about {response_token_target} tokens. "
-            "Prefer compact bullets and short paragraphs."
+            f"Target length: about {response_token_target} tokens (~{approx_words} words). "
+            "Treat this as a soft target and still complete every requested section."
         )
     else:
-        length_instruction = "Keep the response concise."
+        length_instruction = "Keep the response concise while fully addressing each requested section."
 
     user = (
         "Analyze this League of Legends match and provide focused coaching advice.\n\n"
@@ -858,6 +878,7 @@ def _build_prompt(analysis: dict) -> tuple[str, str]:
         f"{'5' if lane_opp else '4'}. Specific, actionable improvements for next games\n"
         f"{'6' if lane_opp else '5'}. One concrete practice focus for the next game\n\n"
         "Keep it direct and specific to this data. Avoid generic filler.\n"
+        "Output plain text only. Do not use Markdown syntax, code fences, or list markers.\n"
         f"{length_instruction}"
     )
     return system, user
@@ -880,9 +901,6 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
     retries = max(0, int(current_app.config.get('LLM_RETRIES', 1) or 1))
     retry_backoff = max(0.0, float(current_app.config.get('LLM_RETRY_BACKOFF_SECONDS', 1.5) or 1.5))
     max_tokens = max(256, int(current_app.config.get('LLM_MAX_TOKENS', 2048) or 2048))
-    response_token_target = max(0, int(current_app.config.get('LLM_RESPONSE_TOKEN_TARGET', 0) or 0))
-    if response_token_target:
-        max_tokens = max(128, min(max_tokens, response_token_target))
     if not api_key:
         return None, 'LLM_API_KEY is not set.'
     if not api_url:
@@ -941,7 +959,7 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
             content = message.get('content') or message.get('reasoning_content') or ''
             if not content:
                 return None, f"LLM API response missing choices/content. URL: {api_url} | Body: {raw_body[:300]}"
-            return content.strip(), None
+            return _soft_text_clean(content), None
         except requests.Timeout:
             last_error = (
                 f"Request timed out after {timeout_seconds}s (attempt {attempt + 1}/{attempts}). "
