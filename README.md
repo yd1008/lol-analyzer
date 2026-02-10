@@ -114,6 +114,7 @@ lol-analyzer/
 | `LLM_RETRIES` | Retries for timeout/5xx failures | `1` |
 | `LLM_RETRY_BACKOFF_SECONDS` | Base exponential retry backoff | `1.5` |
 | `LLM_MAX_TOKENS` | Max completion tokens for AI analysis | `2048` |
+| `LLM_RESPONSE_TOKEN_TARGET` | Optional stricter response token budget (`0` disables) | `0` |
 | `CHECK_INTERVAL_MINUTES` | How often to check for new matches | `5` |
 | `WEEKLY_SUMMARY_DAY` | Day of week for summary | `Monday` |
 | `WEEKLY_SUMMARY_TIME` | Time for summary (HH:MM) | `09:00` |

@@ -44,6 +44,7 @@ class Config:
     LLM_RETRIES = int(os.environ.get('LLM_RETRIES', '1'))
     LLM_RETRY_BACKOFF_SECONDS = float(os.environ.get('LLM_RETRY_BACKOFF_SECONDS', '1.5'))
     LLM_MAX_TOKENS = int(os.environ.get('LLM_MAX_TOKENS', '2048'))
+    LLM_RESPONSE_TOKEN_TARGET = int(os.environ.get('LLM_RESPONSE_TOKEN_TARGET', '0'))
     LLM_KNOWLEDGE_EXTERNAL = _to_bool(os.environ.get('LLM_KNOWLEDGE_EXTERNAL'), True)
     LLM_KNOWLEDGE_FILE = os.environ.get('LLM_KNOWLEDGE_FILE', '')
 

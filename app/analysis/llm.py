@@ -824,6 +824,14 @@ def _build_prompt(analysis: dict) -> tuple[str, str]:
     matchup_instruction = ''
     if lane_opp:
         matchup_instruction = '2. Lane matchup performance and matchup dynamics across game phases\n'
+    response_token_target = max(0, int(current_app.config.get('LLM_RESPONSE_TOKEN_TARGET', 0) or 0))
+    if response_token_target > 0:
+        length_instruction = (
+            f"Hard output budget: keep the response under about {response_token_target} tokens. "
+            "Prefer compact bullets and short paragraphs."
+        )
+    else:
+        length_instruction = "Keep the response concise."
 
     user = (
         "Analyze this League of Legends match and provide focused coaching advice.\n\n"
@@ -849,7 +857,8 @@ def _build_prompt(analysis: dict) -> tuple[str, str]:
         f"{'4' if lane_opp else '3'}. Key strengths shown in this match\n"
         f"{'5' if lane_opp else '4'}. Specific, actionable improvements for next games\n"
         f"{'6' if lane_opp else '5'}. One concrete practice focus for the next game\n\n"
-        "Keep it direct and specific to this data. Avoid generic filler."
+        "Keep it direct and specific to this data. Avoid generic filler.\n"
+        f"{length_instruction}"
     )
     return system, user
 
@@ -871,6 +880,9 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
     retries = max(0, int(current_app.config.get('LLM_RETRIES', 1) or 1))
     retry_backoff = max(0.0, float(current_app.config.get('LLM_RETRY_BACKOFF_SECONDS', 1.5) or 1.5))
     max_tokens = max(256, int(current_app.config.get('LLM_MAX_TOKENS', 2048) or 2048))
+    response_token_target = max(0, int(current_app.config.get('LLM_RESPONSE_TOKEN_TARGET', 0) or 0))
+    if response_token_target:
+        max_tokens = max(128, min(max_tokens, response_token_target))
     if not api_key:
         return None, 'LLM_API_KEY is not set.'
     if not api_url:
@@ -940,7 +952,8 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
                     time.sleep(retry_backoff * (2 ** attempt))
                 continue
             return None, (
-                f"{last_error} Consider lowering LLM_MAX_TOKENS or verifying provider latency/endpoint."
+                f"{last_error} Consider lowering LLM_MAX_TOKENS/LLM_RESPONSE_TOKEN_TARGET "
+                "or verifying provider latency/endpoint."
             )
         except requests.RequestException as e:
             last_error = f"Request failed. URL: {api_url} | Error: {e}"

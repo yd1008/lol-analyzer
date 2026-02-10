@@ -210,6 +210,27 @@ class TestGetLlmAnalysisDetailed:
         assert call_kwargs[1]["timeout"] == 12
         assert call_kwargs[1]["json"]["max_tokens"] == 1234
 
+    @patch("app.analysis.llm.requests.post")
+    def test_response_token_target_caps_max_tokens(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Detailed analysis"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"Detailed analysis"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            app.config["LLM_MAX_TOKENS"] = 1200
+            app.config["LLM_RESPONSE_TOKEN_TARGET"] = 300
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_RESPONSE_TOKEN_TARGET"] = 0
+
+        assert error is None
+        assert result == "Detailed analysis"
+        call_kwargs = mock_post.call_args
+        assert call_kwargs[1]["json"]["max_tokens"] == 300
+
     @patch("app.analysis.llm.time.sleep", return_value=None)
     @patch("app.analysis.llm.requests.post")
     def test_retries_once_after_timeout(self, mock_post, _mock_sleep, app):
@@ -300,3 +321,23 @@ class TestGetLlmAnalysisDetailed:
 
         assert result is None
         assert "set llm_api_url to https://opencode.ai/zen/v1/chat/completions" in error.lower()
+
+    @patch("app.analysis.llm.requests.post")
+    def test_prompt_includes_length_budget_instruction_when_configured(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Detailed analysis"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"Detailed analysis"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            app.config["LLM_RESPONSE_TOKEN_TARGET"] = 280
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_RESPONSE_TOKEN_TARGET"] = 0
+
+        assert error is None
+        assert result == "Detailed analysis"
+        user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
+        assert "under about 280 tokens" in user_prompt
