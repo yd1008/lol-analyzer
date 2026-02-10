@@ -13,19 +13,19 @@
     <div class="admin-card">
         <h3>Step 1: Look Up Summoner</h3>
         <p>Enter a summoner name to fetch their recent matches.</p>
-        <form method="POST" class="loading-form" style="margin-top: 1rem;">
+        <form method="POST" class="loading-form admin-lookup-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="lookup">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
-                <div class="form-group" style="margin: 0;">
+            <div class="admin-lookup-grid">
+                <div class="form-group compact-field">
                     <label>Summoner Name</label>
                     <input type="text" name="summoner_name" placeholder="e.g. Faker" value="{{ summoner_name or '' }}" required>
                 </div>
-                <div class="form-group" style="margin: 0;">
+                <div class="form-group compact-field">
                     <label>Tagline</label>
                     <input type="text" name="tagline" placeholder="e.g. KR1" value="{{ tagline or '' }}" required>
                 </div>
-                <div class="form-group" style="margin: 0;">
+                <div class="form-group compact-field">
                     <label>Region</label>
                     <select name="region">
                         {% for r in ['na1','euw1','eun1','kr','br1','la1','la2','oc1','tr1','ru','jp1'] %}
@@ -34,7 +34,7 @@
                     </select>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 1rem;">Fetch Matches</button>
+            <button type="submit" class="btn btn-primary btn-sm admin-form-submit">Fetch Matches</button>
         </form>
     </div>
 
@@ -63,7 +63,7 @@
                     <td>{{ match.game_duration }} min</td>
                     <td>{{ match.queue_type }}</td>
                     <td>
-                        <form method="POST" class="loading-form" style="display: inline;">
+                        <form method="POST" class="loading-form inline-action-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="action" value="select">
                             <input type="hidden" name="match_id" value="{{ match.match_id }}">
@@ -85,30 +85,30 @@
     <!-- Step 3: Match data preview -->
     <div class="admin-card">
         <h3>Step 3: Match Data</h3>
-        <div class="match-stats-grid" style="margin-bottom: 1rem;">
+        <div class="match-stats-grid admin-preview-grid">
             <div class="stat-card">
                 <div class="stat-label">Champion</div>
-                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.champion }}</div>
+                <div class="stat-value stat-value-lg">{{ analysis_data.champion }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Result</div>
-                <div class="stat-value {{ 'win' if analysis_data.win else 'loss' }}" style="font-size: 1.25rem;">{{ 'Win' if analysis_data.win else 'Loss' }}</div>
+                <div class="stat-value stat-value-lg {{ 'win' if analysis_data.win else 'loss' }}">{{ 'Win' if analysis_data.win else 'Loss' }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">KDA</div>
-                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.kills }}/{{ analysis_data.deaths }}/{{ analysis_data.assists }}</div>
+                <div class="stat-value stat-value-lg">{{ analysis_data.kills }}/{{ analysis_data.deaths }}/{{ analysis_data.assists }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Gold/min</div>
-                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.gold_per_min }}</div>
+                <div class="stat-value stat-value-lg">{{ analysis_data.gold_per_min }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">DMG/min</div>
-                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.damage_per_min }}</div>
+                <div class="stat-value stat-value-lg">{{ analysis_data.damage_per_min }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Vision</div>
-                <div class="stat-value" style="font-size: 1.25rem;">{{ analysis_data.vision_score }}</div>
+                <div class="stat-value stat-value-lg">{{ analysis_data.vision_score }}</div>
             </div>
         </div>
 
@@ -119,7 +119,7 @@
             <input type="hidden" name="analysis_json" value='{{ analysis_data | tojson }}'>
             <button type="submit" class="btn btn-primary btn-sm" id="llm-btn">Run LLM Analysis</button>
         </form>
-        <div id="llm-loading" class="loading-indicator" style="display: none;">
+        <div id="llm-loading" class="loading-indicator">
             <div class="loading-spinner"></div>
             <div class="loading-text">
                 <strong>Generating AI analysis...</strong>
@@ -159,7 +159,6 @@ document.addEventListener('DOMContentLoaded', function() {
             var btn = form.querySelector('button[type="submit"]');
             if (btn) {
                 btn.disabled = true;
-                var orig = btn.textContent;
                 btn.textContent = 'Loading...';
                 btn.style.opacity = '0.5';
             }
