@@ -1,6 +1,8 @@
 """Tests for auth and basic routes."""
 
-from app.models import User
+from unittest.mock import patch
+
+from app.models import User, MatchAnalysis
 
 
 class TestLandingPage:
@@ -129,3 +131,54 @@ class TestAdminAccess:
         })
         resp = client.get("/admin/")
         assert resp.status_code == 200
+
+
+class TestAiAnalysisRoute:
+    def test_ai_analysis_force_regenerates(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_test",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="cached analysis",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp_cached = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={})
+        assert resp_cached.status_code == 200
+        cached_json = resp_cached.get_json()
+        assert cached_json["cached"] is True
+        assert cached_json["analysis"] == "cached analysis"
+
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("fresh analysis", None)):
+            resp_force = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis",
+                json={"force": True},
+            )
+
+        assert resp_force.status_code == 200
+        force_json = resp_force.get_json()
+        assert force_json["cached"] is False
+        assert force_json["regenerated"] is True
+        assert force_json["analysis"] == "fresh analysis"
+
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis == "fresh analysis"

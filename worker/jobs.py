@@ -194,3 +194,22 @@ def send_weekly_summaries(app):
             except Exception as e:
                 logger.error("Error sending weekly summary for user %d: %s", user.id, e)
                 continue
+
+
+def refresh_game_assets(app):
+    """Warm Data Dragon champion/item/rune icon caches periodically."""
+    with app.app_context():
+        from app.analysis.champion_assets import refresh_asset_caches
+
+        try:
+            result = refresh_asset_caches()
+            logger.info(
+                "Refreshed game assets cache. version=%s champion_aliases=%s items=%s runes=%s styles=%s",
+                result.get('version', ''),
+                result.get('champion_aliases', 0),
+                result.get('items', 0),
+                result.get('runes', 0),
+                result.get('styles', 0),
+            )
+        except Exception as e:
+            logger.error("Error refreshing game assets cache: %s", e)
