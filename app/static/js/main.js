@@ -188,44 +188,23 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="visual-group" data-group="lane">' + renderLaneCharts(m) + '</div>';
     }
 
-    function formatAiHtml(text) {
-        var lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
-        var html = '<div class="ai-rich">';
-        var inList = false;
+    function normalizeAiText(text) {
+        var normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        normalized = normalized.replace(/^\s{0,3}#{1,6}\s*/gm, '');
+        normalized = normalized.replace(/^\s*>\s?/gm, '');
+        normalized = normalized.replace(/^\s*[-*+]\s+/gm, '');
+        normalized = normalized.replace(/^\s*\d+[.)]\s+/gm, '');
+        normalized = normalized.replace(/\*\*(.*?)\*\*/g, '$1');
+        normalized = normalized.replace(/__(.*?)__/g, '$1');
+        normalized = normalized.replace(/`([^`]+)`/g, '$1');
+        normalized = normalized.replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1');
+        normalized = normalized.replace(/\n{3,}/g, '\n\n');
+        return normalized.trim();
+    }
 
-        function closeList() {
-            if (inList) {
-                html += '</ul>';
-                inList = false;
-            }
-        }
-
-        lines.forEach(function (raw) {
-            var line = raw.trim();
-            if (!line) {
-                closeList();
-                return;
-            }
-            if (/^\d+\.\s+/.test(line)) {
-                closeList();
-                html += '<div class="ai-section-title">' + escapeHtml(line.replace(/^\d+\.\s+/, '')) + '</div>';
-                return;
-            }
-            if (/^[-*]\s+/.test(line)) {
-                if (!inList) {
-                    html += '<ul class="ai-list">';
-                    inList = true;
-                }
-                html += '<li>' + escapeHtml(line.replace(/^[-*]\s+/, '')) + '</li>';
-                return;
-            }
-            closeList();
-            html += '<p class="ai-paragraph">' + escapeHtml(line) + '</p>';
-        });
-
-        closeList();
-        html += '</div>';
-        return html;
+    function renderAiText(container, text) {
+        container.className = 'match-ai-content llm-analysis';
+        container.textContent = normalizeAiText(text);
     }
 
     function renderMatchBox(m) {
@@ -389,10 +368,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     btn.disabled = false;
                     return;
                 }
-                content.className = 'match-ai-content llm-analysis';
-                content.innerHTML = formatAiHtml(data.analysis || '');
+                renderAiText(content, data.analysis || '');
                 if (data.stale && data.error) {
-                    content.innerHTML += '<p class="card-muted">Using cached analysis because regeneration failed: ' + escapeHtml(data.error) + '</p>';
+                    content.textContent += '\n\nUsing cached analysis because regeneration failed: ' + data.error;
                 }
                 btn.textContent = 'Regenerate AI Analysis';
                 btn.classList.add('has-analysis');
