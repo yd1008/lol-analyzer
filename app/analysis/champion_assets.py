@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 _VERSIONS_URL = 'https://ddragon.leagueoflegends.com/api/versions.json'
 _CHAMPIONS_URL = 'https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/champion.json'
 _ICON_URL = 'https://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{champion_id}.png'
+_VERSION_SUCCESS_TTL_SECONDS = 6 * 3600
+_VERSION_FAILURE_TTL_SECONDS = 120
 
 _LOCK = threading.Lock()
 _VERSION_CACHE = {'value': '', 'expires_at': 0.0}
@@ -25,23 +27,29 @@ def _normalize(value: str) -> str:
 def _fetch_latest_version() -> str:
     now = time.time()
     with _LOCK:
-        if _VERSION_CACHE['expires_at'] > now and _VERSION_CACHE['value']:
+        if _VERSION_CACHE['expires_at'] > now:
             return _VERSION_CACHE['value']
 
     version = ''
+    fetch_success = False
     try:
         resp = requests.get(_VERSIONS_URL, timeout=6)
         if resp.status_code == 200:
             data = resp.json()
             if isinstance(data, list) and data:
                 version = data[0]
+                fetch_success = True
     except requests.RequestException:
         version = ''
 
     with _LOCK:
-        _VERSION_CACHE['value'] = version
-        _VERSION_CACHE['expires_at'] = now + 6 * 3600
-    return version
+        if fetch_success:
+            _VERSION_CACHE['value'] = version
+            _VERSION_CACHE['expires_at'] = now + _VERSION_SUCCESS_TTL_SECONDS
+        else:
+            # Back off quickly during outages; keep previous value if one exists.
+            _VERSION_CACHE['expires_at'] = now + _VERSION_FAILURE_TTL_SECONDS
+    return _VERSION_CACHE['value']
 
 
 def _get_champion_map(version: str) -> dict:
