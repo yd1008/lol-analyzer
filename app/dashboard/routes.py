@@ -423,7 +423,15 @@ def api_ai_analysis(match_db_id):
 
     result, error = get_llm_analysis_detailed(analysis_dict)
     if error:
-        return jsonify({'error': error}), 500
+        if match.llm_analysis:
+            return jsonify({
+                'analysis': match.llm_analysis,
+                'cached': True,
+                'stale': True,
+                'error': error,
+            }), 200
+        status = 504 if 'timed out' in error.lower() else 502
+        return jsonify({'error': error}), status
 
     match.llm_analysis = result
     db.session.commit()

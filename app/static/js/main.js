@@ -382,14 +382,18 @@ document.addEventListener('DOMContentLoaded', function () {
         })
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                if (data.error) {
-                    btn.textContent = 'Error';
+                if (data.error && !data.analysis) {
+                    content.className = 'match-ai-content card-muted';
+                    content.textContent = data.error;
+                    btn.textContent = 'Run AI Analysis';
                     btn.disabled = false;
-                    setTimeout(function () { btn.textContent = 'Run AI Analysis'; }, 2000);
                     return;
                 }
                 content.className = 'match-ai-content llm-analysis';
                 content.innerHTML = formatAiHtml(data.analysis || '');
+                if (data.stale && data.error) {
+                    content.innerHTML += '<p class="card-muted">Using cached analysis because regeneration failed: ' + escapeHtml(data.error) + '</p>';
+                }
                 btn.textContent = 'Regenerate AI Analysis';
                 btn.classList.add('has-analysis');
                 btn.disabled = false;

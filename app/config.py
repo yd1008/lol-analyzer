@@ -40,6 +40,10 @@ class Config:
     LLM_API_KEY = os.environ.get('LLM_API_KEY', '')
     LLM_API_URL = os.environ.get('LLM_API_URL', '')
     LLM_MODEL = os.environ.get('LLM_MODEL', 'deepseek-chat')
+    LLM_TIMEOUT_SECONDS = int(os.environ.get('LLM_TIMEOUT_SECONDS', '30'))
+    LLM_RETRIES = int(os.environ.get('LLM_RETRIES', '1'))
+    LLM_RETRY_BACKOFF_SECONDS = float(os.environ.get('LLM_RETRY_BACKOFF_SECONDS', '1.5'))
+    LLM_MAX_TOKENS = int(os.environ.get('LLM_MAX_TOKENS', '2048'))
     LLM_KNOWLEDGE_EXTERNAL = _to_bool(os.environ.get('LLM_KNOWLEDGE_EXTERNAL'), True)
     LLM_KNOWLEDGE_FILE = os.environ.get('LLM_KNOWLEDGE_FILE', '')
 

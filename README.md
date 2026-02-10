@@ -107,6 +107,13 @@ lol-analyzer/
 | `DISCORD_BOT_TOKEN` | Discord bot token | (required) |
 | `DISCORD_CLIENT_ID` | Discord application client ID | (optional, for invite URL) |
 | `RIOT_VERIFICATION_UUID` | Riot API verification UUID | (set in .env) |
+| `LLM_API_KEY` | LLM provider API key | (required for AI analysis) |
+| `LLM_API_URL` | OpenAI-compatible chat completions endpoint | (required for AI analysis) |
+| `LLM_MODEL` | Model name sent to provider | `deepseek-chat` |
+| `LLM_TIMEOUT_SECONDS` | Timeout per LLM request attempt | `30` |
+| `LLM_RETRIES` | Retries for timeout/5xx failures | `1` |
+| `LLM_RETRY_BACKOFF_SECONDS` | Base exponential retry backoff | `1.5` |
+| `LLM_MAX_TOKENS` | Max completion tokens for AI analysis | `2048` |
 | `CHECK_INTERVAL_MINUTES` | How often to check for new matches | `5` |
 | `WEEKLY_SUMMARY_DAY` | Day of week for summary | `Monday` |
 | `WEEKLY_SUMMARY_TIME` | Time for summary (HH:MM) | `09:00` |

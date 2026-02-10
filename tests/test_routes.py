@@ -220,6 +220,85 @@ class TestAiAnalysisRoute:
         reloaded = db.session.get(MatchAnalysis, match.id)
         assert reloaded.llm_analysis == "fresh analysis"
 
+    def test_ai_analysis_timeout_returns_504_without_cached_analysis(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_timeout_no_cache",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Request timed out after 30s. URL: https://example.test/v1/chat/completions"),
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={"force": True})
+
+        assert resp.status_code == 504
+        payload = resp.get_json()
+        assert "timed out" in payload["error"].lower()
+
+    def test_ai_analysis_timeout_returns_stale_cached_analysis(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_timeout_with_cache",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="existing cached analysis",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Request timed out after 30s. URL: https://example.test/v1/chat/completions"),
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={"force": True})
+
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload["cached"] is True
+        assert payload["stale"] is True
+        assert payload["analysis"] == "existing cached analysis"
+        assert "timed out" in payload["error"].lower()
+
 
 class TestMatchDetailRoute:
     @patch("app.dashboard.routes.champion_icon_url", return_value="")

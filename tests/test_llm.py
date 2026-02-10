@@ -187,3 +187,48 @@ class TestGetLlmAnalysisDetailed:
 
         assert result is None
         assert "timed out" in error.lower()
+
+    @patch("app.analysis.llm.requests.post")
+    def test_uses_configured_timeout_and_max_tokens(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Detailed analysis"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"Detailed analysis"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            app.config["LLM_TIMEOUT_SECONDS"] = 12
+            app.config["LLM_MAX_TOKENS"] = 1234
+            app.config["LLM_RETRIES"] = 0
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert error is None
+        assert result == "Detailed analysis"
+        call_kwargs = mock_post.call_args
+        assert call_kwargs[1]["timeout"] == 12
+        assert call_kwargs[1]["json"]["max_tokens"] == 1234
+
+    @patch("app.analysis.llm.time.sleep", return_value=None)
+    @patch("app.analysis.llm.requests.post")
+    def test_retries_once_after_timeout(self, mock_post, _mock_sleep, app):
+        import requests
+        timeout_error = requests.Timeout("timed out")
+        success_resp = MagicMock()
+        success_resp.status_code = 200
+        success_resp.json.return_value = {
+            "choices": [{"message": {"content": "Recovered analysis"}}]
+        }
+        success_resp.text = '{"choices":[{"message":{"content":"Recovered analysis"}}]}'
+        mock_post.side_effect = [timeout_error, success_resp]
+
+        with app.app_context():
+            app.config["LLM_TIMEOUT_SECONDS"] = 5
+            app.config["LLM_RETRIES"] = 1
+            app.config["LLM_RETRY_BACKOFF_SECONDS"] = 0
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert error is None
+        assert result == "Recovered analysis"
+        assert mock_post.call_count == 2

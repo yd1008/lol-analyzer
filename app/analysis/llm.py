@@ -793,50 +793,84 @@ def get_llm_analysis_detailed(analysis: dict) -> tuple[str | None, str | None]:
     api_key = current_app.config.get('LLM_API_KEY', '')
     api_url = current_app.config.get('LLM_API_URL', '')
     model = current_app.config.get('LLM_MODEL', 'deepseek-chat')
+    timeout_seconds = max(5, int(current_app.config.get('LLM_TIMEOUT_SECONDS', 30) or 30))
+    retries = max(0, int(current_app.config.get('LLM_RETRIES', 1) or 1))
+    retry_backoff = max(0.0, float(current_app.config.get('LLM_RETRY_BACKOFF_SECONDS', 1.5) or 1.5))
+    max_tokens = max(256, int(current_app.config.get('LLM_MAX_TOKENS', 2048) or 2048))
     if not api_key:
         return None, 'LLM_API_KEY is not set.'
     if not api_url:
         return None, 'LLM_API_URL is not set.'
 
     system_prompt, user_prompt = _build_prompt(analysis)
-    try:
-        resp = requests.post(
-            api_url,
-            json={
-                'model': model,
-                'messages': [
-                    {'role': 'system', 'content': system_prompt},
-                    {'role': 'user', 'content': user_prompt},
-                ],
-                'max_tokens': 4096,
-                'temperature': 0.7,
-            },
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json',
-            },
-            timeout=90,
-        )
-        if resp.status_code == 401:
-            return None, f"Authentication failed (401). Check your LLM_API_KEY. Response: {resp.text[:200]}"
-        if resp.status_code == 404:
-            return None, f"Endpoint not found (404). Check your LLM_API_URL: {api_url}"
-        if resp.status_code != 200:
-            return None, f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
+    body = {
+        'model': model,
+        'messages': [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt},
+        ],
+        'max_tokens': max_tokens,
+        'temperature': 0.7,
+    }
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
 
-        raw_body = resp.text
-        if not raw_body or not raw_body.strip():
-            return None, f"LLM API returned empty response body. URL: {api_url} | Model: {model}"
+    last_error = ''
+    attempts = retries + 1
+    for attempt in range(attempts):
         try:
-            data = resp.json()
-        except ValueError:
-            return None, f"LLM API returned non-JSON response. URL: {api_url} | Body: {raw_body[:300]}"
-        message = data.get('choices', [{}])[0].get('message', {})
-        content = message.get('content') or message.get('reasoning_content') or ''
-        if not content:
-            return None, f"LLM API response missing choices/content. URL: {api_url} | Body: {raw_body[:300]}"
-        return content.strip(), None
-    except requests.Timeout:
-        return None, f"Request timed out after 90s. URL: {api_url}"
-    except requests.RequestException as e:
-        return None, f"Request failed. URL: {api_url} | Error: {e}"
+            resp = requests.post(
+                api_url,
+                json=body,
+                headers=headers,
+                timeout=timeout_seconds,
+            )
+            if resp.status_code == 401:
+                return None, f"Authentication failed (401). Check your LLM_API_KEY. Response: {resp.text[:200]}"
+            if resp.status_code == 404:
+                return None, f"Endpoint not found (404). Check your LLM_API_URL: {api_url}"
+            if resp.status_code >= 500:
+                last_error = f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
+                if attempt < retries:
+                    if retry_backoff > 0:
+                        time.sleep(retry_backoff * (2 ** attempt))
+                    continue
+                return None, last_error
+            if resp.status_code != 200:
+                return None, f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
+
+            raw_body = resp.text
+            if not raw_body or not raw_body.strip():
+                return None, f"LLM API returned empty response body. URL: {api_url} | Model: {model}"
+            try:
+                data = resp.json()
+            except ValueError:
+                return None, f"LLM API returned non-JSON response. URL: {api_url} | Body: {raw_body[:300]}"
+            message = data.get('choices', [{}])[0].get('message', {})
+            content = message.get('content') or message.get('reasoning_content') or ''
+            if not content:
+                return None, f"LLM API response missing choices/content. URL: {api_url} | Body: {raw_body[:300]}"
+            return content.strip(), None
+        except requests.Timeout:
+            last_error = (
+                f"Request timed out after {timeout_seconds}s (attempt {attempt + 1}/{attempts}). "
+                f"URL: {api_url}"
+            )
+            if attempt < retries:
+                if retry_backoff > 0:
+                    time.sleep(retry_backoff * (2 ** attempt))
+                continue
+            return None, (
+                f"{last_error} Consider lowering LLM_MAX_TOKENS or verifying provider latency/endpoint."
+            )
+        except requests.RequestException as e:
+            last_error = f"Request failed. URL: {api_url} | Error: {e}"
+            if attempt < retries:
+                if retry_backoff > 0:
+                    time.sleep(retry_backoff * (2 ** attempt))
+                continue
+            return None, last_error
+
+    return None, last_error or 'Unknown LLM request failure.'
