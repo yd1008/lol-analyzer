@@ -121,6 +121,16 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
 
         participants = []
         for p in match_detail['info']['participants']:
+            perks = p.get('perks', {})
+            styles = perks.get('styles', []) if isinstance(perks, dict) else []
+            primary_rune_id = 0
+            secondary_style_id = 0
+            if styles and isinstance(styles[0], dict):
+                selections = styles[0].get('selections', [])
+                if selections and isinstance(selections[0], dict):
+                    primary_rune_id = selections[0].get('perk', 0) or 0
+            if len(styles) > 1 and isinstance(styles[1], dict):
+                secondary_style_id = styles[1].get('style', 0) or 0
             participants.append({
                 'puuid': p.get('puuid', ''),
                 'summoner_id': p.get('summonerId', ''),
@@ -141,6 +151,8 @@ def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -
                 'vision_score': p.get('visionScore', 0),
                 'level': p.get('champLevel', 0),
                 'item_ids': [p.get(f'item{i}', 0) for i in range(7) if p.get(f'item{i}', 0)],
+                'primary_rune_id': primary_rune_id,
+                'secondary_rune_style_id': secondary_style_id,
             })
 
         game_start_timestamp = match_detail['info'].get('gameStartTimestamp')

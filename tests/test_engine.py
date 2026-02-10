@@ -219,6 +219,8 @@ class TestAnalyzeMatch:
         assert player_entries[0]["team_id"] == 100
         assert "summoner_id" in player_entries[0]
         assert "item_ids" in player_entries[0]
+        assert "primary_rune_id" in player_entries[0]
+        assert "secondary_rune_style_id" in player_entries[0]
 
         assert player_entries[0]["position"] == "MIDDLE"
 

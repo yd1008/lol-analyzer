@@ -31,6 +31,7 @@ class Config:
     )
 
     CHECK_INTERVAL_MINUTES = int(os.environ.get('CHECK_INTERVAL_MINUTES', '5'))
+    ASSET_REFRESH_HOURS = int(os.environ.get('ASSET_REFRESH_HOURS', '6'))
     WEEKLY_SUMMARY_DAY = os.environ.get('WEEKLY_SUMMARY_DAY', 'Monday')
     WEEKLY_SUMMARY_TIME = os.environ.get('WEEKLY_SUMMARY_TIME', '09:00')
 
