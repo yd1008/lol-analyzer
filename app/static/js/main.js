@@ -395,7 +395,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var isActive = button.getAttribute(buttonAttr) === activeKey;
             button.classList.toggle('active', isActive);
             button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-            button.tabIndex = isActive ? 0 : -1;
+            // Keep all tab buttons in the keyboard tab order.
+            button.tabIndex = 0;
         });
         panels.forEach(function (panel) {
             var isActive = panel.getAttribute(panelAttr) === activeKey;
