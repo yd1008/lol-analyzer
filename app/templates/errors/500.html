@@ -3,9 +3,9 @@
 {% block title %}500 - Server Error{% endblock %}
 
 {% block content %}
-<div class="container" style="text-align: center; padding-top: 10rem;">
-    <h1 style="font-size: 4rem; color: var(--text-muted); font-weight: 800;">500</h1>
-    <p style="font-size: 1rem; margin-bottom: 2rem; color: var(--text-secondary);">Something went wrong on our end. Please try again later.</p>
+<div class="container error-shell">
+    <h1>500</h1>
+    <p>Something went wrong on our end. Please try again later.</p>
     <a href="{{ url_for('main.landing') }}" class="btn btn-primary">Go Home</a>
 </div>
 {% endblock %}

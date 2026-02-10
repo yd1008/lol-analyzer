@@ -176,16 +176,19 @@ document.addEventListener('DOMContentLoaded', function () {
         return html;
     }
 
-    function renderVisualPanel(m) {
+    function renderVisualPanel(m, idPrefix) {
+        var compareId = idPrefix + '-compare';
+        var sharesId = idPrefix + '-shares';
+        var laneId = idPrefix + '-lane';
         return '' +
-            '<div class="visual-toggle-bar">' +
-                '<button class="visual-toggle-btn active" data-group="compare">Compare</button>' +
-                '<button class="visual-toggle-btn" data-group="shares">Shares</button>' +
-                '<button class="visual-toggle-btn" data-group="lane">Lane</button>' +
+            '<div class="visual-toggle-bar" role="tablist" aria-label="Visualization groups">' +
+                '<button class="visual-toggle-btn active" id="' + compareId + '-tab" data-group="compare" role="tab" aria-selected="true" aria-controls="' + compareId + '">Compare</button>' +
+                '<button class="visual-toggle-btn" id="' + sharesId + '-tab" data-group="shares" role="tab" aria-selected="false" aria-controls="' + sharesId + '" tabindex="-1">Shares</button>' +
+                '<button class="visual-toggle-btn" id="' + laneId + '-tab" data-group="lane" role="tab" aria-selected="false" aria-controls="' + laneId + '" tabindex="-1">Lane</button>' +
             '</div>' +
-            '<div class="visual-group active" data-group="compare">' + renderCompareRows(m) + '</div>' +
-            '<div class="visual-group" data-group="shares">' + renderShareRings(m) + '</div>' +
-            '<div class="visual-group" data-group="lane">' + renderLaneCharts(m) + '</div>';
+            '<div class="visual-group active" id="' + compareId + '" data-group="compare" role="tabpanel" aria-labelledby="' + compareId + '-tab">' + renderCompareRows(m) + '</div>' +
+            '<div class="visual-group" id="' + sharesId + '" data-group="shares" role="tabpanel" aria-labelledby="' + sharesId + '-tab" hidden>' + renderShareRings(m) + '</div>' +
+            '<div class="visual-group" id="' + laneId + '" data-group="lane" role="tabpanel" aria-labelledby="' + laneId + '-tab" hidden>' + renderLaneCharts(m) + '</div>';
     }
 
     function normalizeAiText(text) {
@@ -217,6 +220,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var aiClass = m.has_llm_analysis ? ' has-analysis' : '';
         var aiText = m.has_llm_analysis ? 'Regenerate AI Analysis' : 'Run AI Analysis';
         var dateHtml = m.analyzed_at ? '<span class="match-duration">' + escapeHtml(m.analyzed_at.slice(0, 10)) + '</span>' : '';
+        var tabPrefix = 'match-' + m.id + '-tab';
+        var visualPrefix = 'match-' + m.id + '-visual';
 
         var overviewHtml = '' +
             '<div class="match-box-stats">' +
@@ -247,15 +252,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<span class="match-duration">' + fmtNum(m.game_duration) + 'm</span>' +
                     dateHtml +
                 '</div>' +
-                '<div class="match-tab-bar">' +
-                    '<button class="match-tab-btn active" data-tab="overview">Overview</button>' +
-                    '<button class="match-tab-btn" data-tab="visuals">Visuals</button>' +
-                    '<button class="match-tab-btn" data-tab="ai">AI Analysis</button>' +
+                '<div class="match-tab-bar" role="tablist" aria-label="Match views">' +
+                    '<button class="match-tab-btn active" id="' + tabPrefix + '-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="' + tabPrefix + '-panel-overview">Overview</button>' +
+                    '<button class="match-tab-btn" id="' + tabPrefix + '-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-visuals" tabindex="-1">Visuals</button>' +
+                    '<button class="match-tab-btn" id="' + tabPrefix + '-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-ai" tabindex="-1">AI Analysis</button>' +
                 '</div>' +
                 '<div class="match-tab-stage">' +
-                    '<div class="match-tab-panel active" data-panel="overview">' + overviewHtml + '</div>' +
-                    '<div class="match-tab-panel" data-panel="visuals">' + renderVisualPanel(m) + '</div>' +
-                    '<div class="match-tab-panel" data-panel="ai">' +
+                    '<div class="match-tab-panel active" id="' + tabPrefix + '-panel-overview" data-panel="overview" role="tabpanel" aria-labelledby="' + tabPrefix + '-overview">' + overviewHtml + '</div>' +
+                    '<div class="match-tab-panel" id="' + tabPrefix + '-panel-visuals" data-panel="visuals" role="tabpanel" aria-labelledby="' + tabPrefix + '-visuals" hidden>' + renderVisualPanel(m, visualPrefix) + '</div>' +
+                    '<div class="match-tab-panel" id="' + tabPrefix + '-panel-ai" data-panel="ai" role="tabpanel" aria-labelledby="' + tabPrefix + '-ai" hidden>' +
                         '<div class="match-ai-content card-muted">Generate AI coaching for this match from in-game metrics, rank context, and composition.</div>' +
                         '<button class="ai-btn' + aiClass + '" data-match-id="' + m.id + '">' + aiText + '</button>' +
                     '</div>' +
@@ -303,6 +308,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 renderMatches(data.matches, true);
+                initializeAriaTabs(matchList);
                 currentOffset += data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
             })
@@ -330,6 +336,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 renderMatches(data.matches, false);
+                initializeAriaTabs(matchList);
                 currentOffset = data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
             })
@@ -383,8 +390,44 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function syncTabState(buttons, panels, activeKey, buttonAttr, panelAttr) {
+        buttons.forEach(function (button) {
+            var isActive = button.getAttribute(buttonAttr) === activeKey;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            // Keep all tab buttons in the keyboard tab order.
+            button.tabIndex = 0;
+        });
+        panels.forEach(function (panel) {
+            var isActive = panel.getAttribute(panelAttr) === activeKey;
+            panel.classList.toggle('active', isActive);
+            panel.hidden = !isActive;
+        });
+    }
+
+    function initializeAriaTabs(scope) {
+        scope.querySelectorAll('.match-box').forEach(function (box) {
+            var tabButtons = box.querySelectorAll('.match-tab-btn');
+            var tabPanels = box.querySelectorAll('.match-tab-panel');
+            if (tabButtons.length && tabPanels.length) {
+                var activeTab = box.querySelector('.match-tab-btn.active');
+                syncTabState(tabButtons, tabPanels, activeTab ? activeTab.getAttribute('data-tab') : 'overview', 'data-tab', 'data-panel');
+            }
+
+            box.querySelectorAll('.match-tab-panel[data-panel="visuals"]').forEach(function (visualPanel) {
+                var visualButtons = visualPanel.querySelectorAll('.visual-toggle-btn');
+                var visualGroups = visualPanel.querySelectorAll('.visual-group');
+                if (visualButtons.length && visualGroups.length) {
+                    var activeGroup = visualPanel.querySelector('.visual-toggle-btn.active');
+                    syncTabState(visualButtons, visualGroups, activeGroup ? activeGroup.getAttribute('data-group') : 'compare', 'data-group', 'data-group');
+                }
+            });
+        });
+    }
+
     function initializeFromServer() {
         renderMatches(initialMatches, false);
+        initializeAriaTabs(matchList);
         currentOffset = initialMatches.length;
         updateLoadMoreVisibility(window.__totalGames || 0, undefined);
     }
@@ -409,11 +452,13 @@ document.addEventListener('DOMContentLoaded', function () {
             var tab = tabBtn.getAttribute('data-tab');
             var box = tabBtn.closest('.match-box');
             if (!box) return;
-            box.querySelectorAll('.match-tab-btn').forEach(function (b) { b.classList.remove('active'); });
-            tabBtn.classList.add('active');
-            box.querySelectorAll('.match-tab-panel').forEach(function (panel) {
-                panel.classList.toggle('active', panel.getAttribute('data-panel') === tab);
-            });
+            syncTabState(
+                box.querySelectorAll('.match-tab-btn'),
+                box.querySelectorAll('.match-tab-panel'),
+                tab,
+                'data-tab',
+                'data-panel'
+            );
             return;
         }
 
@@ -422,11 +467,13 @@ document.addEventListener('DOMContentLoaded', function () {
             var visualPanel = visualToggle.closest('.match-tab-panel');
             if (!visualPanel) return;
             var group = visualToggle.getAttribute('data-group');
-            visualPanel.querySelectorAll('.visual-toggle-btn').forEach(function (b) { b.classList.remove('active'); });
-            visualToggle.classList.add('active');
-            visualPanel.querySelectorAll('.visual-group').forEach(function (pane) {
-                pane.classList.toggle('active', pane.getAttribute('data-group') === group);
-            });
+            syncTabState(
+                visualPanel.querySelectorAll('.visual-toggle-btn'),
+                visualPanel.querySelectorAll('.visual-group'),
+                group,
+                'data-group',
+                'data-group'
+            );
             return;
         }
 

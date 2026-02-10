@@ -5,10 +5,22 @@
 {% block content %}
 <div class="container dashboard">
     <div class="dashboard-header">
-        <h1>Dashboard</h1>
+        <div class="page-title-block">
+            <div class="page-eyebrow">Overview</div>
+            <h1>Dashboard</h1>
+        </div>
         {% if riot_account %}
-            <span style="color: var(--text-muted); font-size: 0.875rem;">{{ riot_account.summoner_name }}#{{ riot_account.tagline }}</span>
+            <span class="dashboard-id">{{ riot_account.summoner_name }}#{{ riot_account.tagline }}</span>
         {% endif %}
+    </div>
+
+    <div class="card quick-guide">
+        <h3>Use This Dashboard in 3 Steps</h3>
+        <div class="quick-guide-grid">
+            <div class="quick-guide-step"><span>1</span>Run or regenerate AI analysis on recent matches.</div>
+            <div class="quick-guide-step"><span>2</span>Compare your metrics to team and lobby averages.</div>
+            <div class="quick-guide-step"><span>3</span>Pick one improvement focus and apply it next game.</div>
+        </div>
     </div>
 
     {% if not riot_account %}

@@ -5,8 +5,20 @@
 {% block content %}
 <div class="container dashboard">
     <div class="dashboard-header">
-        <h1>Match History</h1>
+        <div class="page-title-block">
+            <div class="page-eyebrow">Review</div>
+            <h1>Match History</h1>
+        </div>
         <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary btn-sm">Back to Dashboard</a>
+    </div>
+
+    <div class="card page-usage">
+        <h3>Use This View Fast</h3>
+        <div class="quick-guide-grid">
+            <div class="quick-guide-step"><span>1</span>Filter by queue to isolate one mode.</div>
+            <div class="quick-guide-step"><span>2</span>Open tabs inside each card for overview, visuals, AI.</div>
+            <div class="quick-guide-step"><span>3</span>Open Details for full scoreboard and matchup context.</div>
+        </div>
     </div>
 
     <div class="card">

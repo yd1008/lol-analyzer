@@ -5,7 +5,37 @@
 {% block content %}
 <div class="container dashboard">
     <div class="dashboard-header">
-        <h1>Settings</h1>
+        <div class="page-title-block">
+            <div class="page-eyebrow">Setup</div>
+            <h1>Settings</h1>
+        </div>
+    </div>
+
+    <div class="card setup-checklist">
+        <h3>Complete Setup Checklist</h3>
+        <div class="setup-check-grid">
+            <div class="setup-check-item {{ 'done' if riot_account and riot_account.is_verified else 'pending' }}">
+                <span>{{ 'Done' if riot_account and riot_account.is_verified else '1' }}</span>
+                <div>
+                    <strong>Link Riot Account</strong>
+                    <p>Required for match sync and analysis.</p>
+                </div>
+            </div>
+            <div class="setup-check-item {{ 'done' if discord_config and discord_config.channel_id else 'pending' }}">
+                <span>{{ 'Done' if discord_config and discord_config.channel_id else '2' }}</span>
+                <div>
+                    <strong>Set Discord Channel</strong>
+                    <p>Optional but recommended for instant reports.</p>
+                </div>
+            </div>
+            <div class="setup-check-item {{ 'done' if current_user.settings else 'pending' }}">
+                <span>{{ 'Done' if current_user.settings else '3' }}</span>
+                <div>
+                    <strong>Tune Preferences</strong>
+                    <p>Choose cadence and summary schedule.</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Riot Account -->
@@ -48,12 +78,13 @@
     <div class="card settings-section">
         <h3>Discord Notifications</h3>
         {% if bot_invite_url %}
-        <p style="margin-bottom: 1rem; font-size: 0.8125rem; color: var(--text-secondary);">
-            <strong style="color: var(--text-primary);">Step 1:</strong> <a href="{{ bot_invite_url }}" target="_blank" class="btn btn-secondary btn-sm" style="margin-left: 0.5rem;">Add Bot to Server</a>
-        </p>
+        <div class="discord-step-row">
+            <p><strong>Step 1:</strong> Add bot to your server.</p>
+            <a href="{{ bot_invite_url }}" target="_blank" class="btn btn-secondary btn-sm">Add Bot</a>
+        </div>
         {% endif %}
-        <p style="margin-bottom: 1rem; font-size: 0.8125rem; color: var(--text-muted);">
-            <strong style="color: var(--text-primary);">Step 2:</strong> Enable Developer Mode in Discord (Settings > Advanced), right-click the target channel, and copy the Channel ID.
+        <p class="discord-step-note">
+            <strong>Step 2:</strong> Enable Developer Mode in Discord (Settings > Advanced), right-click the target channel, and copy the Channel ID.
         </p>
         {% if discord_config %}
         <div class="settings-status active">Channel: {{ discord_config.channel_id }}</div>
