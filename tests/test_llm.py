@@ -323,6 +323,85 @@ class TestGetLlmAnalysisDetailed:
         assert "set llm_api_url to https://opencode.ai/zen/v1/chat/completions" in error.lower()
 
     @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm.requests.get")
+    def test_opencode_prompt_tokens_500_retries_without_temperature(self, mock_get, mock_post, app):
+        models_resp = MagicMock()
+        models_resp.status_code = 200
+        models_resp.json.return_value = {
+            "data": [{"id": "big-pickle"}, {"id": "glm-4.7-free"}]
+        }
+        mock_get.return_value = models_resp
+
+        crash_resp = MagicMock()
+        crash_resp.status_code = 500
+        crash_resp.text = '{"type":"error","error":{"message":"Cannot read properties of undefined (reading \\"prompt_tokens\\")"}}'
+
+        success_resp = MagicMock()
+        success_resp.status_code = 200
+        success_resp.json.return_value = {
+            "choices": [{"message": {"content": "Recovered after temperature removal"}}]
+        }
+        success_resp.text = '{"choices":[{"message":{"content":"Recovered after temperature removal"}}]}'
+        mock_post.side_effect = [crash_resp, success_resp]
+
+        with app.app_context():
+            original_url = app.config["LLM_API_URL"]
+            original_model = app.config["LLM_MODEL"]
+            app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/chat/completions"
+            app.config["LLM_MODEL"] = "big-pickle"
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_API_URL"] = original_url
+            app.config["LLM_MODEL"] = original_model
+
+        assert error is None
+        assert result == "Recovered after temperature removal"
+        assert mock_post.call_count == 2
+        first_json = mock_post.call_args_list[0][1]["json"]
+        second_json = mock_post.call_args_list[1][1]["json"]
+        assert first_json["model"] == "big-pickle"
+        assert "temperature" in first_json
+        assert second_json["model"] == "big-pickle"
+        assert "temperature" not in second_json
+
+    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm.requests.get")
+    def test_opencode_prompt_tokens_500_falls_back_to_default_model(self, mock_get, mock_post, app):
+        models_resp = MagicMock()
+        models_resp.status_code = 200
+        models_resp.json.return_value = {
+            "data": [{"id": "big-pickle"}, {"id": "glm-4.7-free"}]
+        }
+        mock_get.return_value = models_resp
+
+        crash_resp = MagicMock()
+        crash_resp.status_code = 500
+        crash_resp.text = '{"type":"error","error":{"message":"Cannot read properties of undefined (reading \\"prompt_tokens\\")"}}'
+
+        success_resp = MagicMock()
+        success_resp.status_code = 200
+        success_resp.json.return_value = {
+            "choices": [{"message": {"content": "Recovered with model fallback"}}]
+        }
+        success_resp.text = '{"choices":[{"message":{"content":"Recovered with model fallback"}}]}'
+        mock_post.side_effect = [crash_resp, crash_resp, success_resp]
+
+        with app.app_context():
+            original_url = app.config["LLM_API_URL"]
+            original_model = app.config["LLM_MODEL"]
+            app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/chat/completions"
+            app.config["LLM_MODEL"] = "big-pickle"
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_API_URL"] = original_url
+            app.config["LLM_MODEL"] = original_model
+
+        assert error is None
+        assert result == "Recovered with model fallback"
+        assert mock_post.call_count == 3
+        third_json = mock_post.call_args_list[2][1]["json"]
+        assert third_json["model"] == "glm-4.7-free"
+        assert "temperature" not in third_json
+
+    @patch("app.analysis.llm.requests.post")
     def test_prompt_includes_length_budget_instruction_when_configured(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
