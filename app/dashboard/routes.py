@@ -8,6 +8,7 @@ from app.dashboard.forms import RiotAccountForm, DiscordConfigForm, PreferencesF
 from app.models import RiotAccount, DiscordConfig, MatchAnalysis, UserSettings
 from app.analysis.riot_api import resolve_puuid, get_watcher, get_routing_value, get_recent_matches
 from app.analysis.engine import analyze_match, derive_lane_context
+from app.analysis.champion_assets import champion_icon_url
 from app.analysis.llm import get_llm_analysis_detailed
 from app.analysis.discord_notifier import get_bot_invite_url
 from app.extensions import db
@@ -117,10 +118,40 @@ def index():
 
 
 _LANE_ORDER = {'TOP': 0, 'JUNGLE': 1, 'MIDDLE': 2, 'BOTTOM': 3, 'UTILITY': 4}
+_LANE_LABEL = {'TOP': 'TOP', 'JUNGLE': 'JGL', 'MIDDLE': 'MID', 'BOTTOM': 'BOT', 'UTILITY': 'SUP'}
 
 
 def _lane_sort_key(p):
     return _LANE_ORDER.get(p.get('position', ''), 9)
+
+
+def _participant_view(p: dict, game_duration: float) -> dict:
+    """Serialize participant data for UI rendering."""
+    kills = p.get('kills', 0)
+    deaths = p.get('deaths', 0)
+    assists = p.get('assists', 0)
+    gold = p.get('gold_earned', 0)
+    damage = p.get('total_damage', 0)
+    cs = p.get('cs', 0)
+    vision = p.get('vision_score', 0)
+    duration = max(game_duration, 1.0)
+    return {
+        'champion': p.get('champion', ''),
+        'champion_icon': champion_icon_url(p.get('champion', ''), p.get('champion_id')),
+        'summoner_name': p.get('summoner_name', ''),
+        'tagline': p.get('tagline', ''),
+        'position': p.get('position', ''),
+        'lane_label': _LANE_LABEL.get(p.get('position', ''), ''),
+        'kills': kills,
+        'deaths': deaths,
+        'assists': assists,
+        'kda': round((kills + assists) / max(1, deaths), 2),
+        'gold_per_min': round(gold / duration, 2),
+        'damage_per_min': round(damage / duration, 2),
+        'cs_per_min': round(cs / duration, 2),
+        'vision_per_min': round(vision / duration, 2),
+        'is_player': bool(p.get('is_player')),
+    }
 
 
 def _serialize_match(m):
@@ -128,30 +159,89 @@ def _serialize_match(m):
     participants = m.participants_json or []
     player_team = None
     player_position = ''
+    player_participant = None
+    game_duration = max(float(m.game_duration or 0), 1.0)
     for p in participants:
         if p.get('is_player'):
             player_team = p.get('team_id')
             player_position = p.get('position', '')
+            player_participant = p
             break
 
     enemies = []
     allies = []
+    ally_comp = []
+    enemy_comp = []
+    lane_matchups = []
+    visuals = {
+        'player': {},
+        'team_avg': {},
+        'lobby_avg': {},
+    }
     if player_team is not None:
-        enemies = sorted([
-            {'champion': p['champion'], 'summoner_name': p.get('summoner_name', ''), 'tagline': p.get('tagline', ''), 'position': p.get('position', '')}
-            for p in participants
-            if p.get('team_id') != player_team
-        ], key=_lane_sort_key)
-        allies = sorted([
-            {'champion': p['champion'], 'summoner_name': p.get('summoner_name', ''), 'tagline': p.get('tagline', ''), 'position': p.get('position', '')}
-            for p in participants
-            if p.get('team_id') == player_team and not p.get('is_player')
-        ], key=_lane_sort_key)
+        enemy_participants = sorted(
+            [p for p in participants if p.get('team_id') != player_team],
+            key=_lane_sort_key,
+        )
+        ally_participants = sorted(
+            [p for p in participants if p.get('team_id') == player_team],
+            key=_lane_sort_key,
+        )
+        enemies = [_participant_view(p, game_duration) for p in enemy_participants]
+        allies = [_participant_view(p, game_duration) for p in ally_participants if not p.get('is_player')]
+        ally_comp = [_participant_view(p, game_duration) for p in ally_participants]
+        enemy_comp = [_participant_view(p, game_duration) for p in enemy_participants]
+
+        for lane in ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']:
+            ally_lane = next((p for p in ally_participants if p.get('position') == lane), None)
+            enemy_lane = next((p for p in enemy_participants if p.get('position') == lane), None)
+            if ally_lane or enemy_lane:
+                lane_matchups.append({
+                    'lane': lane,
+                    'lane_label': _LANE_LABEL.get(lane, lane),
+                    'ally': _participant_view(ally_lane, game_duration) if ally_lane else None,
+                    'enemy': _participant_view(enemy_lane, game_duration) if enemy_lane else None,
+                })
+
+        def _avg_rate(team: list[dict], key: str) -> float:
+            if not team:
+                return 0.0
+            return round(sum(p.get(key, 0) for p in team) / len(team) / game_duration, 2)
+
+        visuals['team_avg'] = {
+            'gold_per_min': _avg_rate(ally_participants, 'gold_earned'),
+            'damage_per_min': _avg_rate(ally_participants, 'total_damage'),
+            'cs_per_min': _avg_rate(ally_participants, 'cs'),
+            'vision_per_min': _avg_rate(ally_participants, 'vision_score'),
+        }
+        visuals['lobby_avg'] = {
+            'gold_per_min': _avg_rate(participants, 'gold_earned'),
+            'damage_per_min': _avg_rate(participants, 'total_damage'),
+            'cs_per_min': _avg_rate(participants, 'cs'),
+            'vision_per_min': _avg_rate(participants, 'vision_score'),
+        }
+
+    if player_participant:
+        pv = _participant_view(player_participant, game_duration)
+        visuals['player'] = {
+            'gold_per_min': pv['gold_per_min'],
+            'damage_per_min': pv['damage_per_min'],
+            'cs_per_min': pv['cs_per_min'],
+            'vision_per_min': pv['vision_per_min'],
+        }
+    else:
+        visuals['player'] = {
+            'gold_per_min': m.gold_per_min,
+            'damage_per_min': m.damage_per_min,
+            'cs_per_min': round((m.cs_total or 0) / game_duration, 2),
+            'vision_per_min': round((m.vision_score or 0) / game_duration, 2),
+        }
 
     return {
         'id': m.id,
         'match_id': m.match_id,
         'champion': m.champion,
+        'champion_icon': champion_icon_url(m.champion),
         'win': m.win,
         'kills': m.kills,
         'deaths': m.deaths,
@@ -165,8 +255,13 @@ def _serialize_match(m):
         'queue_type': m.queue_type or '',
         'has_llm_analysis': bool(m.llm_analysis),
         'player_position': player_position,
+        'player_position_label': _LANE_LABEL.get(player_position, ''),
         'enemies': enemies,
         'allies': allies,
+        'ally_comp': ally_comp,
+        'enemy_comp': enemy_comp,
+        'lane_matchups': lane_matchups,
+        'visuals': visuals,
         'analyzed_at': m.analyzed_at.isoformat() if m.analyzed_at else '',
     }
 
@@ -257,10 +352,12 @@ def matches():
     pagination = MatchAnalysis.query.filter_by(user_id=current_user.id)\
         .order_by(*_match_order)\
         .paginate(page=page, per_page=per_page, error_out=False)
+    initial_matches = _serialize_matches(pagination.items)
 
     return render_template('dashboard/matches.html',
         matches=pagination.items,
         pagination=pagination,
+        initial_matches_json=initial_matches,
     )
 
 
@@ -268,7 +365,8 @@ def matches():
 @login_required
 def match_detail(match_db_id):
     analysis = MatchAnalysis.query.filter_by(id=match_db_id, user_id=current_user.id).first_or_404()
-    return render_template('dashboard/match_detail.html', analysis=analysis)
+    match_view = _serialize_match(analysis)
+    return render_template('dashboard/match_detail.html', analysis=analysis, match_view=match_view)
 
 
 @dashboard_bp.route('/settings', methods=['GET', 'POST'])
