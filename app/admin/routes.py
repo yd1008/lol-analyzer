@@ -97,6 +97,8 @@ def test_llm():
             if not analysis_data:
                 flash('Failed to analyze the selected match.', 'error')
                 return redirect(url_for('admin.test_llm'))
+            analysis_data['platform_region'] = region
+            analysis_data['player_puuid'] = puuid
 
             return render_template('admin/test_llm.html',
                 analysis_data=analysis_data,

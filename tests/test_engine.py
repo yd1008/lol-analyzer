@@ -124,6 +124,9 @@ class TestAnalyzeMatch:
         assert result["player_position"] == "MIDDLE"
         assert result["lane_opponent"] is not None
         assert result["lane_opponent"]["champion"] == "Syndra"
+        assert "item_ids" in result
+        assert "player_summoner_id" in result
+        assert result["queue_id"] == 420
 
     def test_player_not_found_in_match(self):
         watcher = MagicMock()
@@ -214,6 +217,8 @@ class TestAnalyzeMatch:
         assert player_entries[0]["summoner_name"] == "TestPlayer"
         assert player_entries[0]["tagline"] == "NA1"
         assert player_entries[0]["team_id"] == 100
+        assert "summoner_id" in player_entries[0]
+        assert "item_ids" in player_entries[0]
 
         assert player_entries[0]["position"] == "MIDDLE"
 

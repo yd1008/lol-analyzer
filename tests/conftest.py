@@ -23,6 +23,7 @@ def app():
         LLM_API_KEY="test-llm-key",
         LLM_API_URL="https://api.example.com/v1/chat/completions",
         LLM_MODEL="test-model",
+        LLM_KNOWLEDGE_EXTERNAL=False,
     )
     with app.app_context():
         _db.create_all()

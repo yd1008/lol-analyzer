@@ -208,6 +208,7 @@ def api_matches():
 def api_ai_analysis(match_db_id):
     """Run or return cached AI analysis for a match."""
     match = MatchAnalysis.query.filter_by(id=match_db_id, user_id=current_user.id).first_or_404()
+    riot_account = RiotAccount.query.filter_by(user_id=current_user.id).first()
 
     if match.llm_analysis:
         return jsonify({'analysis': match.llm_analysis, 'cached': True})
@@ -216,6 +217,7 @@ def api_ai_analysis(match_db_id):
     player_position, lane_opponent = derive_lane_context(participants)
 
     analysis_dict = {
+        'match_id': match.match_id,
         'champion': match.champion,
         'win': match.win,
         'kills': match.kills,
@@ -229,9 +231,12 @@ def api_ai_analysis(match_db_id):
         'vision_score': match.vision_score,
         'cs_total': match.cs_total,
         'game_duration': match.game_duration,
+        'queue_type': match.queue_type,
         'player_position': player_position,
         'lane_opponent': lane_opponent,
         'participants': participants,
+        'platform_region': riot_account.region if riot_account else '',
+        'player_puuid': riot_account.puuid if riot_account else '',
     }
 
     result, error = get_llm_analysis_detailed(analysis_dict)
