@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template
 from app.config import config
 from app.extensions import db, login_manager, migrate, csrf
+from app.analysis.champion_assets import champion_icon_url
 
 
 def create_app(config_name=None):
@@ -29,6 +30,8 @@ def create_app(config_name=None):
     app.register_blueprint(admin_bp, url_prefix='/admin')
 
     from app.models import User, RiotAccount, DiscordConfig, MatchAnalysis, WeeklySummary, UserSettings  # noqa: F401
+
+    app.jinja_env.globals['champion_icon_url'] = champion_icon_url
 
     @app.errorhandler(404)
     def not_found(e):

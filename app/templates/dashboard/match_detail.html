@@ -17,57 +17,231 @@
         <a href="{{ url_for('dashboard.matches') }}" class="btn btn-secondary btn-sm">Back</a>
     </div>
 
-    <div class="match-stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">KDA</div>
-            <div class="stat-value">{{ analysis.kills }}/{{ analysis.deaths }}/{{ analysis.assists }}</div>
+    <div class="detail-tabs" id="detail-tabs">
+        <button class="detail-tab-btn active" data-tab="overview">Overview</button>
+        <button class="detail-tab-btn" data-tab="visuals">Visuals</button>
+        <button class="detail-tab-btn" data-tab="ai">AI Analysis</button>
+    </div>
+
+    <div class="detail-tab-panel active" data-panel="overview">
+        <div class="match-stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">KDA</div>
+                <div class="stat-value">{{ analysis.kills }}/{{ analysis.deaths }}/{{ analysis.assists }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">KDA Ratio</div>
+                <div class="stat-value">{{ analysis.kda }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Gold</div>
+                <div class="stat-value">{{ analysis.gold_per_min }}/m</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Damage</div>
+                <div class="stat-value">{{ analysis.damage_per_min }}/m</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Vision</div>
+                <div class="stat-value">{{ analysis.vision_score }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">CS</div>
+                <div class="stat-value">{{ analysis.cs_total }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Duration</div>
+                <div class="stat-value">{{ analysis.game_duration }}m</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Gold Total</div>
+                <div class="stat-value">{{ '{:,}'.format(analysis.gold_earned) }}</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">KDA Ratio</div>
-            <div class="stat-value">{{ analysis.kda }}</div>
+
+        <div class="card">
+            <h3>Team Compositions</h3>
+            <div class="team-composition-dual">
+                <div class="team-comp-block">
+                    <div class="team-comp-title">Allies</div>
+                    <div class="team-comp-icons">
+                        {% for p in match_view.ally_comp %}
+                        <div class="team-comp-icon-wrap" title="{{ p.summoner_name }}{% if p.tagline %}#{{ p.tagline }}{% endif %} · {{ p.champion }} · {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}">
+                            {% if p.champion_icon %}
+                            <img class="champion-icon" src="{{ p.champion_icon }}" alt="{{ p.champion }}">
+                            {% else %}
+                            <span class="champion-icon-fallback">{{ p.champion[:1] }}</span>
+                            {% endif %}
+                            <span class="lane-mini">{{ p.lane_label }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="team-comp-block">
+                    <div class="team-comp-title">Enemies</div>
+                    <div class="team-comp-icons">
+                        {% for p in match_view.enemy_comp %}
+                        <div class="team-comp-icon-wrap" title="{{ p.summoner_name }}{% if p.tagline %}#{{ p.tagline }}{% endif %} · {{ p.champion }} · {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}">
+                            {% if p.champion_icon %}
+                            <img class="champion-icon" src="{{ p.champion_icon }}" alt="{{ p.champion }}">
+                            {% else %}
+                            <span class="champion-icon-fallback">{{ p.champion[:1] }}</span>
+                            {% endif %}
+                            <span class="lane-mini">{{ p.lane_label }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Gold</div>
-            <div class="stat-value">{{ analysis.gold_per_min }}/m</div>
+
+        <div class="card">
+            <h3>Lane-by-Lane Matchup</h3>
+            <div class="lane-grid">
+                {% for lane in match_view.lane_matchups %}
+                <div class="lane-row">
+                    <div class="lane-row-label">{{ lane.lane_label }}</div>
+                    <div class="lane-player ally">
+                        {% if lane.ally %}
+                            {% if lane.ally.champion_icon %}
+                            <img class="champion-icon champion-icon-sm" src="{{ lane.ally.champion_icon }}" alt="{{ lane.ally.champion }}">
+                            {% else %}
+                            <span class="champion-icon-fallback champion-icon-sm">{{ lane.ally.champion[:1] }}</span>
+                            {% endif %}
+                            <div>
+                                <div class="lane-player-name">{{ lane.ally.summoner_name or lane.ally.champion }}</div>
+                                <div class="lane-player-sub">{{ lane.ally.champion }} · {{ lane.ally.kills }}/{{ lane.ally.deaths }}/{{ lane.ally.assists }}</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="lane-player enemy">
+                        {% if lane.enemy %}
+                            {% if lane.enemy.champion_icon %}
+                            <img class="champion-icon champion-icon-sm" src="{{ lane.enemy.champion_icon }}" alt="{{ lane.enemy.champion }}">
+                            {% else %}
+                            <span class="champion-icon-fallback champion-icon-sm">{{ lane.enemy.champion[:1] }}</span>
+                            {% endif %}
+                            <div>
+                                <div class="lane-player-name">{{ lane.enemy.summoner_name or lane.enemy.champion }}</div>
+                                <div class="lane-player-sub">{{ lane.enemy.champion }} · {{ lane.enemy.kills }}/{{ lane.enemy.deaths }}/{{ lane.enemy.assists }}</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Damage</div>
-            <div class="stat-value">{{ analysis.damage_per_min }}/m</div>
+
+        {% if analysis.recommendations %}
+        <div class="card">
+            <h3>Quick Recommendations</h3>
+            <ul class="recommendations-list">
+                {% for rec in analysis.recommendations %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Vision</div>
-            <div class="stat-value">{{ analysis.vision_score }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">CS</div>
-            <div class="stat-value">{{ analysis.cs_total }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Duration</div>
-            <div class="stat-value">{{ analysis.game_duration }}m</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Gold Total</div>
-            <div class="stat-value">{{ '{:,}'.format(analysis.gold_earned) }}</div>
+        {% endif %}
+    </div>
+
+    <div class="detail-tab-panel" data-panel="visuals">
+        <div class="card">
+            <h3>Performance Visuals</h3>
+            <div class="visuals-grid">
+                {% set visual_labels = {'gold_per_min': 'Gold / Min', 'damage_per_min': 'Damage / Min', 'cs_per_min': 'CS / Min', 'vision_per_min': 'Vision / Min'} %}
+                {% for metric, label in visual_labels.items() %}
+                {% set player = match_view.visuals.player.get(metric, 0) %}
+                {% set team_avg = match_view.visuals.team_avg.get(metric, 0) %}
+                {% set lobby_avg = match_view.visuals.lobby_avg.get(metric, 0) %}
+                {% set maxv = [player, team_avg, lobby_avg, 1] | max %}
+                <div class="visual-row">
+                    <div class="visual-label">{{ label }}</div>
+                    <div class="visual-bars">
+                        <div class="visual-bar-track">
+                            <div class="visual-bar player" style="width: {{ ((player / maxv) * 100) | round(1) }}%"></div>
+                        </div>
+                        <div class="visual-bar-values">
+                            <span>You: {{ player }}</span>
+                            <span>Team Avg: {{ team_avg }}</span>
+                            <span>Lobby Avg: {{ lobby_avg }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 
-    {% if analysis.llm_analysis %}
-    <div class="card">
-        <h3>AI Analysis</h3>
-        <div class="llm-analysis">{{ analysis.llm_analysis }}</div>
+    <div class="detail-tab-panel" data-panel="ai">
+        <div class="card">
+            <h3>AI Match Analysis</h3>
+            <div id="detail-ai-content">
+                {% if analysis.llm_analysis %}
+                <div class="llm-analysis">{{ analysis.llm_analysis }}</div>
+                {% else %}
+                <p class="card-muted" id="detail-ai-placeholder">Run AI analysis to generate matchup-specific coaching.</p>
+                {% endif %}
+            </div>
+            <button class="ai-btn{{ ' has-analysis' if analysis.llm_analysis else '' }}" id="detail-ai-btn" data-match-id="{{ analysis.id }}">
+                {{ 'Refresh AI Analysis' if analysis.llm_analysis else 'Run AI Analysis' }}
+            </button>
+        </div>
     </div>
-    {% endif %}
-
-    {% if analysis.recommendations %}
-    <div class="card">
-        <h3>Quick Recommendations</h3>
-        <ul class="recommendations-list">
-            {% for rec in analysis.recommendations %}
-            <li>{{ rec }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var tabs = document.getElementById('detail-tabs');
+    var panels = document.querySelectorAll('.detail-tab-panel');
+    var csrf = document.querySelector('meta[name=\"csrf-token\"]');
+    csrf = csrf ? csrf.getAttribute('content') : '';
+
+    if (tabs) {
+        tabs.addEventListener('click', function (e) {
+            var btn = e.target.closest('.detail-tab-btn');
+            if (!btn) return;
+            var tab = btn.getAttribute('data-tab');
+            tabs.querySelectorAll('.detail-tab-btn').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            panels.forEach(function (p) {
+                p.classList.toggle('active', p.getAttribute('data-panel') === tab);
+            });
+        });
+    }
+
+    var aiBtn = document.getElementById('detail-ai-btn');
+    var aiContent = document.getElementById('detail-ai-content');
+    if (!aiBtn || !aiContent) return;
+
+    aiBtn.addEventListener('click', function () {
+        var matchId = aiBtn.getAttribute('data-match-id');
+        aiBtn.disabled = true;
+        aiBtn.textContent = 'Analyzing...';
+        fetch('/dashboard/api/matches/' + matchId + '/ai-analysis', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf,
+            },
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) {
+                    aiBtn.disabled = false;
+                    aiBtn.textContent = 'Run AI Analysis';
+                    return;
+                }
+                aiContent.innerHTML = '<div class=\"llm-analysis\"></div>';
+                aiContent.querySelector('.llm-analysis').textContent = data.analysis || '';
+                aiBtn.disabled = false;
+                aiBtn.classList.add('has-analysis');
+                aiBtn.textContent = 'Refresh AI Analysis';
+            })
+            .catch(function () {
+                aiBtn.disabled = false;
+                aiBtn.textContent = 'Run AI Analysis';
+            });
+    });
+});
+</script>
 {% endblock %}
