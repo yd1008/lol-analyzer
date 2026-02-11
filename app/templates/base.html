@@ -9,15 +9,17 @@
     <script>
         (function () {
             var theme = 'light';
+            var stored = null;
             try {
-                var stored = localStorage.getItem('lanescope-theme');
-                if (stored === 'light' || stored === 'dark') {
-                    theme = stored;
-                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
+                stored = localStorage.getItem('lanescope-theme');
             } catch (err) {
-                theme = 'light';
+                stored = null;
+            }
+
+            if (stored === 'light' || stored === 'dark') {
+                theme = stored;
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                theme = 'dark';
             }
             document.documentElement.setAttribute('data-theme', theme);
         })();
