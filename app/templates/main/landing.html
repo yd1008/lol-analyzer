@@ -6,9 +6,9 @@
 <section class="hero">
     <div class="container hero-shell">
         <div class="hero-copy">
-            <div class="hero-badge">Minimal Match Intelligence</div>
-            <h1>Know exactly <em>why</em><br>you won or lost</h1>
-            <p>Link your Riot ID once. Then every match is translated into clear coaching points, delivered on web and Discord.</p>
+            <div class="hero-badge">Built For Deliberate Improvement</div>
+            <h1>Review every match with <em>clarity</em>, not noise</h1>
+            <p>Track what happened, why it happened, and what to change next queue. LaneScope turns each game into a concise coaching workflow.</p>
             <div class="cta-buttons">
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Open Dashboard</a>
@@ -19,17 +19,17 @@
                 {% endif %}
             </div>
             <div class="signal-row">
-                <span class="signal-pill">Auto match sync</span>
-                <span class="signal-pill">Role-aware insights</span>
-                <span class="signal-pill">Discord delivery</span>
+                <span class="signal-pill">Automatic Match Sync</span>
+                <span class="signal-pill">Role + Matchup Context</span>
+                <span class="signal-pill">One-Action Coaching</span>
             </div>
         </div>
         <aside class="hero-panel">
-            <h2>How to use this site</h2>
+            <h2>Start In Minutes</h2>
             <ol class="flow-list">
-                <li><span>1</span>Connect Riot account in Settings</li>
-                <li><span>2</span>Add Discord channel for notifications</li>
-                <li><span>3</span>Play and review AI coaching after each game</li>
+                <li><span>1</span>Connect Riot ID in Settings</li>
+                <li><span>2</span>Set Discord channel (optional)</li>
+                <li><span>3</span>Play and review post-match coaching</li>
             </ol>
             {% if current_user.is_authenticated %}
             <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">Go to Setup</a>
@@ -44,19 +44,19 @@
     <div class="container">
         <div class="workflow-track">
             <div class="workflow-node">
-                <div class="workflow-kicker">Setup</div>
-                <h3>Link Once</h3>
-                <p>Riot ID + Discord channel in under 2 minutes.</p>
+                <div class="workflow-kicker">Connect</div>
+                <h3>One-Time Setup</h3>
+                <p>Riot account and delivery preferences are configured once.</p>
             </div>
             <div class="workflow-node">
-                <div class="workflow-kicker">Collection</div>
-                <h3>Auto Sync</h3>
-                <p>New matches are fetched and analyzed in background.</p>
+                <div class="workflow-kicker">Collect</div>
+                <h3>Background Import</h3>
+                <p>Recent games are fetched and normalized without manual steps.</p>
             </div>
             <div class="workflow-node">
                 <div class="workflow-kicker">Improve</div>
-                <h3>Act Fast</h3>
-                <p>Get one clear focus for your very next game.</p>
+                <h3>Next-Game Focus</h3>
+                <p>Each report ends with a practical adjustment you can apply fast.</p>
             </div>
         </div>
     </div>
@@ -70,22 +70,22 @@
         </div>
         <div class="features-grid feature-min-grid">
             <div class="feature-card">
-                <div class="feature-icon">A</div>
+                <div class="feature-icon">01</div>
                 <h3>Automatic Match Import</h3>
                 <p>Your recent games sync without copy-pasting match IDs.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">B</div>
+                <div class="feature-icon">02</div>
                 <h3>Context-Aware Coaching</h3>
                 <p>Advice considers lane matchup, composition, and performance deltas.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">C</div>
+                <div class="feature-icon">03</div>
                 <h3>Discord + Web</h3>
                 <p>Read short insights in Discord, then deep dive from the dashboard.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">D</div>
+                <div class="feature-icon">04</div>
                 <h3>Weekly Trends</h3>
                 <p>Track consistency and spot recurring mistakes over time.</p>
             </div>
@@ -101,17 +101,17 @@
         </div>
         <div class="steps">
             <div class="step">
-                <div class="step-number">I</div>
+                <div class="step-number">01</div>
                 <h3>Current Form</h3>
                 <p>KDA, CS, gold/min, damage/min, vision, and role context.</p>
             </div>
             <div class="step">
-                <div class="step-number">II</div>
+                <div class="step-number">02</div>
                 <h3>Matchup Clarity</h3>
                 <p>Lane and team composition snapshots with performance deltas.</p>
             </div>
             <div class="step">
-                <div class="step-number">III</div>
+                <div class="step-number">03</div>
                 <h3>Next Focus</h3>
                 <p>One practical adjustment to apply in your next queue.</p>
             </div>
