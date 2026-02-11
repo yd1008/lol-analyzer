@@ -182,7 +182,7 @@ a:hover {
     animation: slideIn 0.3s ease;
 }
 
-.flash-success { background: rgba(52, 211, 153, 0.16); border-color: rgba(52, 211, 153, 0.34); color: #9df6d3; }
+.flash-success { background: rgba(31, 143, 95, 0.12); border-color: rgba(31, 143, 95, 0.34); color: #196c48; }
 .flash-error, .flash-danger { background: rgba(203, 76, 76, 0.1); border-color: rgba(203, 76, 76, 0.3); color: #8d2f2f; }
 .flash-info { background: rgba(16, 163, 127, 0.11); border-color: rgba(16, 163, 127, 0.3); color: #0f7f64; }
 .flash-warning { background: rgba(177, 133, 43, 0.11); border-color: rgba(177, 133, 43, 0.3); color: #7b5c1d; }
