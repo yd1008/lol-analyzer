@@ -1,5 +1,70 @@
 // Auto-dismiss flash messages after 5 seconds
 document.addEventListener('DOMContentLoaded', function () {
+    var THEME_STORAGE_KEY = 'lanescope-theme';
+
+    function getStoredTheme() {
+        try {
+            var stored = localStorage.getItem(THEME_STORAGE_KEY);
+            return stored === 'light' || stored === 'dark' ? stored : null;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function getCurrentTheme() {
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+
+    function updateThemeToggleUi(theme) {
+        var toggle = document.getElementById('theme-toggle');
+        if (!toggle) return;
+
+        var nextTheme = theme === 'dark' ? 'light' : 'dark';
+        var label = toggle.querySelector('.theme-toggle-label');
+
+        toggle.dataset.theme = theme;
+        toggle.setAttribute('aria-label', 'Switch to ' + nextTheme + ' theme');
+        toggle.setAttribute('title', 'Switch to ' + nextTheme + ' theme');
+        toggle.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+        if (label) {
+            label.textContent = theme === 'dark' ? 'Dark' : 'Light';
+        }
+    }
+
+    function applyTheme(theme, persist) {
+        document.documentElement.setAttribute('data-theme', theme);
+        if (persist) {
+            try {
+                localStorage.setItem(THEME_STORAGE_KEY, theme);
+            } catch (err) {
+                // Ignore storage failures in strict browsing modes.
+            }
+        }
+        updateThemeToggleUi(theme);
+    }
+
+    function initializeThemeToggle() {
+        var toggle = document.getElementById('theme-toggle');
+        var media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+        updateThemeToggleUi(getCurrentTheme());
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                var nextTheme = getCurrentTheme() === 'dark' ? 'light' : 'dark';
+                applyTheme(nextTheme, true);
+            });
+        }
+
+        if (!getStoredTheme() && media && media.addEventListener) {
+            media.addEventListener('change', function (event) {
+                applyTheme(event.matches ? 'dark' : 'light', false);
+            });
+        }
+    }
+
+    initializeThemeToggle();
+
     var flashes = document.querySelectorAll('.flash');
     flashes.forEach(function (flash) {
         setTimeout(function () {

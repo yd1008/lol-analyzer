@@ -6,6 +6,22 @@
     <title>{% block title %}LoL Analyzer{% endblock %}</title>
     <meta name="description" content="{% block description %}AI-powered League of Legends performance analysis. Get match insights and personalized coaching delivered to your Discord.{% endblock %}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        (function () {
+            var theme = 'light';
+            try {
+                var stored = localStorage.getItem('lanescope-theme');
+                if (stored === 'light' || stored === 'dark') {
+                    theme = stored;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            } catch (err) {
+                theme = 'light';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
@@ -29,6 +45,14 @@
                         <li><a href="{{ url_for('auth.login') }}">Login</a></li>
                         <li><a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Get Started</a></li>
                     {% endif %}
+                    <li>
+                        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch theme" aria-pressed="false">
+                            <span class="theme-toggle-track" aria-hidden="true">
+                                <span class="theme-toggle-knob"></span>
+                            </span>
+                            <span class="theme-toggle-label">Theme</span>
+                        </button>
+                    </li>
                 </ul>
             </nav>
         </div>
