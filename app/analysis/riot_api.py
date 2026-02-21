@@ -4,6 +4,7 @@ import logging
 import requests as http_requests
 from flask import current_app
 from riotwatcher import LolWatcher, ApiError
+from app.i18n import lt
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,10 @@ def resolve_puuid(summoner_name: str, tagline: str, region: str) -> tuple[str | 
     On failure puuid is None and error_message describes the problem.
     """
     if not current_app.config.get('RIOT_API_KEY'):
-        return None, "Riot API key is not configured. Please contact the site administrator."
+        return None, lt(
+            "Riot API key is not configured. Please contact the site administrator.",
+            "Riot API 密钥未配置，请联系站点管理员。",
+        )
 
     try:
         api_key = current_app.config['RIOT_API_KEY']
@@ -70,22 +74,39 @@ def resolve_puuid(summoner_name: str, tagline: str, region: str) -> tuple[str | 
         display = REGION_DISPLAY.get(region, region.upper())
         if resp.status_code == 404:
             return None, (
-                f'Summoner "{summoner_name}#{tagline}" was not found on {display}. '
-                f'Make sure your Riot ID is spelled correctly (case-insensitive) '
-                f'and that you selected the right region. '
-                f'Your Riot ID is shown at the top of your League client.'
+                lt(
+                    f'Summoner "{summoner_name}#{tagline}" was not found on {display}. '
+                    f'Make sure your Riot ID is spelled correctly (case-insensitive) '
+                    f'and that you selected the right region. '
+                    f'Your Riot ID is shown at the top of your League client.',
+                    f'在 {display} 未找到召唤师“{summoner_name}#{tagline}”。'
+                    f'请确认 Riot ID 拼写正确（不区分大小写）并选择了正确服务器。'
+                    f'你的 Riot ID 可在英雄联盟客户端顶部查看。',
+                )
             )
         if resp.status_code == 403:
-            return None, "Riot API key is invalid or expired. Please contact the site administrator."
+            return None, lt(
+                "Riot API key is invalid or expired. Please contact the site administrator.",
+                "Riot API 密钥无效或已过期，请联系站点管理员。",
+            )
         if resp.status_code == 429:
-            return None, "Too many requests to Riot API. Please wait a minute and try again."
+            return None, lt(
+                "Too many requests to Riot API. Please wait a minute and try again.",
+                "Riot API 请求过于频繁，请稍后再试。",
+            )
         logger.error("Riot API error resolving PUUID for %s#%s: status %d", summoner_name, tagline, resp.status_code)
-        return None, f"Riot API returned an error (code {resp.status_code}). Please try again later."
+        return None, lt(
+            f"Riot API returned an error (code {resp.status_code}). Please try again later.",
+            f"Riot API 返回错误（代码 {resp.status_code}），请稍后重试。",
+        )
     except ValueError as e:
         return None, str(e)
     except Exception as e:
         logger.error("Error resolving PUUID for %s#%s: %s", summoner_name, tagline, e)
-        return None, "An unexpected error occurred. Please try again later."
+        return None, lt(
+            "An unexpected error occurred. Please try again later.",
+            "发生未知错误，请稍后重试。",
+        )
 
 
 def get_recent_matches(region: str, puuid: str, count: int = 10) -> list[str]:

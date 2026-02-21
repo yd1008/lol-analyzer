@@ -1,34 +1,34 @@
 {% extends "base.html" %}
 
-{% block title %}Sign In - LoL Analyzer{% endblock %}
+{% block title %}{{ lt('Sign In - LoL Analyzer', '登录 - LoL 分析器') }}{% endblock %}
 
 {% block content %}
 <section class="auth-shell">
     <div class="form-container">
-        <h2>Welcome back</h2>
-        <p class="form-subtitle">Sign in to your account to continue.</p>
+        <h2>{{ lt('Welcome back', '欢迎回来') }}</h2>
+        <p class="form-subtitle">{{ lt('Sign in to your account to continue.', '登录你的账号以继续。') }}</p>
         <form method="POST">
             {{ form.hidden_tag() }}
             <div class="form-group">
-                {{ form.email.label }}
-                {{ form.email(placeholder="you@example.com") }}
+                <label for="{{ form.email.id }}">{{ t(form.email.label.text) if form.email.label.text.startswith('form.') else form.email.label.text }}</label>
+                {{ form.email(placeholder=lt("you@example.com", "you@example.com")) }}
                 {% for error in form.email.errors %}
-                    <div class="error">{{ error }}</div>
+                    <div class="error">{{ t(error) }}</div>
                 {% endfor %}
             </div>
             <div class="form-group">
-                {{ form.password.label }}
-                {{ form.password(placeholder="Your password") }}
+                <label for="{{ form.password.id }}">{{ t(form.password.label.text) if form.password.label.text.startswith('form.') else form.password.label.text }}</label>
+                {{ form.password(placeholder=lt("Your password", "你的密码")) }}
                 {% for error in form.password.errors %}
-                    <div class="error">{{ error }}</div>
+                    <div class="error">{{ t(error) }}</div>
                 {% endfor %}
             </div>
             <div class="form-actions">
-                {{ form.submit(class="btn btn-primary") }}
+                <button type="submit" class="btn btn-primary">{{ lt('Sign In', '登录') }}</button>
             </div>
         </form>
         <div class="form-footer">
-            Don't have an account? <a href="{{ url_for('auth.register') }}">Create one</a>
+            {{ lt("Don't have an account?", "还没有账号？") }} <a href="{{ url_for('auth.register') }}">{{ lt('Create one', '立即注册') }}</a>
         </div>
     </div>
 </section>

@@ -1,39 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Match History - LoL Analyzer{% endblock %}
+{% block title %}{{ lt('Match History - LoL Analyzer', '对局历史 - LoL 分析器') }}{% endblock %}
 
 {% block content %}
 <div class="container dashboard">
     <div class="dashboard-header">
         <div class="page-title-block">
-            <div class="page-eyebrow">Review</div>
-            <h1>Match History</h1>
+            <div class="page-eyebrow">{{ lt('Review', '复盘') }}</div>
+            <h1>{{ lt('Match History', '对局历史') }}</h1>
         </div>
-        <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary btn-sm">Back to Dashboard</a>
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary btn-sm">{{ lt('Back to Dashboard', '返回仪表盘') }}</a>
     </div>
 
     <div class="card page-usage">
-        <h3>Use This View Fast</h3>
+        <h3>{{ lt('Use This View Fast', '快速使用此视图') }}</h3>
         <div class="quick-guide-grid">
-            <div class="quick-guide-step"><span>1</span>Filter by queue to isolate one mode.</div>
-            <div class="quick-guide-step"><span>2</span>Open tabs inside each card for overview, visuals, AI.</div>
-            <div class="quick-guide-step"><span>3</span>Open Details for full scoreboard and matchup context.</div>
+            <div class="quick-guide-step"><span>1</span>{{ lt('Filter by queue to isolate one mode.', '按队列筛选聚焦某一种模式。') }}</div>
+            <div class="quick-guide-step"><span>2</span>{{ lt('Open tabs inside each card for overview, visuals, AI.', '在每张卡片中切换概览、图表、AI 标签。') }}</div>
+            <div class="quick-guide-step"><span>3</span>{{ lt('Open Details for full scoreboard and matchup context.', '进入详情页查看完整战绩与对线上下文。') }}</div>
         </div>
     </div>
 
     <div class="card matches-card">
         <div class="section-head">
             <div>
-                <div class="section-label">Match Queue</div>
-                <h3>All Matches</h3>
+                <div class="section-label">{{ lt('Match Queue', '对局列表') }}</div>
+                <h3>{{ lt('All Matches', '全部对局') }}</h3>
             </div>
-            <p class="card-muted">Use filters and tabs to inspect performance and coaching quickly.</p>
+            <p class="card-muted">{{ lt('Use filters and tabs to inspect performance and coaching quickly.', '通过筛选和标签快速查看表现与建议。') }}</p>
         </div>
         <div class="match-filter-bar" id="match-filter-bar">
-            <button class="filter-btn active" data-queue="">All</button>
-            <button class="filter-btn" data-queue="Ranked Solo">Ranked Solo</button>
-            <button class="filter-btn" data-queue="Ranked Flex">Ranked Flex</button>
-            <button class="filter-btn" data-queue="Normal Draft,Normal Blind">Normal</button>
+            <button class="filter-btn active" data-queue="">{{ lt('All', '全部') }}</button>
+            <button class="filter-btn" data-queue="Ranked Solo">{{ queue_label('Ranked Solo') }}</button>
+            <button class="filter-btn" data-queue="Ranked Flex">{{ queue_label('Ranked Flex') }}</button>
+            <button class="filter-btn" data-queue="Normal Draft,Normal Blind">{{ lt('Normal', '匹配') }}</button>
         </div>
 
         <div id="match-list">
@@ -41,7 +41,7 @@
 
         {% if pagination.total > matches|length %}
         <div class="load-more-container" id="load-more-container">
-            <button class="btn btn-secondary btn-sm" id="load-more-btn">Load More</button>
+            <button class="btn btn-secondary btn-sm" id="load-more-btn">{{ lt('Load More', '加载更多') }}</button>
         </div>
         {% endif %}
     </div>

@@ -12,6 +12,16 @@ from app.analysis.engine import analyze_match, derive_lane_context
 from app.analysis.champion_assets import champion_icon_url, item_icon_url, rune_icons
 from app.analysis.llm import get_llm_analysis_detailed, iter_llm_analysis_stream
 from app.analysis.discord_notifier import get_bot_invite_url
+from app.i18n import (
+    champion_name,
+    get_locale,
+    lane_label,
+    lt,
+    queue_label,
+    resolve_api_language,
+    t,
+    weekday_label,
+)
 from app.extensions import db
 
 logger = logging.getLogger(__name__)
@@ -119,14 +129,13 @@ def index():
 
 
 _LANE_ORDER = {'TOP': 0, 'JUNGLE': 1, 'MIDDLE': 2, 'BOTTOM': 3, 'UTILITY': 4}
-_LANE_LABEL = {'TOP': 'TOP', 'JUNGLE': 'JGL', 'MIDDLE': 'MID', 'BOTTOM': 'BOT', 'UTILITY': 'SUP'}
 
 
 def _lane_sort_key(p):
     return _LANE_ORDER.get(p.get('position', ''), 9)
 
 
-def _participant_view(p: dict, game_duration: float) -> dict:
+def _participant_view(p: dict, game_duration: float, locale: str | None = None) -> dict:
     """Serialize participant data for UI rendering."""
     if not p:
         return {}
@@ -148,11 +157,12 @@ def _participant_view(p: dict, game_duration: float) -> dict:
     return {
         'team_id': p.get('team_id'),
         'champion': p.get('champion', ''),
+        'champion_label': champion_name(p.get('champion', ''), locale=locale),
         'champion_icon': champion_icon_url(p.get('champion', ''), p.get('champion_id')),
         'summoner_name': p.get('summoner_name', ''),
         'tagline': p.get('tagline', ''),
         'position': p.get('position', ''),
-        'lane_label': _LANE_LABEL.get(p.get('position', ''), ''),
+        'lane_label': lane_label(p.get('position', ''), short=True, locale=locale),
         'kills': kills,
         'deaths': deaths,
         'assists': assists,
@@ -173,8 +183,9 @@ def _participant_view(p: dict, game_duration: float) -> dict:
     }
 
 
-def _serialize_match(m, include_scoreboard: bool = False):
+def _serialize_match(m, include_scoreboard: bool = False, locale: str | None = None):
     """Serialize a MatchAnalysis row to a dict for JSON responses."""
+    locale = locale or get_locale()
     participants = m.participants_json or []
     player_team = None
     player_position = ''
@@ -209,10 +220,10 @@ def _serialize_match(m, include_scoreboard: bool = False):
             [p for p in participants if p.get('team_id') == player_team],
             key=_lane_sort_key,
         )
-        enemies = [_participant_view(p, game_duration) for p in enemy_participants]
-        allies = [_participant_view(p, game_duration) for p in ally_participants if not p.get('is_player')]
-        ally_comp = [_participant_view(p, game_duration) for p in ally_participants]
-        enemy_comp = [_participant_view(p, game_duration) for p in enemy_participants]
+        enemies = [_participant_view(p, game_duration, locale=locale) for p in enemy_participants]
+        allies = [_participant_view(p, game_duration, locale=locale) for p in ally_participants if not p.get('is_player')]
+        ally_comp = [_participant_view(p, game_duration, locale=locale) for p in ally_participants]
+        enemy_comp = [_participant_view(p, game_duration, locale=locale) for p in enemy_participants]
 
         for lane in ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']:
             ally_lane = next((p for p in ally_participants if p.get('position') == lane), None)
@@ -220,9 +231,9 @@ def _serialize_match(m, include_scoreboard: bool = False):
             if ally_lane or enemy_lane:
                 lane_matchups.append({
                     'lane': lane,
-                    'lane_label': _LANE_LABEL.get(lane, lane),
-                    'ally': _participant_view(ally_lane, game_duration) if ally_lane else None,
-                    'enemy': _participant_view(enemy_lane, game_duration) if enemy_lane else None,
+                    'lane_label': lane_label(lane, short=True, locale=locale),
+                    'ally': _participant_view(ally_lane, game_duration, locale=locale) if ally_lane else None,
+                    'enemy': _participant_view(enemy_lane, game_duration, locale=locale) if enemy_lane else None,
                 })
 
         def _avg_rate(team: list[dict], key: str) -> float:
@@ -281,7 +292,7 @@ def _serialize_match(m, include_scoreboard: bool = False):
             player_kda = round((player_participant.get('kills', 0) + player_participant.get('assists', 0)) / max(1, player_participant.get('deaths', 0)), 2)
             opp_kda = round((lane_opponent.get('kills', 0) + lane_opponent.get('assists', 0)) / max(1, lane_opponent.get('deaths', 0)), 2)
             visuals['lane'] = {
-                'opponent': _participant_view(lane_opponent, game_duration),
+                'opponent': _participant_view(lane_opponent, game_duration, locale=locale),
                 'gpm_delta': round((player_participant.get('gold_earned', 0) - lane_opponent.get('gold_earned', 0)) / game_duration, 2),
                 'dpm_delta': round((player_participant.get('total_damage', 0) - lane_opponent.get('total_damage', 0)) / game_duration, 2),
                 'cspm_delta': round((player_participant.get('cs', 0) - lane_opponent.get('cs', 0)) / game_duration, 2),
@@ -292,11 +303,11 @@ def _serialize_match(m, include_scoreboard: bool = False):
         if include_scoreboard:
             scoreboard_participants = []
             for p in ally_participants:
-                pv = _participant_view(p, game_duration)
+                pv = _participant_view(p, game_duration, locale=locale)
                 pv['side'] = 'ALLY'
                 scoreboard_participants.append(pv)
             for p in enemy_participants:
-                pv = _participant_view(p, game_duration)
+                pv = _participant_view(p, game_duration, locale=locale)
                 pv['side'] = 'ENEMY'
                 scoreboard_participants.append(pv)
             max_damage = max((p.get('total_damage', 0) for p in scoreboard_participants), default=0)
@@ -305,7 +316,7 @@ def _serialize_match(m, include_scoreboard: bool = False):
                 scoreboard_rows.append(pv)
 
     if player_participant:
-        pv = _participant_view(player_participant, game_duration)
+        pv = _participant_view(player_participant, game_duration, locale=locale)
         visuals['player'] = {
             'gold_per_min': pv['gold_per_min'],
             'damage_per_min': pv['damage_per_min'],
@@ -322,10 +333,15 @@ def _serialize_match(m, include_scoreboard: bool = False):
             'kda': m.kda,
         }
 
+    has_llm_analysis_en = bool(m.llm_analysis_en or m.llm_analysis)
+    has_llm_analysis_zh = bool(m.llm_analysis_zh)
+    has_llm_analysis = has_llm_analysis_zh if locale == 'zh-CN' else has_llm_analysis_en
+
     return {
         'id': m.id,
         'match_id': m.match_id,
         'champion': m.champion,
+        'champion_label': champion_name(m.champion, locale=locale),
         'champion_icon': champion_icon_url(m.champion),
         'win': m.win,
         'kills': m.kills,
@@ -338,9 +354,12 @@ def _serialize_match(m, include_scoreboard: bool = False):
         'cs_total': m.cs_total,
         'game_duration': m.game_duration,
         'queue_type': m.queue_type or '',
-        'has_llm_analysis': bool(m.llm_analysis),
+        'queue_type_label': queue_label(m.queue_type or '', locale=locale),
+        'has_llm_analysis': has_llm_analysis,
+        'has_llm_analysis_en': has_llm_analysis_en,
+        'has_llm_analysis_zh': has_llm_analysis_zh,
         'player_position': player_position,
-        'player_position_label': _LANE_LABEL.get(player_position, ''),
+        'player_position_label': lane_label(player_position, short=True, locale=locale),
         'enemies': enemies,
         'allies': allies,
         'ally_comp': ally_comp,
@@ -354,7 +373,8 @@ def _serialize_match(m, include_scoreboard: bool = False):
 
 def _serialize_matches(match_list):
     """Serialize a list of MatchAnalysis rows."""
-    return [_serialize_match(m, include_scoreboard=False) for m in match_list]
+    locale = get_locale()
+    return [_serialize_match(m, include_scoreboard=False, locale=locale) for m in match_list]
 
 
 def _build_llm_analysis_payload(match: MatchAnalysis, riot_account: RiotAccount | None) -> dict:
@@ -384,6 +404,28 @@ def _build_llm_analysis_payload(match: MatchAnalysis, riot_account: RiotAccount 
     }
 
 
+def _analysis_column_for_language(language: str) -> str:
+    return 'llm_analysis_zh' if language == 'zh-CN' else 'llm_analysis_en'
+
+
+def _get_cached_analysis(match: MatchAnalysis, language: str) -> str | None:
+    column = _analysis_column_for_language(language)
+    cached = getattr(match, column, None)
+    if cached:
+        return cached
+    if language == 'en' and match.llm_analysis:
+        return match.llm_analysis
+    return None
+
+
+def _set_cached_analysis(match: MatchAnalysis, language: str, analysis_text: str) -> None:
+    column = _analysis_column_for_language(language)
+    setattr(match, column, analysis_text)
+    # Keep legacy column populated for backward compatibility.
+    if language == 'en':
+        match.llm_analysis = analysis_text
+
+
 def _ai_error_status(error: str) -> int:
     error_l = (error or '').lower()
     if 'timed out' in error_l:
@@ -398,7 +440,7 @@ def _ai_error_status(error: str) -> int:
 
 
 def _ndjson_line(event: dict) -> str:
-    return json.dumps(event, ensure_ascii=True) + '\n'
+    return json.dumps(event, ensure_ascii=False) + '\n'
 
 
 @dashboard_bp.route('/api/matches')
@@ -436,28 +478,31 @@ def api_ai_analysis(match_db_id):
     riot_account = RiotAccount.query.filter_by(user_id=current_user.id).first()
     payload = request.get_json(silent=True)
     force = bool(payload.get('force')) if isinstance(payload, dict) else False
+    language = resolve_api_language(payload.get('language') if isinstance(payload, dict) else None)
+    cached_analysis = _get_cached_analysis(match, language)
 
-    if match.llm_analysis and not force:
-        return jsonify({'analysis': match.llm_analysis, 'cached': True})
+    if cached_analysis and not force:
+        return jsonify({'analysis': cached_analysis, 'cached': True, 'language': language})
 
     analysis_dict = _build_llm_analysis_payload(match, riot_account)
 
-    result, error = get_llm_analysis_detailed(analysis_dict)
+    result, error = get_llm_analysis_detailed(analysis_dict, language=language)
     if error:
-        if match.llm_analysis:
+        if cached_analysis:
             return jsonify({
-                'analysis': match.llm_analysis,
+                'analysis': cached_analysis,
                 'cached': True,
                 'stale': True,
                 'error': error,
+                'language': language,
             }), 200
         status = _ai_error_status(error)
-        return jsonify({'error': error}), status
+        return jsonify({'error': error, 'language': language}), status
 
-    match.llm_analysis = result
+    _set_cached_analysis(match, language, result)
     db.session.commit()
 
-    return jsonify({'analysis': result, 'cached': False, 'regenerated': force})
+    return jsonify({'analysis': result, 'cached': False, 'regenerated': force, 'language': language})
 
 
 @dashboard_bp.route('/api/matches/<int:match_db_id>/ai-analysis/stream', methods=['POST'])
@@ -468,21 +513,24 @@ def api_ai_analysis_stream(match_db_id):
     riot_account = RiotAccount.query.filter_by(user_id=current_user.id).first()
     payload = request.get_json(silent=True)
     force = bool(payload.get('force')) if isinstance(payload, dict) else False
+    language = resolve_api_language(payload.get('language') if isinstance(payload, dict) else None)
+    cached_analysis = _get_cached_analysis(match, language)
 
     def event_stream():
-        if match.llm_analysis and not force:
-            yield _ndjson_line({'type': 'meta', 'cached': True, 'regenerated': False})
+        if cached_analysis and not force:
+            yield _ndjson_line({'type': 'meta', 'cached': True, 'regenerated': False, 'language': language})
             yield _ndjson_line({
                 'type': 'done',
-                'analysis': match.llm_analysis,
+                'analysis': cached_analysis,
                 'cached': True,
                 'regenerated': False,
+                'language': language,
             })
             return
 
-        yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force})
+        yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force, 'language': language})
         analysis_dict = _build_llm_analysis_payload(match, riot_account)
-        for event in iter_llm_analysis_stream(analysis_dict):
+        for event in iter_llm_analysis_stream(analysis_dict, language=language):
             event_type = event.get('type')
             if event_type == 'chunk':
                 delta = event.get('delta', '')
@@ -493,48 +541,53 @@ def api_ai_analysis_stream(match_db_id):
             if event_type == 'done':
                 final_text = event.get('analysis', '')
                 if final_text:
-                    match.llm_analysis = final_text
+                    _set_cached_analysis(match, language, final_text)
                     db.session.commit()
                 yield _ndjson_line({
                     'type': 'done',
                     'analysis': final_text,
                     'cached': False,
                     'regenerated': force,
+                    'language': language,
                 })
                 return
 
             if event_type == 'error':
-                error = event.get('error') or 'AI analysis failed.'
-                if match.llm_analysis:
+                error = event.get('error') or t('flash.ai_failed', locale=language)
+                if cached_analysis:
                     yield _ndjson_line({
                         'type': 'stale',
-                        'analysis': match.llm_analysis,
+                        'analysis': cached_analysis,
                         'cached': True,
                         'stale': True,
                         'error': error,
+                        'language': language,
                     })
                 else:
                     yield _ndjson_line({
                         'type': 'error',
                         'error': error,
                         'status': _ai_error_status(error),
+                        'language': language,
                     })
                 return
 
-        fallback_error = 'AI analysis stream ended without a final result.'
-        if match.llm_analysis:
+        fallback_error = lt('AI analysis stream ended without a final result.', 'AI 分析流结束但未返回最终结果。', locale=language)
+        if cached_analysis:
             yield _ndjson_line({
                 'type': 'stale',
-                'analysis': match.llm_analysis,
+                'analysis': cached_analysis,
                 'cached': True,
                 'stale': True,
                 'error': fallback_error,
+                'language': language,
             })
         else:
             yield _ndjson_line({
                 'type': 'error',
                 'error': fallback_error,
                 'status': 502,
+                'language': language,
             })
 
     response = Response(stream_with_context(event_stream()), mimetype='application/x-ndjson')
@@ -564,8 +617,14 @@ def matches():
 @login_required
 def match_detail(match_db_id):
     analysis = MatchAnalysis.query.filter_by(id=match_db_id, user_id=current_user.id).first_or_404()
-    match_view = _serialize_match(analysis, include_scoreboard=True)
-    return render_template('dashboard/match_detail.html', analysis=analysis, match_view=match_view)
+    initial_ai_analysis = _get_cached_analysis(analysis, get_locale()) or ''
+    match_view = _serialize_match(analysis, include_scoreboard=True, locale=get_locale())
+    return render_template(
+        'dashboard/match_detail.html',
+        analysis=analysis,
+        match_view=match_view,
+        initial_ai_analysis=initial_ai_analysis,
+    )
 
 
 @dashboard_bp.route('/settings', methods=['GET', 'POST'])
@@ -578,6 +637,10 @@ def settings():
     riot_form = RiotAccountForm(prefix='riot')
     discord_form = DiscordConfigForm(prefix='discord')
     prefs_form = PreferencesForm(prefix='prefs')
+    prefs_form.weekly_summary_day.choices = [
+        (day, weekday_label(day))
+        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    ]
 
     if riot_account:
         riot_form.summoner_name.data = riot_account.summoner_name
@@ -639,16 +702,25 @@ def settings_riot():
         try:
             count = sync_recent_matches(current_user.id, riot_account.region, riot_account.puuid)
             if count:
-                flash(f'Riot account linked! Imported {count} recent matches.', 'success')
+                flash(
+                    lt('Riot account linked! Imported {count} recent matches.', 'Riot 账号已绑定！已导入最近 {count} 场对局。').format(count=count),
+                    'success',
+                )
             else:
-                flash('Riot account linked successfully!', 'success')
+                flash(lt('Riot account linked successfully!', 'Riot 账号绑定成功！'), 'success')
         except Exception as e:
             logger.error("Failed to sync matches after linking for user %d: %s", current_user.id, e)
-            flash('Riot account linked, but match import failed. Matches will sync on dashboard.', 'warning')
+            flash(
+                lt(
+                    'Riot account linked, but match import failed. Matches will sync on dashboard.',
+                    'Riot 账号已绑定，但导入对局失败。后续会在仪表盘自动同步。',
+                ),
+                'warning',
+            )
     else:
         for field, errors in form.errors.items():
             for error in errors:
-                flash(f'{error}', 'error')
+                flash(t(error), 'error')
 
     return redirect(url_for('dashboard.settings'))
 
@@ -671,11 +743,11 @@ def settings_discord():
             db.session.add(discord_config)
 
         db.session.commit()
-        flash('Discord configuration saved!', 'success')
+        flash(lt('Discord configuration saved!', 'Discord 配置已保存！'), 'success')
     else:
         for field, errors in form.errors.items():
             for error in errors:
-                flash(f'{error}', 'error')
+                flash(t(error), 'error')
 
     return redirect(url_for('dashboard.settings'))
 
@@ -684,6 +756,10 @@ def settings_discord():
 @login_required
 def settings_preferences():
     form = PreferencesForm(prefix='prefs')
+    form.weekly_summary_day.choices = [
+        (day, weekday_label(day))
+        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    ]
     if form.validate_on_submit():
         settings = current_user.settings
         if not settings:
@@ -696,10 +772,10 @@ def settings_preferences():
         settings.notifications_enabled = form.notifications_enabled.data
 
         db.session.commit()
-        flash('Preferences saved!', 'success')
+        flash(lt('Preferences saved!', '偏好设置已保存！'), 'success')
     else:
         for field, errors in form.errors.items():
             for error in errors:
-                flash(f'{error}', 'error')
+                flash(t(error), 'error')
 
     return redirect(url_for('dashboard.settings'))

@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - LoL Analyzer{% endblock %}
+{% block title %}{{ lt('Dashboard - LoL Analyzer', '仪表盘 - LoL 分析器') }}{% endblock %}
 
 {% block content %}
 <div class="container dashboard">
     <div class="dashboard-header">
         <div class="page-title-block">
-            <div class="page-eyebrow">Overview</div>
-            <h1>Dashboard</h1>
+            <div class="page-eyebrow">{{ lt('Overview', '概览') }}</div>
+            <h1>{{ lt('Dashboard', '仪表盘') }}</h1>
         </div>
         {% if riot_account %}
             <span class="dashboard-id">{{ riot_account.summoner_name }}#{{ riot_account.tagline }}</span>
@@ -15,39 +15,39 @@
     </div>
 
     <div class="card quick-guide">
-        <h3>Use This Dashboard in 3 Steps</h3>
+        <h3>{{ lt('Use This Dashboard in 3 Steps', '3 步用好这个仪表盘') }}</h3>
         <div class="quick-guide-grid">
-            <div class="quick-guide-step"><span>1</span>Run or regenerate AI analysis on recent matches.</div>
-            <div class="quick-guide-step"><span>2</span>Compare your metrics to team and lobby averages.</div>
-            <div class="quick-guide-step"><span>3</span>Pick one improvement focus and apply it next game.</div>
+            <div class="quick-guide-step"><span>1</span>{{ lt('Run or regenerate AI analysis on recent matches.', '对最近对局运行或重生成 AI 分析。') }}</div>
+            <div class="quick-guide-step"><span>2</span>{{ lt('Compare your metrics to team and lobby averages.', '将你的数据与队伍均值和全局均值对比。') }}</div>
+            <div class="quick-guide-step"><span>3</span>{{ lt('Pick one improvement focus and apply it next game.', '选定一个改进重点并在下一局执行。') }}</div>
         </div>
     </div>
 
     {% if not riot_account %}
     <div class="setup-prompt">
         <div>
-            <strong>Link your Riot account to get started</strong>
-            <p>Connect your summoner name so we can start analyzing your matches.</p>
+            <strong>{{ lt('Link your Riot account to get started', '先绑定 Riot 账号开始使用') }}</strong>
+            <p>{{ lt('Connect your summoner name so we can start analyzing your matches.', '绑定你的召唤师信息后即可开始分析对局。') }}</p>
         </div>
-        <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">Go to Settings</a>
+        <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">{{ lt('Go to Settings', '前往设置') }}</a>
     </div>
     {% endif %}
 
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-label">Total Games</div>
+            <div class="stat-label">{{ lt('Total Games', '总对局') }}</div>
             <div class="stat-value">{{ total_games }}</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Win Rate</div>
+            <div class="stat-label">{{ lt('Win Rate', '胜率') }}</div>
             <div class="stat-value">{{ win_rate }}%</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Wins</div>
+            <div class="stat-label">{{ lt('Wins', '胜场') }}</div>
             <div class="stat-value">{{ wins }}</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Avg KDA</div>
+            <div class="stat-label">{{ lt('Avg KDA', '平均 KDA') }}</div>
             <div class="stat-value">{{ avg_kda }}</div>
         </div>
     </div>
@@ -55,17 +55,17 @@
     <div class="card matches-card">
         <div class="section-head">
             <div>
-                <div class="section-label">Match Queue</div>
-                <h3>Recent Matches</h3>
+                <div class="section-label">{{ lt('Match Queue', '对局列表') }}</div>
+                <h3>{{ lt('Recent Matches', '最近对局') }}</h3>
             </div>
-            <p class="card-muted">Stream AI coaching inline without leaving the dashboard.</p>
+            <p class="card-muted">{{ lt('Stream AI coaching inline without leaving the dashboard.', '无需离开仪表盘即可实时查看 AI 建议。') }}</p>
         </div>
 
         <div class="match-filter-bar" id="match-filter-bar">
-            <button class="filter-btn active" data-queue="">All</button>
-            <button class="filter-btn" data-queue="Ranked Solo">Ranked Solo</button>
-            <button class="filter-btn" data-queue="Ranked Flex">Ranked Flex</button>
-            <button class="filter-btn" data-queue="Normal Draft,Normal Blind">Normal</button>
+            <button class="filter-btn active" data-queue="">{{ lt('All', '全部') }}</button>
+            <button class="filter-btn" data-queue="Ranked Solo">{{ queue_label('Ranked Solo') }}</button>
+            <button class="filter-btn" data-queue="Ranked Flex">{{ queue_label('Ranked Flex') }}</button>
+            <button class="filter-btn" data-queue="Normal Draft,Normal Blind">{{ lt('Normal', '匹配') }}</button>
         </div>
 
         <div id="match-list">
@@ -73,7 +73,7 @@
 
         {% if total_games > 10 %}
         <div class="load-more-container" id="load-more-container">
-            <button class="btn btn-secondary btn-sm" id="load-more-btn">Load More</button>
+            <button class="btn btn-secondary btn-sm" id="load-more-btn">{{ lt('Load More', '加载更多') }}</button>
         </div>
         {% endif %}
     </div>

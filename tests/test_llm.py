@@ -443,6 +443,25 @@ class TestGetLlmAnalysisDetailed:
         assert error is None
         assert result == "Overall\nGood lane control\nPractice wave timing"
 
+    @patch("app.analysis.llm.requests.post")
+    def test_chinese_language_prompt_scaffold(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "中文分析"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"中文分析"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS, language="zh-CN")
+
+        assert error is None
+        assert result == "中文分析"
+        user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
+        assert "对局数据" in user_prompt
+        assert "仅输出纯文本" in user_prompt
+
 
 class TestIterLlmAnalysisStream:
     @patch("app.analysis.llm.requests.post")

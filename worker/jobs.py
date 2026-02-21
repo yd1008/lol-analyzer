@@ -81,6 +81,8 @@ def check_all_users_matches(app):
                         game_duration=analysis['game_duration'],
                         recommendations=analysis['recommendations'],
                         llm_analysis=llm_text,
+                        llm_analysis_en=llm_text,
+                        llm_analysis_zh=None,
                         queue_type=analysis.get('queue_type'),
                         participants_json=analysis.get('participants'),
                         game_start_timestamp=analysis.get('game_start_timestamp'),
