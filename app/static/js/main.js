@@ -393,6 +393,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var force = options.force;
         var container = options.container;
         var button = options.button;
+        var streamFallbackNotice = 'Live stream interrupted. Falling back to standard analysis...';
 
         button.disabled = true;
         button.textContent = 'Analyzing...';
@@ -464,16 +465,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                     if (event.type === 'stale') {
-                        gotTerminalEvent = true;
-                        renderAiText(container, event.analysis || '');
-                        appendAiNote(container, 'Using cached analysis because regeneration failed: ' + (event.error || ''), 'card-muted');
-                        completeAiButton(button);
-                        try {
-                            await reader.cancel();
-                        } catch (err) {
-                            // Ignore cancellation errors after terminal event.
+                        streamFallbackNotice = 'Live stream returned cached analysis. Retrying with standard analysis...';
+                        if (event.error) {
+                            streamFallbackNotice += ' (' + event.error + ')';
                         }
-                        break;
+                        throw new Error('Stream returned stale cached response.');
                     }
 
                     if (event.type === 'error') {
@@ -491,10 +487,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     renderAiText(container, tailEvent.analysis || streamedText);
                     completeAiButton(button);
                 } else if (tailEvent && tailEvent.type === 'stale') {
-                    gotTerminalEvent = true;
-                    renderAiText(container, tailEvent.analysis || '');
-                    appendAiNote(container, 'Using cached analysis because regeneration failed: ' + (tailEvent.error || ''), 'card-muted');
-                    completeAiButton(button);
+                    streamFallbackNotice = 'Live stream returned cached analysis. Retrying with standard analysis...';
+                    if (tailEvent.error) {
+                        streamFallbackNotice += ' (' + tailEvent.error + ')';
+                    }
+                    throw new Error('Stream returned stale cached response.');
                 } else if (tailEvent && tailEvent.type === 'error') {
                     throw new Error(tailEvent.error || 'AI analysis stream failed.');
                 }
@@ -509,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 force: force,
                 container: container,
                 button: button,
-                fallbackNotice: 'Live stream interrupted. Falling back to standard analysis...',
+                fallbackNotice: streamFallbackNotice,
             });
         }
     }
