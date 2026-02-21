@@ -10,7 +10,8 @@
     <script>
         (function () {
             var theme = 'light';
-            var locale = '{{ current_locale }}';
+            var serverLocale = '{{ current_locale }}';
+            var locale = serverLocale;
             var stored = null;
             var storedLang = null;
             try {
@@ -26,6 +27,15 @@
             } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 theme = 'dark';
             }
+
+            if ((storedLang === 'en' || storedLang === 'zh-CN') && storedLang !== serverLocale) {
+                document.cookie = 'lanescope-lang=' + encodeURIComponent(storedLang) + '; path=/; max-age=31536000; SameSite=Lax';
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('lang', storedLang);
+                window.location.replace(window.location.pathname + window.location.search + window.location.hash);
+                return;
+            }
+
             if (storedLang === 'en' || storedLang === 'zh-CN') {
                 locale = storedLang;
                 document.cookie = 'lanescope-lang=' + encodeURIComponent(locale) + '; path=/; max-age=31536000; SameSite=Lax';

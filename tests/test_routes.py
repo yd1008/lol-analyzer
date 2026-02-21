@@ -60,6 +60,16 @@ class TestRegister:
         assert resp.status_code == 200
         assert User.query.filter_by(email="mismatch@example.com").first() is None
 
+    def test_register_empty_password_fields_show_required_messages(self, client, db):
+        resp = client.post("/auth/register", data={
+            "email": "empty-password@example.com",
+            "password": "",
+            "confirm_password": "",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        assert b"Password is required." in resp.data
+        assert b"Please confirm your password." in resp.data
+
 
 class TestLogin:
     def test_login_page_loads(self, client):

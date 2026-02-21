@@ -20,11 +20,14 @@ class RegisterForm(FlaskForm):
     )
     password = PasswordField(
         'form.password',
-        validators=[DataRequired(message='validation.password_min'), Length(min=8, message='validation.password_min')],
+        validators=[DataRequired(message='validation.password_required'), Length(min=8, message='validation.password_min')],
     )
     confirm_password = PasswordField(
         'form.confirm_password',
-        validators=[DataRequired(message='validation.password_match'), EqualTo('password', message='validation.password_match')],
+        validators=[
+            DataRequired(message='validation.confirm_password_required'),
+            EqualTo('password', message='validation.password_match'),
+        ],
     )
     submit = SubmitField('form.create_account')
 
