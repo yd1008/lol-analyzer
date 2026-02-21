@@ -1,7 +1,7 @@
 """Tests for LLM integration."""
 
 from unittest.mock import patch, MagicMock
-from app.analysis.llm import get_llm_analysis, get_llm_analysis_detailed
+from app.analysis.llm import get_llm_analysis, get_llm_analysis_detailed, iter_llm_analysis_stream
 from tests.conftest import SAMPLE_ANALYSIS
 
 
@@ -442,3 +442,56 @@ class TestGetLlmAnalysisDetailed:
 
         assert error is None
         assert result == "Overall\nGood lane control\nPractice wave timing"
+
+
+class TestIterLlmAnalysisStream:
+    @patch("app.analysis.llm.requests.post")
+    def test_stream_yields_chunks_and_done(self, mock_post, app):
+        stream_resp = MagicMock()
+        stream_resp.status_code = 200
+        stream_resp.iter_lines.return_value = [
+            'data: {"choices":[{"delta":{"content":"Great lane control. "}}]}',
+            'data: {"choices":[{"delta":{"content":"Keep wave tempo."}}]}',
+            'data: [DONE]',
+        ]
+        mock_post.return_value = stream_resp
+
+        with app.app_context():
+            events = list(iter_llm_analysis_stream(SAMPLE_ANALYSIS))
+
+        assert events[0]["type"] == "chunk"
+        assert events[0]["delta"] == "Great lane control. "
+        assert events[1]["type"] == "chunk"
+        assert events[1]["delta"] == "Keep wave tempo."
+        assert events[-1]["type"] == "done"
+        assert events[-1]["analysis"] == "Great lane control. Keep wave tempo."
+
+    @patch("app.analysis.llm.requests.post")
+    def test_stream_timeout_returns_structured_error(self, mock_post, app):
+        import requests
+        mock_post.side_effect = requests.Timeout("timed out")
+
+        with app.app_context():
+            events = list(iter_llm_analysis_stream(SAMPLE_ANALYSIS))
+
+        assert len(events) == 1
+        assert events[0]["type"] == "error"
+        assert "timed out" in events[0]["error"].lower()
+
+    @patch("app.analysis.llm.requests.post")
+    def test_stream_ignores_non_json_lines(self, mock_post, app):
+        stream_resp = MagicMock()
+        stream_resp.status_code = 200
+        stream_resp.iter_lines.return_value = [
+            'data: {"choices":[{"delta":{"content":"# Header\\n"}}]}',
+            'not-json',
+            'data: {"choices":[{"delta":{"content":"- **Tip** text"}}]}',
+            'data: [DONE]',
+        ]
+        mock_post.return_value = stream_resp
+
+        with app.app_context():
+            events = list(iter_llm_analysis_stream(SAMPLE_ANALYSIS))
+
+        assert [e["type"] for e in events] == ["chunk", "chunk", "done"]
+        assert events[-1]["analysis"] == "Header\nTip text"

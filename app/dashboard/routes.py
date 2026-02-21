@@ -1,6 +1,7 @@
+import json
 import logging
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, Response, stream_with_context
 from flask_login import login_required, current_user
 from sqlalchemy import func
 from app.dashboard import dashboard_bp
@@ -9,7 +10,7 @@ from app.models import RiotAccount, DiscordConfig, MatchAnalysis, UserSettings
 from app.analysis.riot_api import resolve_puuid, get_watcher, get_routing_value, get_recent_matches
 from app.analysis.engine import analyze_match, derive_lane_context
 from app.analysis.champion_assets import champion_icon_url, item_icon_url, rune_icons
-from app.analysis.llm import get_llm_analysis_detailed
+from app.analysis.llm import get_llm_analysis_detailed, iter_llm_analysis_stream
 from app.analysis.discord_notifier import get_bot_invite_url
 from app.extensions import db
 
@@ -356,6 +357,50 @@ def _serialize_matches(match_list):
     return [_serialize_match(m, include_scoreboard=False) for m in match_list]
 
 
+def _build_llm_analysis_payload(match: MatchAnalysis, riot_account: RiotAccount | None) -> dict:
+    participants = match.participants_json or []
+    player_position, lane_opponent = derive_lane_context(participants)
+    return {
+        'match_id': match.match_id,
+        'champion': match.champion,
+        'win': match.win,
+        'kills': match.kills,
+        'deaths': match.deaths,
+        'assists': match.assists,
+        'kda': match.kda,
+        'gold_earned': match.gold_earned,
+        'gold_per_min': match.gold_per_min,
+        'total_damage': match.total_damage,
+        'damage_per_min': match.damage_per_min,
+        'vision_score': match.vision_score,
+        'cs_total': match.cs_total,
+        'game_duration': match.game_duration,
+        'queue_type': match.queue_type,
+        'player_position': player_position,
+        'lane_opponent': lane_opponent,
+        'participants': participants,
+        'platform_region': riot_account.region if riot_account else '',
+        'player_puuid': riot_account.puuid if riot_account else '',
+    }
+
+
+def _ai_error_status(error: str) -> int:
+    error_l = (error or '').lower()
+    if 'timed out' in error_l:
+        return 504
+    if (
+        'not compatible with /chat/completions' in error_l
+        or 'not available on opencode zen' in error_l
+        or 'llm_' in error_l
+    ):
+        return 400
+    return 502
+
+
+def _ndjson_line(event: dict) -> str:
+    return json.dumps(event, ensure_ascii=True) + '\n'
+
+
 @dashboard_bp.route('/api/matches')
 @login_required
 def api_matches():
@@ -395,31 +440,7 @@ def api_ai_analysis(match_db_id):
     if match.llm_analysis and not force:
         return jsonify({'analysis': match.llm_analysis, 'cached': True})
 
-    participants = match.participants_json or []
-    player_position, lane_opponent = derive_lane_context(participants)
-
-    analysis_dict = {
-        'match_id': match.match_id,
-        'champion': match.champion,
-        'win': match.win,
-        'kills': match.kills,
-        'deaths': match.deaths,
-        'assists': match.assists,
-        'kda': match.kda,
-        'gold_earned': match.gold_earned,
-        'gold_per_min': match.gold_per_min,
-        'total_damage': match.total_damage,
-        'damage_per_min': match.damage_per_min,
-        'vision_score': match.vision_score,
-        'cs_total': match.cs_total,
-        'game_duration': match.game_duration,
-        'queue_type': match.queue_type,
-        'player_position': player_position,
-        'lane_opponent': lane_opponent,
-        'participants': participants,
-        'platform_region': riot_account.region if riot_account else '',
-        'player_puuid': riot_account.puuid if riot_account else '',
-    }
+    analysis_dict = _build_llm_analysis_payload(match, riot_account)
 
     result, error = get_llm_analysis_detailed(analysis_dict)
     if error:
@@ -430,23 +451,96 @@ def api_ai_analysis(match_db_id):
                 'stale': True,
                 'error': error,
             }), 200
-        error_l = error.lower()
-        if 'timed out' in error_l:
-            status = 504
-        elif (
-            'not compatible with /chat/completions' in error_l
-            or 'not available on opencode zen' in error_l
-            or 'llm_' in error_l
-        ):
-            status = 400
-        else:
-            status = 502
+        status = _ai_error_status(error)
         return jsonify({'error': error}), status
 
     match.llm_analysis = result
     db.session.commit()
 
     return jsonify({'analysis': result, 'cached': False, 'regenerated': force})
+
+
+@dashboard_bp.route('/api/matches/<int:match_db_id>/ai-analysis/stream', methods=['POST'])
+@login_required
+def api_ai_analysis_stream(match_db_id):
+    """Stream AI analysis events as NDJSON for progressive UI rendering."""
+    match = MatchAnalysis.query.filter_by(id=match_db_id, user_id=current_user.id).first_or_404()
+    riot_account = RiotAccount.query.filter_by(user_id=current_user.id).first()
+    payload = request.get_json(silent=True)
+    force = bool(payload.get('force')) if isinstance(payload, dict) else False
+
+    def event_stream():
+        if match.llm_analysis and not force:
+            yield _ndjson_line({'type': 'meta', 'cached': True, 'regenerated': False})
+            yield _ndjson_line({
+                'type': 'done',
+                'analysis': match.llm_analysis,
+                'cached': True,
+                'regenerated': False,
+            })
+            return
+
+        yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force})
+        analysis_dict = _build_llm_analysis_payload(match, riot_account)
+        for event in iter_llm_analysis_stream(analysis_dict):
+            event_type = event.get('type')
+            if event_type == 'chunk':
+                delta = event.get('delta', '')
+                if delta:
+                    yield _ndjson_line({'type': 'chunk', 'delta': delta})
+                continue
+
+            if event_type == 'done':
+                final_text = event.get('analysis', '')
+                if final_text:
+                    match.llm_analysis = final_text
+                    db.session.commit()
+                yield _ndjson_line({
+                    'type': 'done',
+                    'analysis': final_text,
+                    'cached': False,
+                    'regenerated': force,
+                })
+                return
+
+            if event_type == 'error':
+                error = event.get('error') or 'AI analysis failed.'
+                if match.llm_analysis:
+                    yield _ndjson_line({
+                        'type': 'stale',
+                        'analysis': match.llm_analysis,
+                        'cached': True,
+                        'stale': True,
+                        'error': error,
+                    })
+                else:
+                    yield _ndjson_line({
+                        'type': 'error',
+                        'error': error,
+                        'status': _ai_error_status(error),
+                    })
+                return
+
+        fallback_error = 'AI analysis stream ended without a final result.'
+        if match.llm_analysis:
+            yield _ndjson_line({
+                'type': 'stale',
+                'analysis': match.llm_analysis,
+                'cached': True,
+                'stale': True,
+                'error': fallback_error,
+            })
+        else:
+            yield _ndjson_line({
+                'type': 'error',
+                'error': fallback_error,
+                'status': 502,
+            })
+
+    response = Response(stream_with_context(event_stream()), mimetype='application/x-ndjson')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Accel-Buffering'] = 'no'
+    return response
 
 
 @dashboard_bp.route('/matches')
