@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var csrfToken = document.querySelector('meta[name="csrf-token"]');
     csrfToken = csrfToken ? csrfToken.getAttribute('content') : '';
 
-    var STREAM_STATUS_MESSAGES = ['Reviewing lane pressure', 'Mapping gold tempo', 'Drafting actionable coaching'];
+    var STREAM_STATUS_MESSAGES = ['Reading lane pressure', 'Comparing team tempo', 'Writing focused coaching'];
     var matchList = document.getElementById('match-list');
     var loadMoreBtn = document.getElementById('load-more-btn');
     var loadMoreContainer = document.getElementById('load-more-container');
@@ -307,11 +307,17 @@ document.addEventListener('DOMContentLoaded', function () {
         container.setAttribute('aria-busy', 'true');
         container.innerHTML =
             '<div class="ai-stream-dock" aria-hidden="true">' +
-                '<div class="ai-stream-orb"></div>' +
-                '<div class="ai-stream-wave">' +
-                    '<span></span><span></span><span></span><span></span><span></span>' +
+                '<div class="ai-stream-core">' +
+                    '<div class="ai-stream-orb"></div>' +
+                    '<div class="ai-stream-rings"><span></span><span></span><span></span></div>' +
                 '</div>' +
-                '<div class="ai-stream-status">' + buildStatusMarkup() + '</div>' +
+                '<div class="ai-stream-meta">' +
+                    '<div class="ai-stream-status">' + buildStatusMarkup() + '</div>' +
+                    '<div class="ai-stream-wave">' +
+                        '<span></span><span></span><span></span><span></span><span></span>' +
+                    '</div>' +
+                    '<div class="ai-stream-skeleton"><span></span><span></span><span></span></div>' +
+                '</div>' +
             '</div>' +
             '<div class="llm-analysis ai-stream-output"></div>';
         return container.querySelector('.ai-stream-output');
@@ -324,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function () {
             container.classList.add('is-streaming');
         }
         output.textContent = text;
-        if (container.classList.contains('detail-ai-scroll')) {
+        if (container.scrollHeight > container.clientHeight) {
             container.scrollTop = container.scrollHeight;
         }
     }

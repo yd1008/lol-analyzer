@@ -71,6 +71,13 @@
     --table-enemy-bg: rgba(203, 76, 76, 0.06);
     --ai-accent-bg: #e7f4ef;
     --ai-accent-text: #116f59;
+    --ai-panel-glow: rgba(16, 163, 127, 0.14);
+    --ai-panel-tint: rgba(16, 163, 127, 0.06);
+    --ai-stream-core: #0f9a78;
+    --ai-stream-core-soft: rgba(16, 163, 127, 0.22);
+    --ai-stream-line: rgba(16, 163, 127, 0.18);
+    --ai-scroll-thumb: rgba(16, 163, 127, 0.42);
+    --ai-scroll-track: rgba(16, 163, 127, 0.1);
     --error-text: #a74040;
     --bar-player-start: #127c64;
     --bar-team-start: #8dcf8b;
@@ -166,6 +173,13 @@
     --table-enemy-bg: rgba(255, 122, 122, 0.09);
     --ai-accent-bg: rgba(50, 215, 255, 0.15);
     --ai-accent-text: #99edff;
+    --ai-panel-glow: rgba(50, 215, 255, 0.2);
+    --ai-panel-tint: rgba(50, 215, 255, 0.11);
+    --ai-stream-core: #32d7ff;
+    --ai-stream-core-soft: rgba(50, 215, 255, 0.3);
+    --ai-stream-line: rgba(50, 215, 255, 0.25);
+    --ai-scroll-thumb: rgba(50, 215, 255, 0.55);
+    --ai-scroll-track: rgba(50, 215, 255, 0.14);
     --error-text: #ffacac;
     --bar-player-start: #1fa78a;
     --bar-team-start: #82e5b0;
@@ -1316,94 +1330,208 @@ textarea:focus-visible {
     width: 100%;
     border: 1px solid var(--btn-active-bg);
     border-radius: var(--radius-sm);
-    background: var(--btn-active-bg);
+    background: linear-gradient(135deg, var(--btn-active-bg) 0%, var(--btn-primary-hover) 100%);
     color: var(--btn-active-text);
     padding: 10px 12px;
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    box-shadow: 0 10px 20px rgba(5, 9, 7, 0.12);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 22px rgba(5, 9, 7, 0.16);
+}
+
+.ai-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.ai-btn:disabled {
+    opacity: 0.85;
+    cursor: progress;
+    transform: none;
 }
 
 .ai-btn.has-analysis {
-    background: var(--ai-accent-bg);
+    background: linear-gradient(135deg, var(--ai-accent-bg) 0%, var(--ai-panel-tint) 100%);
     border-color: var(--accent-border-strong);
     color: var(--ai-accent-text);
+    box-shadow: none;
+}
+
+.ai-btn.has-analysis:hover {
+    box-shadow: 0 8px 14px var(--ai-panel-glow);
 }
 
 .match-ai-content,
 .detail-ai-scroll,
 .llm-analysis {
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: var(--bg-secondary);
-    padding: 12px;
+    border-radius: calc(var(--radius-sm) + 2px);
+    border: 1px solid var(--accent-border-subtle);
+    background:
+        linear-gradient(155deg, var(--ai-panel-glow) 0%, transparent 58%),
+        linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-panel) 100%);
+    padding: 14px;
     white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.62;
+}
+
+.match-ai-content,
+.detail-ai-scroll {
+    scrollbar-gutter: stable both-edges;
+    overscroll-behavior: contain;
+}
+
+.match-ai-content {
+    max-height: min(42vh, 300px);
+    overflow-y: auto;
+    margin-bottom: 8px;
 }
 
 .detail-ai-scroll {
-    max-height: 420px;
+    max-height: min(55vh, 460px);
     overflow-y: auto;
     margin-bottom: 8px;
+}
+
+.match-ai-content::-webkit-scrollbar,
+.detail-ai-scroll::-webkit-scrollbar {
+    width: 9px;
+}
+
+.match-ai-content::-webkit-scrollbar-track,
+.detail-ai-scroll::-webkit-scrollbar-track {
+    background: var(--ai-scroll-track);
+    border-radius: 999px;
+}
+
+.match-ai-content::-webkit-scrollbar-thumb,
+.detail-ai-scroll::-webkit-scrollbar-thumb {
+    background: var(--ai-scroll-thumb);
+    border-radius: 999px;
 }
 
 .ai-stream-host {
     position: relative;
     overflow: hidden;
-    border: 1px solid var(--accent-border-soft);
+    border: 1px solid var(--accent-border-strong);
     background:
-        linear-gradient(120deg, transparent 0%, var(--accent-soft) 46%, transparent 100%),
-        var(--bg-secondary);
-    background-size: 220% 100%, auto;
+        radial-gradient(120% 110% at 0% 0%, var(--ai-panel-glow) 0%, transparent 64%),
+        linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-panel) 100%);
 }
 
-.ai-stream-host.is-loading {
-    animation: aiShimmer 2.1s linear infinite;
+.ai-stream-host::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 16%, var(--ai-panel-tint) 50%, transparent 84%);
+    background-size: 220% 100%;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ai-stream-host.is-loading::before {
+    opacity: 1;
+    animation: aiSweep 2s linear infinite;
 }
 
 .ai-stream-dock {
     display: grid;
-    gap: 10px;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
     margin-bottom: 12px;
 }
 
-.ai-stream-orb {
+.ai-stream-core {
     width: 46px;
     height: 46px;
-    border-radius: 50%;
     position: relative;
-    background: radial-gradient(circle at 35% 35%, var(--accent) 0%, var(--bar-player-start) 62%, transparent 100%);
-    box-shadow: 0 0 0 0 var(--accent-soft);
-    animation: aiPulse 1.5s ease-out infinite;
+    display: grid;
+    place-items: center;
 }
 
-.ai-stream-orb::after {
-    content: '';
-    position: absolute;
-    inset: -8px;
+.ai-stream-orb {
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
-    border: 2px solid var(--accent-border-strong);
-    border-top-color: transparent;
-    animation: aiOrbit 1.3s linear infinite;
+    background: radial-gradient(circle at 35% 35%, var(--accent) 0%, var(--ai-stream-core) 75%);
+    box-shadow: 0 0 0 8px var(--ai-stream-core-soft);
+    animation: aiOrbPulse 1.8s ease-in-out infinite;
+}
+
+.ai-stream-rings {
+    position: absolute;
+    inset: 0;
+}
+
+.ai-stream-rings span {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid var(--accent-border);
+    opacity: 0;
+    animation: aiRipple 2.4s ease-out infinite;
+}
+
+.ai-stream-rings span:nth-child(2) { animation-delay: 0.8s; }
+.ai-stream-rings span:nth-child(3) { animation-delay: 1.6s; }
+
+.ai-stream-meta {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ai-stream-skeleton {
+    display: grid;
+    gap: 5px;
+}
+
+.ai-stream-skeleton span {
+    display: block;
+    height: 5px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ai-stream-line) 0%, var(--accent-soft) 50%, var(--ai-stream-line) 100%);
+    background-size: 210% 100%;
+    animation: aiShimmer 1.6s linear infinite;
+}
+
+.ai-stream-skeleton span:nth-child(1) { width: 92%; }
+.ai-stream-skeleton span:nth-child(2) { width: 76%; }
+.ai-stream-skeleton span:nth-child(3) { width: 84%; }
+
+.ai-stream-host.is-streaming .ai-stream-skeleton {
+    opacity: 0;
+    max-height: 0;
+    gap: 0;
+    overflow: hidden;
+    transition: opacity 0.24s ease, max-height 0.24s ease, gap 0.24s ease;
 }
 
 .ai-stream-wave {
-    height: 22px;
+    height: 20px;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: end;
-    gap: 6px;
-    max-width: 180px;
+    gap: 4px;
+    max-width: 84px;
 }
 
 .ai-stream-wave span {
     display: block;
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(180deg, var(--bar-team-start), var(--bar-player-start));
+    background: linear-gradient(180deg, var(--accent), var(--bar-player-start));
     transform-origin: bottom center;
-    animation: aiWave 1s ease-in-out infinite;
+    animation: aiWave 0.95s ease-in-out infinite;
 }
 
 .ai-stream-wave span:nth-child(2) { animation-delay: 0.1s; }
@@ -1415,8 +1543,9 @@ textarea:focus-visible {
     height: 18px;
     overflow: hidden;
     color: var(--text-secondary);
-    font-size: 0.74rem;
-    letter-spacing: 0.03em;
+    font-size: 0.73rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     animation: aiStatusCycle 6s steps(3, end) infinite;
 }
 
@@ -1426,19 +1555,16 @@ textarea:focus-visible {
 }
 
 .ai-stream-output {
-    min-height: 86px;
+    min-height: 96px;
 }
 
 .ai-stream-host.is-loading .ai-stream-output {
-    opacity: 0.55;
+    opacity: 0.46;
 }
 
 .ai-stream-host.is-streaming .ai-stream-dock {
-    opacity: 0;
-    max-height: 0;
-    margin: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease, max-height 0.25s ease, margin 0.25s ease;
+    opacity: 0.45;
+    transition: opacity 0.22s ease;
 }
 
 .ai-stream-host.is-streaming .ai-stream-output::after {
@@ -1454,7 +1580,7 @@ textarea:focus-visible {
 }
 
 .ai-stream-fallback {
-    border-color: var(--accent-border);
+    border-color: var(--border-strong);
 }
 
 .match-detail-header {
@@ -1818,13 +1944,14 @@ textarea:focus-visible {
     to { transform: rotate(360deg); }
 }
 
-@keyframes aiPulse {
-    0% { box-shadow: 0 0 0 0 var(--accent-soft); }
-    100% { box-shadow: 0 0 0 16px transparent; }
+@keyframes aiOrbPulse {
+    0%, 100% { transform: scale(0.92); box-shadow: 0 0 0 8px var(--ai-stream-core-soft); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 12px transparent; }
 }
 
-@keyframes aiOrbit {
-    to { transform: rotate(360deg); }
+@keyframes aiRipple {
+    0% { transform: scale(0.55); opacity: 0.7; }
+    100% { transform: scale(1.1); opacity: 0; }
 }
 
 @keyframes aiWave {
@@ -1840,8 +1967,13 @@ textarea:focus-visible {
 }
 
 @keyframes aiShimmer {
-    from { background-position: 180% 0, 0 0; }
-    to { background-position: -40% 0, 0 0; }
+    from { background-position: 180% 0; }
+    to { background-position: -40% 0; }
+}
+
+@keyframes aiSweep {
+    from { background-position: 160% 0; }
+    to { background-position: -60% 0; }
 }
 
 @keyframes aiCursorBlink {
