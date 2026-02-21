@@ -32,7 +32,10 @@
     <header class="site-header">
         <div class="container">
             <nav class="site-nav" aria-label="Primary">
-                <a href="{{ url_for('main.landing') }}" class="logo">lane<span>scope</span></a>
+                <a href="{{ url_for('main.landing') }}" class="logo">
+                    <span class="logo-mark" aria-hidden="true">LS</span>
+                    <span class="logo-text">lane<span>scope</span></span>
+                </a>
                 <ul class="nav-links">
                     <li><a href="{{ url_for('main.landing') }}#workflow">How It Works</a></li>
                     <li><a href="{{ url_for('main.landing') }}#features">Features</a></li>
