@@ -1,5 +1,6 @@
 """Tests for auth and basic routes."""
 
+import json
 from unittest.mock import patch
 
 from app.models import User, MatchAnalysis
@@ -134,6 +135,9 @@ class TestAdminAccess:
 
 
 class TestAiAnalysisRoute:
+    def _parse_ndjson(self, response):
+        return [json.loads(line) for line in response.data.decode().splitlines() if line.strip()]
+
     def test_ai_analysis_non_object_payload_does_not_crash(self, auth_client, db, user):
         match = MatchAnalysis(
             user_id=user.id,
@@ -336,6 +340,167 @@ class TestAiAnalysisRoute:
         assert resp.status_code == 400
         payload = resp.get_json()
         assert "not compatible with /chat/completions" in payload["error"]
+
+    def test_ai_analysis_stream_returns_cached_done_when_not_forced(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_cached",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="already cached",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={})
+        assert resp.status_code == 200
+        events = self._parse_ndjson(resp)
+        assert events[0]["type"] == "meta"
+        assert events[0]["cached"] is True
+        assert events[1]["type"] == "done"
+        assert events[1]["analysis"] == "already cached"
+        assert events[1]["cached"] is True
+
+    def test_ai_analysis_stream_emits_chunk_then_done_and_persists(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_success",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        stream_events = [
+            {"type": "chunk", "delta": "First part. "},
+            {"type": "done", "analysis": "First part. Final part."},
+        ]
+        with patch("app.dashboard.routes.iter_llm_analysis_stream", return_value=stream_events):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
+            events = self._parse_ndjson(resp)
+
+        assert resp.status_code == 200
+        assert events[0]["type"] == "meta"
+        assert events[1]["type"] == "chunk"
+        assert events[2]["type"] == "done"
+        assert events[2]["analysis"] == "First part. Final part."
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis == "First part. Final part."
+
+    def test_ai_analysis_stream_emits_stale_when_stream_fails_with_cache(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_stale",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="cached fallback",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.iter_llm_analysis_stream",
+            return_value=[{"type": "error", "error": "Request timed out after 30s"}],
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
+            events = self._parse_ndjson(resp)
+
+        assert resp.status_code == 200
+        assert events[-1]["type"] == "stale"
+        assert events[-1]["analysis"] == "cached fallback"
+        assert events[-1]["cached"] is True
+        assert events[-1]["stale"] is True
+
+    def test_ai_analysis_stream_emits_error_when_stream_fails_without_cache(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_error",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.iter_llm_analysis_stream",
+            return_value=[{"type": "error", "error": "not compatible with /chat/completions"}],
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
+            events = self._parse_ndjson(resp)
+
+        assert resp.status_code == 200
+        assert events[-1]["type"] == "error"
+        assert events[-1]["status"] == 400
 
 
 class TestMatchDetailRoute:

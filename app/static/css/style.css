@@ -1348,6 +1348,115 @@ textarea:focus-visible {
     margin-bottom: 8px;
 }
 
+.ai-stream-host {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--accent-border-soft);
+    background:
+        linear-gradient(120deg, transparent 0%, var(--accent-soft) 46%, transparent 100%),
+        var(--bg-secondary);
+    background-size: 220% 100%, auto;
+}
+
+.ai-stream-host.is-loading {
+    animation: aiShimmer 2.1s linear infinite;
+}
+
+.ai-stream-dock {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.ai-stream-orb {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    position: relative;
+    background: radial-gradient(circle at 35% 35%, var(--accent) 0%, var(--bar-player-start) 62%, transparent 100%);
+    box-shadow: 0 0 0 0 var(--accent-soft);
+    animation: aiPulse 1.5s ease-out infinite;
+}
+
+.ai-stream-orb::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-border-strong);
+    border-top-color: transparent;
+    animation: aiOrbit 1.3s linear infinite;
+}
+
+.ai-stream-wave {
+    height: 22px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: end;
+    gap: 6px;
+    max-width: 180px;
+}
+
+.ai-stream-wave span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--bar-team-start), var(--bar-player-start));
+    transform-origin: bottom center;
+    animation: aiWave 1s ease-in-out infinite;
+}
+
+.ai-stream-wave span:nth-child(2) { animation-delay: 0.1s; }
+.ai-stream-wave span:nth-child(3) { animation-delay: 0.2s; }
+.ai-stream-wave span:nth-child(4) { animation-delay: 0.3s; }
+.ai-stream-wave span:nth-child(5) { animation-delay: 0.4s; }
+
+.ai-stream-status {
+    height: 18px;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    animation: aiStatusCycle 6s steps(3, end) infinite;
+}
+
+.ai-stream-status span {
+    display: block;
+    line-height: 18px;
+}
+
+.ai-stream-output {
+    min-height: 86px;
+}
+
+.ai-stream-host.is-loading .ai-stream-output {
+    opacity: 0.55;
+}
+
+.ai-stream-host.is-streaming .ai-stream-dock {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, max-height 0.25s ease, margin 0.25s ease;
+}
+
+.ai-stream-host.is-streaming .ai-stream-output::after {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 1em;
+    margin-left: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: aiCursorBlink 0.9s steps(1, end) infinite;
+    vertical-align: text-bottom;
+}
+
+.ai-stream-fallback {
+    border-color: var(--accent-border);
+}
+
 .match-detail-header {
     display: flex;
     justify-content: space-between;
@@ -1687,6 +1796,7 @@ textarea:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    .ai-stream-host.is-streaming .ai-stream-output::after { display: none; }
 }
 
 @keyframes slideIn {
@@ -1706,4 +1816,35 @@ textarea:focus-visible {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+@keyframes aiPulse {
+    0% { box-shadow: 0 0 0 0 var(--accent-soft); }
+    100% { box-shadow: 0 0 0 16px transparent; }
+}
+
+@keyframes aiOrbit {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes aiWave {
+    0%, 100% { transform: scaleY(0.28); opacity: 0.55; }
+    50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes aiStatusCycle {
+    0% { transform: translateY(0); }
+    33% { transform: translateY(-18px); }
+    66% { transform: translateY(-36px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes aiShimmer {
+    from { background-position: 180% 0, 0 0; }
+    to { background-position: -40% 0, 0 0; }
+}
+
+@keyframes aiCursorBlink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
 }

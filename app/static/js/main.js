@@ -73,17 +73,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 5000);
     });
 
-    var matchList = document.getElementById('match-list');
-    if (!matchList) return;
+    var csrfToken = document.querySelector('meta[name="csrf-token"]');
+    csrfToken = csrfToken ? csrfToken.getAttribute('content') : '';
 
+    var STREAM_STATUS_MESSAGES = ['Reviewing lane pressure', 'Mapping gold tempo', 'Drafting actionable coaching'];
+    var matchList = document.getElementById('match-list');
     var loadMoreBtn = document.getElementById('load-more-btn');
     var loadMoreContainer = document.getElementById('load-more-container');
     var filterBar = document.getElementById('match-filter-bar');
     var initialMatches = Array.isArray(window.__initialMatches) ? window.__initialMatches : [];
     var currentOffset = 0;
     var currentQueue = '';
-    var csrfToken = document.querySelector('meta[name="csrf-token"]');
-    csrfToken = csrfToken ? csrfToken.getAttribute('content') : '';
 
     var POSITION_MAP = {TOP: 'TOP', JUNGLE: 'JGL', MIDDLE: 'MID', BOTTOM: 'BOT', UTILITY: 'SUP'};
     var VISUAL_METRICS = [
@@ -270,9 +270,245 @@ document.addEventListener('DOMContentLoaded', function () {
         return normalized.trim();
     }
 
+    function clearAiContainerState(container) {
+        container.classList.remove('card-muted');
+        container.classList.remove('ai-stream-host', 'is-loading', 'is-streaming', 'ai-stream-fallback', 'llm-analysis');
+        container.setAttribute('aria-busy', 'false');
+        container.setAttribute('aria-live', 'polite');
+    }
+
+    function appendAiNote(container, text, className) {
+        var note = document.createElement('p');
+        note.className = className || 'card-muted';
+        note.textContent = text;
+        container.appendChild(note);
+    }
+
+    function renderAiError(container, text) {
+        clearAiContainerState(container);
+        container.innerHTML = '<p class="card-muted">' + escapeHtml(text || 'AI analysis failed.') + '</p>';
+    }
+
     function renderAiText(container, text) {
-        container.className = 'match-ai-content llm-analysis';
+        clearAiContainerState(container);
+        container.classList.add('llm-analysis');
         container.textContent = normalizeAiText(text);
+    }
+
+    function buildStatusMarkup() {
+        return STREAM_STATUS_MESSAGES.map(function (message) {
+            return '<span>' + escapeHtml(message) + '</span>';
+        }).join('');
+    }
+
+    function prepareStreamUi(container) {
+        clearAiContainerState(container);
+        container.classList.add('ai-stream-host', 'is-loading');
+        container.setAttribute('aria-busy', 'true');
+        container.innerHTML =
+            '<div class="ai-stream-dock" aria-hidden="true">' +
+                '<div class="ai-stream-orb"></div>' +
+                '<div class="ai-stream-wave">' +
+                    '<span></span><span></span><span></span><span></span><span></span>' +
+                '</div>' +
+                '<div class="ai-stream-status">' + buildStatusMarkup() + '</div>' +
+            '</div>' +
+            '<div class="llm-analysis ai-stream-output"></div>';
+        return container.querySelector('.ai-stream-output');
+    }
+
+    function updateStreamOutput(container, output, text) {
+        if (!output) return;
+        if (container.classList.contains('is-loading')) {
+            container.classList.remove('is-loading');
+            container.classList.add('is-streaming');
+        }
+        output.textContent = text;
+        if (container.classList.contains('detail-ai-scroll')) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    function completeAiButton(button) {
+        button.disabled = false;
+        button.classList.add('has-analysis');
+        button.textContent = 'Regenerate AI Analysis';
+    }
+
+    function resetAiButton(button) {
+        button.disabled = false;
+        button.textContent = 'Run AI Analysis';
+    }
+
+    async function runAiAnalysisSync(options) {
+        var matchId = options.matchId;
+        var force = options.force;
+        var container = options.container;
+        var button = options.button;
+        var fallbackNotice = options.fallbackNotice || '';
+
+        if (fallbackNotice) {
+            renderAiError(container, fallbackNotice);
+            container.classList.add('ai-stream-fallback');
+        }
+
+        try {
+            var resp = await fetch('/dashboard/api/matches/' + matchId + '/ai-analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({force: force}),
+            });
+            var data = await resp.json();
+            if (data.error && !data.analysis) {
+                renderAiError(container, data.error || 'AI analysis failed.');
+                resetAiButton(button);
+                return;
+            }
+            renderAiText(container, data.analysis || '');
+            if (data.stale && data.error) {
+                appendAiNote(container, 'Using cached analysis because regeneration failed: ' + data.error, 'card-muted');
+            }
+            completeAiButton(button);
+        } catch (err) {
+            renderAiError(container, 'AI analysis failed.');
+            resetAiButton(button);
+        }
+    }
+
+    function parseNdjsonLine(line) {
+        var trimmed = (line || '').trim();
+        if (!trimmed) return null;
+        try {
+            return JSON.parse(trimmed);
+        } catch (err) {
+            return null;
+        }
+    }
+
+    async function runAiAnalysisWithStreaming(options) {
+        var matchId = options.matchId;
+        var force = options.force;
+        var container = options.container;
+        var button = options.button;
+        var streamFallbackNotice = 'Live stream interrupted. Falling back to standard analysis...';
+
+        button.disabled = true;
+        button.textContent = 'Analyzing...';
+
+        var output = prepareStreamUi(container);
+        var streamedText = '';
+        var gotTerminalEvent = false;
+
+        var canStream = !!(window.ReadableStream && typeof TextDecoder !== 'undefined');
+        if (!canStream) {
+            await runAiAnalysisSync({
+                matchId: matchId,
+                force: force,
+                container: container,
+                button: button,
+                fallbackNotice: 'Live stream is unavailable in this browser. Running standard analysis...',
+            });
+            return;
+        }
+
+        try {
+            var response = await fetch('/dashboard/api/matches/' + matchId + '/ai-analysis/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({force: force}),
+            });
+
+            if (!response.ok) {
+                throw new Error('Stream endpoint returned ' + response.status);
+            }
+            if (!response.body || !response.body.getReader) {
+                throw new Error('Stream reader not available');
+            }
+
+            var reader = response.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+
+            while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buffer += decoder.decode(chunk.value, {stream: true});
+                var lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (var i = 0; i < lines.length; i += 1) {
+                    var event = parseNdjsonLine(lines[i]);
+                    if (!event || !event.type) continue;
+
+                    if (event.type === 'chunk') {
+                        streamedText += String(event.delta || '');
+                        updateStreamOutput(container, output, streamedText);
+                        continue;
+                    }
+
+                    if (event.type === 'done') {
+                        gotTerminalEvent = true;
+                        renderAiText(container, event.analysis || streamedText);
+                        completeAiButton(button);
+                        try {
+                            await reader.cancel();
+                        } catch (err) {
+                            // Ignore cancellation errors after terminal event.
+                        }
+                        break;
+                    }
+
+                    if (event.type === 'stale') {
+                        streamFallbackNotice = 'Live stream returned cached analysis. Retrying with standard analysis...';
+                        if (event.error) {
+                            streamFallbackNotice += ' (' + event.error + ')';
+                        }
+                        throw new Error('Stream returned stale cached response.');
+                    }
+
+                    if (event.type === 'error') {
+                        throw new Error(event.error || 'AI analysis stream failed.');
+                    }
+                }
+
+                if (gotTerminalEvent) break;
+            }
+
+            if (!gotTerminalEvent && buffer.trim()) {
+                var tailEvent = parseNdjsonLine(buffer);
+                if (tailEvent && tailEvent.type === 'done') {
+                    gotTerminalEvent = true;
+                    renderAiText(container, tailEvent.analysis || streamedText);
+                    completeAiButton(button);
+                } else if (tailEvent && tailEvent.type === 'stale') {
+                    streamFallbackNotice = 'Live stream returned cached analysis. Retrying with standard analysis...';
+                    if (tailEvent.error) {
+                        streamFallbackNotice += ' (' + tailEvent.error + ')';
+                    }
+                    throw new Error('Stream returned stale cached response.');
+                } else if (tailEvent && tailEvent.type === 'error') {
+                    throw new Error(tailEvent.error || 'AI analysis stream failed.');
+                }
+            }
+
+            if (!gotTerminalEvent) {
+                throw new Error('AI analysis stream ended without a final event.');
+            }
+        } catch (err) {
+            await runAiAnalysisSync({
+                matchId: matchId,
+                force: force,
+                container: container,
+                button: button,
+                fallbackNotice: streamFallbackNotice,
+            });
+        }
     }
 
     function renderMatchBox(m) {
@@ -419,40 +655,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var content = aiPanel ? aiPanel.querySelector('.match-ai-content') : null;
         if (!content) return;
 
-        var force = btn.classList.contains('has-analysis');
-        btn.disabled = true;
-        btn.textContent = 'Analyzing...';
-
-        fetch('/dashboard/api/matches/' + matchId + '/ai-analysis', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken,
-            },
-            body: JSON.stringify({force: force}),
-        })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (data.error && !data.analysis) {
-                    content.className = 'match-ai-content card-muted';
-                    content.textContent = data.error;
-                    btn.textContent = 'Run AI Analysis';
-                    btn.disabled = false;
-                    return;
-                }
-                renderAiText(content, data.analysis || '');
-                if (data.stale && data.error) {
-                    content.textContent += '\n\nUsing cached analysis because regeneration failed: ' + data.error;
-                }
-                btn.textContent = 'Regenerate AI Analysis';
-                btn.classList.add('has-analysis');
-                btn.disabled = false;
-            })
-            .catch(function () {
-                btn.textContent = 'Error';
-                btn.disabled = false;
-                setTimeout(function () { btn.textContent = 'Run AI Analysis'; }, 2000);
-            });
+        runAiAnalysisWithStreaming({
+            matchId: matchId,
+            force: btn.classList.contains('has-analysis'),
+            container: content,
+            button: btn,
+        });
     }
 
     function syncTabState(buttons, panels, activeKey, buttonAttr, panelAttr) {
@@ -497,56 +705,120 @@ document.addEventListener('DOMContentLoaded', function () {
         updateLoadMoreVisibility(window.__totalGames || 0, undefined);
     }
 
-    if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', loadMore);
-    }
+    if (matchList) {
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', loadMore);
+        }
 
-    if (filterBar) {
-        filterBar.addEventListener('click', function (e) {
-            var btn = e.target.closest('.filter-btn');
-            if (!btn) return;
-            filterBar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
-            btn.classList.add('active');
-            filterByQueue(btn.getAttribute('data-queue'));
+        if (filterBar) {
+            filterBar.addEventListener('click', function (e) {
+                var btn = e.target.closest('.filter-btn');
+                if (!btn) return;
+                filterBar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                filterByQueue(btn.getAttribute('data-queue'));
+            });
+        }
+
+        matchList.addEventListener('click', function (e) {
+            var tabBtn = e.target.closest('.match-tab-btn');
+            if (tabBtn) {
+                var tab = tabBtn.getAttribute('data-tab');
+                var box = tabBtn.closest('.match-box');
+                if (!box) return;
+                syncTabState(
+                    box.querySelectorAll('.match-tab-btn'),
+                    box.querySelectorAll('.match-tab-panel'),
+                    tab,
+                    'data-tab',
+                    'data-panel'
+                );
+                return;
+            }
+
+            var visualToggle = e.target.closest('.visual-toggle-btn');
+            if (visualToggle) {
+                var visualPanel = visualToggle.closest('.match-tab-panel');
+                if (!visualPanel) return;
+                var group = visualToggle.getAttribute('data-group');
+                syncTabState(
+                    visualPanel.querySelectorAll('.visual-toggle-btn'),
+                    visualPanel.querySelectorAll('.visual-group'),
+                    group,
+                    'data-group',
+                    'data-group'
+                );
+                return;
+            }
+
+            var aiBtn = e.target.closest('.ai-btn');
+            if (aiBtn) {
+                handleAiAnalysis(aiBtn);
+            }
         });
+
+        initializeFromServer();
     }
 
-    matchList.addEventListener('click', function (e) {
-        var tabBtn = e.target.closest('.match-tab-btn');
-        if (tabBtn) {
-            var tab = tabBtn.getAttribute('data-tab');
-            var box = tabBtn.closest('.match-box');
-            if (!box) return;
-            syncTabState(
-                box.querySelectorAll('.match-tab-btn'),
-                box.querySelectorAll('.match-tab-panel'),
-                tab,
-                'data-tab',
-                'data-panel'
-            );
-            return;
+    var detailTabs = document.getElementById('detail-tabs');
+    var detailPanels = document.querySelectorAll('.detail-tab-panel');
+    var detailVisualToggle = document.getElementById('detail-visual-toggle');
+    if (detailTabs && detailPanels.length) {
+        function activateDetailTab(tab) {
+            var buttons = detailTabs.querySelectorAll('.detail-tab-btn');
+            syncTabState(buttons, detailPanels, tab, 'data-tab', 'data-panel');
         }
 
-        var visualToggle = e.target.closest('.visual-toggle-btn');
-        if (visualToggle) {
-            var visualPanel = visualToggle.closest('.match-tab-panel');
+        function activateDetailVisual(group) {
+            if (!detailVisualToggle) return;
+            var toggleButtons = detailVisualToggle.querySelectorAll('.visual-toggle-btn');
+            var visualPanel = detailVisualToggle.closest('.card');
             if (!visualPanel) return;
-            var group = visualToggle.getAttribute('data-group');
-            syncTabState(
-                visualPanel.querySelectorAll('.visual-toggle-btn'),
-                visualPanel.querySelectorAll('.visual-group'),
-                group,
-                'data-group',
-                'data-group'
-            );
-            return;
+            var groups = visualPanel.querySelectorAll('.visual-group');
+            syncTabState(toggleButtons, groups, group, 'data-group', 'data-group');
         }
 
-        var aiBtn = e.target.closest('.ai-btn');
-        if (aiBtn) {
-            handleAiAnalysis(aiBtn);
-        }
-    });
+        detailTabs.addEventListener('click', function (e) {
+            var btn = e.target.closest('.detail-tab-btn');
+            if (!btn) return;
+            activateDetailTab(btn.getAttribute('data-tab'));
+        });
 
-    initializeFromServer();
+        if (detailVisualToggle) {
+            detailVisualToggle.addEventListener('click', function (e) {
+                var btn = e.target.closest('.visual-toggle-btn');
+                if (!btn) return;
+                activateDetailVisual(btn.getAttribute('data-group'));
+            });
+        }
+
+        activateDetailTab('overview');
+        activateDetailVisual('compare');
+
+        var detailAiBtn = document.getElementById('detail-ai-btn');
+        var detailAiContent = document.getElementById('detail-ai-content');
+        var detailAiInitial = document.getElementById('detail-ai-initial');
+        if (detailAiBtn && detailAiContent && detailAiInitial) {
+            var initialText = '';
+            try {
+                initialText = JSON.parse(detailAiInitial.textContent || '""');
+            } catch (e) {
+                initialText = '';
+            }
+            if (initialText) {
+                renderAiText(detailAiContent, initialText);
+                detailAiBtn.classList.add('has-analysis');
+                detailAiBtn.textContent = 'Regenerate AI Analysis';
+            }
+
+            detailAiBtn.addEventListener('click', function () {
+                runAiAnalysisWithStreaming({
+                    matchId: detailAiBtn.getAttribute('data-match-id'),
+                    force: detailAiBtn.classList.contains('has-analysis'),
+                    container: detailAiContent,
+                    button: detailAiBtn,
+                });
+            });
+        }
+    }
 });
