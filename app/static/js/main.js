@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var I18N = window.__i18n || {};
     var LABELS = I18N.labels || {};
     var METRICS = I18N.metrics || {};
-    var CURRENT_LOCALE = I18N.locale || window.__currentLocale || 'zh-CN';
 
     function txt(key, fallback) {
         if (LABELS && Object.prototype.hasOwnProperty.call(LABELS, key)) {
@@ -442,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: CURRENT_LOCALE}),
+                body: JSON.stringify({force: force, language: getCurrentLocale()}),
             });
             var data = await resp.json();
             if (data.error && !data.analysis) {
@@ -504,7 +503,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: CURRENT_LOCALE}),
+                body: JSON.stringify({force: force, language: getCurrentLocale()}),
             });
 
             if (!response.ok) {
