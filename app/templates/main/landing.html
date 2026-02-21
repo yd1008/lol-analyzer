@@ -1,54 +1,54 @@
 {% extends "base.html" %}
 
-{% block title %}LoL Analyzer - AI-Powered Match Analysis{% endblock %}
+{% block title %}{{ lt('LoL Analyzer - AI-Powered Match Analysis', 'LoL 分析器 - AI 对局分析') }}{% endblock %}
 
 {% block content %}
 <section class="hero">
     <div class="container hero-shell">
         <div class="hero-copy">
-            <div class="hero-badge">Built For Deliberate Improvement</div>
-            <h1>Review every match with <em>clarity</em>, not noise</h1>
-            <p>Track what happened, why it happened, and what to change next queue. LaneScope turns each game into a concise coaching workflow.</p>
+            <div class="hero-badge">{{ lt('Built For Deliberate Improvement', '为有意识提升而生') }}</div>
+            <h1>{{ lt('Review every match with ', '用') }}<em>{{ lt('clarity', '清晰') }}</em>{{ lt(', not noise', '而非噪音复盘每场对局') }}</h1>
+            <p>{{ lt('Track what happened, why it happened, and what to change next queue. LaneScope turns each game into a concise coaching workflow.', '追踪发生了什么、为什么会发生，以及下一局要改什么。LaneScope 将每场对局整理成简洁可执行的复盘流程。') }}</p>
             <div class="cta-buttons">
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Open Dashboard</a>
-                    <a href="{{ url_for('dashboard.settings') }}" class="btn btn-secondary">Update Settings</a>
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">{{ lt('Open Dashboard', '打开仪表盘') }}</a>
+                    <a href="{{ url_for('dashboard.settings') }}" class="btn btn-secondary">{{ lt('Update Settings', '更新设置') }}</a>
                 {% else %}
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Start Free</a>
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Sign In</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">{{ lt('Start Free', '免费开始') }}</a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">{{ lt('Sign In', '登录') }}</a>
                 {% endif %}
             </div>
             <div class="signal-row">
-                <span class="signal-pill">Automatic Match Sync</span>
-                <span class="signal-pill">Role + Matchup Context</span>
-                <span class="signal-pill">One-Action Coaching</span>
+                <span class="signal-pill">{{ lt('Automatic Match Sync', '自动同步对局') }}</span>
+                <span class="signal-pill">{{ lt('Role + Matchup Context', '分路 + 对位上下文') }}</span>
+                <span class="signal-pill">{{ lt('One-Action Coaching', '单点可执行建议') }}</span>
             </div>
         </div>
         <aside class="hero-panel">
-            <h2>Start In Minutes</h2>
+            <h2>{{ lt('Start In Minutes', '几分钟快速上手') }}</h2>
             <ol class="flow-list">
-                <li><span>1</span>Connect Riot ID in Settings</li>
-                <li><span>2</span>Set Discord channel (optional)</li>
-                <li><span>3</span>Play and review post-match coaching</li>
+                <li><span>1</span>{{ lt('Connect Riot ID in Settings', '在设置中绑定 Riot ID') }}</li>
+                <li><span>2</span>{{ lt('Set Discord channel (optional)', '设置 Discord 频道（可选）') }}</li>
+                <li><span>3</span>{{ lt('Play and review post-match coaching', '对局后查看复盘建议') }}</li>
             </ol>
             <div class="hero-signal-grid">
                 <div class="hero-signal-tile">
-                    <strong>Lane Lens</strong>
-                    <span>Pressure and tempo snapshot</span>
+                    <strong>{{ lt('Lane Lens', '对线视角') }}</strong>
+                    <span>{{ lt('Pressure and tempo snapshot', '压制与节奏快照') }}</span>
                 </div>
                 <div class="hero-signal-tile">
-                    <strong>Draft Lens</strong>
-                    <span>Composition context in one view</span>
+                    <strong>{{ lt('Draft Lens', '阵容视角') }}</strong>
+                    <span>{{ lt('Composition context in one view', '一屏查看阵容上下文') }}</span>
                 </div>
                 <div class="hero-signal-tile">
-                    <strong>Action Lens</strong>
-                    <span>One clear next-match adjustment</span>
+                    <strong>{{ lt('Action Lens', '行动视角') }}</strong>
+                    <span>{{ lt('One clear next-match adjustment', '下一局一个明确调整点') }}</span>
                 </div>
             </div>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">Go to Setup</a>
+            <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">{{ lt('Go to Setup', '前往设置') }}</a>
             {% else %}
-            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Create Account</a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">{{ lt('Create Account', '创建账号') }}</a>
             {% endif %}
         </aside>
     </div>
@@ -58,19 +58,19 @@
     <div class="container">
         <div class="workflow-track">
             <div class="workflow-node">
-                <div class="workflow-kicker">Connect</div>
-                <h3>One-Time Setup</h3>
-                <p>Riot account and delivery preferences are configured once.</p>
+                <div class="workflow-kicker">{{ lt('Connect', '连接') }}</div>
+                <h3>{{ lt('One-Time Setup', '一次性配置') }}</h3>
+                <p>{{ lt('Riot account and delivery preferences are configured once.', 'Riot 账号与推送偏好只需配置一次。') }}</p>
             </div>
             <div class="workflow-node">
-                <div class="workflow-kicker">Collect</div>
-                <h3>Background Import</h3>
-                <p>Recent games are fetched and normalized without manual steps.</p>
+                <div class="workflow-kicker">{{ lt('Collect', '采集') }}</div>
+                <h3>{{ lt('Background Import', '后台导入') }}</h3>
+                <p>{{ lt('Recent games are fetched and normalized without manual steps.', '最近对局自动抓取并标准化，无需手动操作。') }}</p>
             </div>
             <div class="workflow-node">
-                <div class="workflow-kicker">Improve</div>
-                <h3>Next-Game Focus</h3>
-                <p>Each report ends with a practical adjustment you can apply fast.</p>
+                <div class="workflow-kicker">{{ lt('Improve', '提升') }}</div>
+                <h3>{{ lt('Next-Game Focus', '下一局重点') }}</h3>
+                <p>{{ lt('Each report ends with a practical adjustment you can apply fast.', '每份报告都会给出可快速执行的实战调整。') }}</p>
             </div>
         </div>
     </div>
@@ -79,29 +79,29 @@
 <section class="features" id="features">
     <div class="container">
         <div class="features-header">
-            <div class="section-label">Features</div>
-            <h2 class="section-title">Built for fast decisions, not noise</h2>
+            <div class="section-label">{{ lt('Features', '功能') }}</div>
+            <h2 class="section-title">{{ lt('Built for fast decisions, not noise', '为快速决策而生，不为噪音') }}</h2>
         </div>
         <div class="features-grid feature-min-grid">
             <div class="feature-card">
                 <div class="feature-icon">01</div>
-                <h3>Automatic Match Import</h3>
-                <p>Your recent games sync without copy-pasting match IDs.</p>
+                <h3>{{ lt('Automatic Match Import', '自动导入对局') }}</h3>
+                <p>{{ lt('Your recent games sync without copy-pasting match IDs.', '无需复制粘贴对局 ID，自动同步最近对局。') }}</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">02</div>
-                <h3>Context-Aware Coaching</h3>
-                <p>Advice considers lane matchup, composition, and performance deltas.</p>
+                <h3>{{ lt('Context-Aware Coaching', '上下文感知建议') }}</h3>
+                <p>{{ lt('Advice considers lane matchup, composition, and performance deltas.', '建议会结合对线、阵容和表现差值。') }}</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">03</div>
-                <h3>Discord + Web</h3>
-                <p>Read short insights in Discord, then deep dive from the dashboard.</p>
+                <h3>{{ lt('Discord + Web', 'Discord + 网页') }}</h3>
+                <p>{{ lt('Read short insights in Discord, then deep dive from the dashboard.', '先在 Discord 看摘要，再到仪表盘深入复盘。') }}</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">04</div>
-                <h3>Weekly Trends</h3>
-                <p>Track consistency and spot recurring mistakes over time.</p>
+                <h3>{{ lt('Weekly Trends', '每周趋势') }}</h3>
+                <p>{{ lt('Track consistency and spot recurring mistakes over time.', '追踪稳定性并识别反复出现的问题。') }}</p>
             </div>
         </div>
     </div>
@@ -110,24 +110,24 @@
 <section class="how-it-works">
     <div class="container">
         <div class="how-it-works-header">
-            <div class="section-label">First Look</div>
-            <h2 class="section-title">What you get at a glance</h2>
+            <div class="section-label">{{ lt('First Look', '先看这里') }}</div>
+            <h2 class="section-title">{{ lt('What you get at a glance', '你将一眼看到的内容') }}</h2>
         </div>
         <div class="steps">
             <div class="step">
                 <div class="step-number">01</div>
-                <h3>Current Form</h3>
-                <p>KDA, CS, gold/min, damage/min, vision, and role context.</p>
+                <h3>{{ lt('Current Form', '当前状态') }}</h3>
+                <p>{{ lt('KDA, CS, gold/min, damage/min, vision, and role context.', 'KDA、补刀、每分钟经济/伤害、视野与分路上下文。') }}</p>
             </div>
             <div class="step">
                 <div class="step-number">02</div>
-                <h3>Matchup Clarity</h3>
-                <p>Lane and team composition snapshots with performance deltas.</p>
+                <h3>{{ lt('Matchup Clarity', '对位清晰化') }}</h3>
+                <p>{{ lt('Lane and team composition snapshots with performance deltas.', '分路与阵容快照，并带表现差值对比。') }}</p>
             </div>
             <div class="step">
                 <div class="step-number">03</div>
-                <h3>Next Focus</h3>
-                <p>One practical adjustment to apply in your next queue.</p>
+                <h3>{{ lt('Next Focus', '下一步重点') }}</h3>
+                <p>{{ lt('One practical adjustment to apply in your next queue.', '给出下一局即可执行的一项实战调整。') }}</p>
             </div>
         </div>
     </div>
@@ -135,31 +135,31 @@
 
 <section class="metrics-section">
     <div class="container">
-        <h2 class="section-title">Core Signals Tracked Every Match</h2>
+        <h2 class="section-title">{{ lt('Core Signals Tracked Every Match', '每场对局追踪的核心信号') }}</h2>
         <div class="metrics">
             <div class="metric">
                 <div class="metric-value">KDA</div>
-                <div class="metric-label">Fight Efficiency</div>
+                <div class="metric-label">{{ lt('Fight Efficiency', '作战效率') }}</div>
             </div>
             <div class="metric">
-                <div class="metric-value">Gold</div>
-                <div class="metric-label">Economy Pace</div>
+                <div class="metric-value">{{ lt('Gold', '经济') }}</div>
+                <div class="metric-label">{{ lt('Economy Pace', '发育节奏') }}</div>
             </div>
             <div class="metric">
                 <div class="metric-value">DMG</div>
-                <div class="metric-label">Damage Pressure</div>
+                <div class="metric-label">{{ lt('Damage Pressure', '伤害压力') }}</div>
             </div>
             <div class="metric">
-                <div class="metric-value">Vision</div>
-                <div class="metric-label">Map Control</div>
+                <div class="metric-value">{{ lt('Vision', '视野') }}</div>
+                <div class="metric-label">{{ lt('Map Control', '地图控制') }}</div>
             </div>
             <div class="metric">
                 <div class="metric-value">CS</div>
-                <div class="metric-label">Farm Tempo</div>
+                <div class="metric-label">{{ lt('Farm Tempo', '补刀节奏') }}</div>
             </div>
             <div class="metric">
                 <div class="metric-value">Win%</div>
-                <div class="metric-label">Outcome Trend</div>
+                <div class="metric-label">{{ lt('Outcome Trend', '结果趋势') }}</div>
             </div>
         </div>
     </div>

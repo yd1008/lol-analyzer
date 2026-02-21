@@ -1,36 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}{{ analysis.champion }} - Match Detail{% endblock %}
+{% block title %}{{ (match_view.champion_label or analysis.champion) }} - {{ lt('Match Detail', '对局详情') }}{% endblock %}
 
 {% block content %}
 <div class="container dashboard">
     <div class="match-detail-header">
         <div class="match-headline">
-            <div class="page-eyebrow">Match Breakdown</div>
-            <h1>{{ analysis.champion }}</h1>
+            <div class="page-eyebrow">{{ lt('Match Breakdown', '对局拆解') }}</div>
+            <h1>{{ match_view.champion_label or analysis.champion }}</h1>
             <div class="match-head-meta">
                 <span class="match-result {{ 'win' if analysis.win else 'loss' }}">
-                    {{ 'Victory' if analysis.win else 'Defeat' }}
+                    {{ result_label(analysis.win) }}
                 </span>
-                <span class="match-date">{{ analysis.analyzed_at.strftime('%b %d, %Y at %H:%M') }}</span>
+                <span class="match-date">{{ analysis.analyzed_at.strftime('%Y-%m-%d %H:%M') }}</span>
             </div>
         </div>
-        <a href="{{ url_for('dashboard.matches') }}" class="btn btn-secondary btn-sm">Back</a>
+        <a href="{{ url_for('dashboard.matches') }}" class="btn btn-secondary btn-sm">{{ lt('Back', '返回') }}</a>
     </div>
 
     <div class="card page-usage">
-        <h3>Read This Match in 3 Moves</h3>
+        <h3>{{ lt('Read This Match in 3 Moves', '3 步读懂这场对局') }}</h3>
         <div class="quick-guide-grid">
-            <div class="quick-guide-step"><span>1</span>Start in Overview for comp and lane context.</div>
-            <div class="quick-guide-step"><span>2</span>Use Visuals to compare against team and lobby baselines.</div>
-            <div class="quick-guide-step"><span>3</span>Run AI Analysis and apply one focus next queue.</div>
+            <div class="quick-guide-step"><span>1</span>{{ lt('Start in Overview for comp and lane context.', '先看概览，确认阵容和对线背景。') }}</div>
+            <div class="quick-guide-step"><span>2</span>{{ lt('Use Visuals to compare against team and lobby baselines.', '用图表和队伍/全局均值做对比。') }}</div>
+            <div class="quick-guide-step"><span>3</span>{{ lt('Run AI Analysis and apply one focus next queue.', '运行 AI 分析，并在下一局执行一个重点。') }}</div>
         </div>
     </div>
 
-    <div class="detail-tabs" id="detail-tabs" role="tablist" aria-label="Match detail sections">
-        <button class="detail-tab-btn active" id="detail-tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="detail-panel-overview">Overview</button>
-        <button class="detail-tab-btn" id="detail-tab-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="detail-panel-visuals" tabindex="-1">Visuals</button>
-        <button class="detail-tab-btn" id="detail-tab-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="detail-panel-ai" tabindex="-1">AI Analysis</button>
+    <div class="detail-tabs" id="detail-tabs" role="tablist" aria-label="{{ lt('Match detail sections', '对局详情分区') }}">
+        <button class="detail-tab-btn active" id="detail-tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="detail-panel-overview">{{ lt('Overview', '概览') }}</button>
+        <button class="detail-tab-btn" id="detail-tab-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="detail-panel-visuals" tabindex="-1">{{ lt('Visuals', '图表') }}</button>
+        <button class="detail-tab-btn" id="detail-tab-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="detail-panel-ai" tabindex="-1">{{ lt('AI Analysis', 'AI 分析') }}</button>
     </div>
 
     <div class="detail-tab-stage">
@@ -41,19 +41,19 @@
                     <div class="stat-value">{{ analysis.kills }}/{{ analysis.deaths }}/{{ analysis.assists }}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">KDA Ratio</div>
+                    <div class="stat-label">{{ lt('KDA Ratio', 'KDA 比值') }}</div>
                     <div class="stat-value">{{ analysis.kda }}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Gold</div>
+                    <div class="stat-label">{{ lt('Gold', '金币') }}</div>
                     <div class="stat-value">{{ analysis.gold_per_min }}/m</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Damage</div>
+                    <div class="stat-label">{{ lt('Damage', '伤害') }}</div>
                     <div class="stat-value">{{ analysis.damage_per_min }}/m</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Vision</div>
+                    <div class="stat-label">{{ lt('Vision', '视野') }}</div>
                     <div class="stat-value">{{ analysis.vision_score }}</div>
                 </div>
                 <div class="stat-card">
@@ -61,25 +61,25 @@
                     <div class="stat-value">{{ analysis.cs_total }}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Duration</div>
+                    <div class="stat-label">{{ lt('Duration', '时长') }}</div>
                     <div class="stat-value">{{ analysis.game_duration }}m</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Gold Total</div>
+                    <div class="stat-label">{{ lt('Gold Total', '总经济') }}</div>
                     <div class="stat-value">{{ '{:,}'.format(analysis.gold_earned or 0) }}</div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>Team Compositions</h3>
+                <h3>{{ lt('Team Compositions', '队伍阵容') }}</h3>
                 <div class="team-composition-dual">
                     <div class="team-comp-block">
-                        <div class="team-comp-title">Allies</div>
+                        <div class="team-comp-title">{{ lt('Allies', '我方') }}</div>
                         <div class="team-comp-icons">
                             {% for p in match_view.ally_comp %}
                             <div class="team-comp-icon-wrap" title="{{ p.summoner_name }}{% if p.tagline %}#{{ p.tagline }}{% endif %} | {{ p.champion }} | {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}">
                                 {% if p.champion_icon %}
-                                <img class="champion-icon" src="{{ p.champion_icon }}" alt="{{ p.champion }}">
+                                <img class="champion-icon" src="{{ p.champion_icon }}" alt="{{ p.champion_label or p.champion }}">
                                 {% else %}
                                 <span class="champion-icon-fallback">{{ p.champion[:1] }}</span>
                                 {% endif %}
@@ -89,12 +89,12 @@
                         </div>
                     </div>
                     <div class="team-comp-block">
-                        <div class="team-comp-title">Enemies</div>
+                        <div class="team-comp-title">{{ lt('Enemies', '敌方') }}</div>
                         <div class="team-comp-icons">
                             {% for p in match_view.enemy_comp %}
                             <div class="team-comp-icon-wrap" title="{{ p.summoner_name }}{% if p.tagline %}#{{ p.tagline }}{% endif %} | {{ p.champion }} | {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}">
                                 {% if p.champion_icon %}
-                                <img class="champion-icon" src="{{ p.champion_icon }}" alt="{{ p.champion }}">
+                                <img class="champion-icon" src="{{ p.champion_icon }}" alt="{{ p.champion_label or p.champion }}">
                                 {% else %}
                                 <span class="champion-icon-fallback">{{ p.champion[:1] }}</span>
                                 {% endif %}
@@ -107,7 +107,7 @@
             </div>
 
             <div class="card">
-                <h3>Lane-by-Lane Matchup</h3>
+                <h3>{{ lt('Lane-by-Lane Matchup', '分路对位') }}</h3>
                 <div class="lane-grid">
                     {% for lane in match_view.lane_matchups %}
                     <div class="lane-row">
@@ -115,26 +115,26 @@
                         <div class="lane-player ally">
                             {% if lane.ally %}
                                 {% if lane.ally.champion_icon %}
-                                <img class="champion-icon champion-icon-sm" src="{{ lane.ally.champion_icon }}" alt="{{ lane.ally.champion }}">
+                                <img class="champion-icon champion-icon-sm" src="{{ lane.ally.champion_icon }}" alt="{{ lane.ally.champion_label or lane.ally.champion }}">
                                 {% else %}
                                 <span class="champion-icon-fallback champion-icon-sm">{{ lane.ally.champion[:1] }}</span>
                                 {% endif %}
                                 <div>
-                                    <div class="lane-player-name">{{ lane.ally.summoner_name or lane.ally.champion }}</div>
-                                    <div class="lane-player-sub">{{ lane.ally.champion }} | {{ lane.ally.kills }}/{{ lane.ally.deaths }}/{{ lane.ally.assists }}</div>
+                                    <div class="lane-player-name">{{ lane.ally.summoner_name or lane.ally.champion_label or lane.ally.champion }}</div>
+                                    <div class="lane-player-sub">{{ lane.ally.champion_label or lane.ally.champion }} | {{ lane.ally.kills }}/{{ lane.ally.deaths }}/{{ lane.ally.assists }}</div>
                                 </div>
                             {% endif %}
                         </div>
                         <div class="lane-player enemy">
                             {% if lane.enemy %}
                                 {% if lane.enemy.champion_icon %}
-                                <img class="champion-icon champion-icon-sm" src="{{ lane.enemy.champion_icon }}" alt="{{ lane.enemy.champion }}">
+                                <img class="champion-icon champion-icon-sm" src="{{ lane.enemy.champion_icon }}" alt="{{ lane.enemy.champion_label or lane.enemy.champion }}">
                                 {% else %}
                                 <span class="champion-icon-fallback champion-icon-sm">{{ lane.enemy.champion[:1] }}</span>
                                 {% endif %}
                                 <div>
-                                    <div class="lane-player-name">{{ lane.enemy.summoner_name or lane.enemy.champion }}</div>
-                                    <div class="lane-player-sub">{{ lane.enemy.champion }} | {{ lane.enemy.kills }}/{{ lane.enemy.deaths }}/{{ lane.enemy.assists }}</div>
+                                    <div class="lane-player-name">{{ lane.enemy.summoner_name or lane.enemy.champion_label or lane.enemy.champion }}</div>
+                                    <div class="lane-player-sub">{{ lane.enemy.champion_label or lane.enemy.champion }} | {{ lane.enemy.kills }}/{{ lane.enemy.deaths }}/{{ lane.enemy.assists }}</div>
                                 </div>
                             {% endif %}
                         </div>
@@ -144,34 +144,34 @@
             </div>
 
             <div class="card">
-                <h3>Full Match Summary</h3>
+                <h3>{{ lt('Full Match Summary', '完整对局总结') }}</h3>
                 <div class="match-summary-table-wrap">
                     <table class="match-summary-table">
                         <thead>
                             <tr>
-                                <th>Side</th>
-                                <th>Champion</th>
-                                <th>Runes</th>
+                                <th>{{ lt('Side', '阵营') }}</th>
+                                <th>{{ lt('Champion', '英雄') }}</th>
+                                <th>{{ lt('Runes', '符文') }}</th>
                                 <th>KDA</th>
-                                <th>Damage</th>
-                                <th>Wards</th>
+                                <th>{{ lt('Damage', '伤害') }}</th>
+                                <th>{{ lt('Wards', '视野') }}</th>
                                 <th>CS</th>
-                                <th>Items</th>
+                                <th>{{ lt('Items', '装备') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for row in match_view.scoreboard_rows %}
                             <tr class="{{ 'ally' if row.side == 'ALLY' else 'enemy' }}">
-                                <td>{{ row.side }}</td>
+                                <td>{{ lt('ALLY', '我方') if row.side == 'ALLY' else lt('ENEMY', '敌方') }}</td>
                                 <td>
                                     <div class="summary-champion-cell">
                                         {% if row.champion_icon %}
-                                        <img class="champion-icon champion-icon-sm" src="{{ row.champion_icon }}" alt="{{ row.champion }}">
+                                        <img class="champion-icon champion-icon-sm" src="{{ row.champion_icon }}" alt="{{ row.champion_label or row.champion }}">
                                         {% else %}
                                         <span class="champion-icon-fallback champion-icon-sm">{{ row.champion[:1] }}</span>
                                         {% endif %}
                                         <div>
-                                            <div class="summary-primary">{{ row.champion }}</div>
+                                            <div class="summary-primary">{{ row.champion_label or row.champion }}</div>
                                             <div class="summary-sub">{{ row.summoner_name }}</div>
                                         </div>
                                     </div>
@@ -179,12 +179,12 @@
                                 <td>
                                     <div class="summary-runes">
                                         {% if row.runes.primary %}
-                                        <img class="rune-icon" src="{{ row.runes.primary }}" alt="Primary rune">
+                                        <img class="rune-icon" src="{{ row.runes.primary }}" alt="{{ lt('Primary rune', '主系符文') }}">
                                         {% else %}
                                         <span class="rune-fallback">P</span>
                                         {% endif %}
                                         {% if row.runes.secondary %}
-                                        <img class="rune-icon" src="{{ row.runes.secondary }}" alt="Secondary rune">
+                                        <img class="rune-icon" src="{{ row.runes.secondary }}" alt="{{ lt('Secondary rune', '副系符文') }}">
                                         {% else %}
                                         <span class="rune-fallback">S</span>
                                         {% endif %}
@@ -203,7 +203,7 @@
                                     <div class="summary-items">
                                         {% for it in row['items'] %}
                                             {% if it.icon %}
-                                            <img class="item-icon" src="{{ it.icon }}" alt="Item {{ it.id }}">
+                                            <img class="item-icon" src="{{ it.icon }}" alt="{{ lt('Item', '物品') }} {{ it.id }}">
                                             {% else %}
                                             <span class="item-fallback">{{ it.id }}</span>
                                             {% endif %}
@@ -219,10 +219,10 @@
 
             {% if analysis.recommendations %}
             <div class="card">
-                <h3>Quick Recommendations</h3>
+                <h3>{{ lt('Quick Recommendations', '快速建议') }}</h3>
                 <ul class="recommendations-list">
                     {% for rec in analysis.recommendations %}
-                    <li>{{ rec }}</li>
+                    <li>{{ recommendation_text(rec) }}</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -231,16 +231,16 @@
 
         <div class="detail-tab-panel" id="detail-panel-visuals" data-panel="visuals" role="tabpanel" aria-labelledby="detail-tab-visuals" hidden>
             <div class="card">
-                <h3>Performance Visuals</h3>
-                <div class="visual-toggle-bar" id="detail-visual-toggle" role="tablist" aria-label="Visualization groups">
-                    <button class="visual-toggle-btn active" id="detail-visual-tab-compare" data-group="compare" role="tab" aria-selected="true" aria-controls="detail-visual-group-compare">Compare</button>
-                    <button class="visual-toggle-btn" id="detail-visual-tab-shares" data-group="shares" role="tab" aria-selected="false" aria-controls="detail-visual-group-shares" tabindex="-1">Shares</button>
-                    <button class="visual-toggle-btn" id="detail-visual-tab-lane" data-group="lane" role="tab" aria-selected="false" aria-controls="detail-visual-group-lane" tabindex="-1">Lane</button>
+                <h3>{{ lt('Performance Visuals', '表现图表') }}</h3>
+                <div class="visual-toggle-bar" id="detail-visual-toggle" role="tablist" aria-label="{{ lt('Visualization groups', '图表分组') }}">
+                    <button class="visual-toggle-btn active" id="detail-visual-tab-compare" data-group="compare" role="tab" aria-selected="true" aria-controls="detail-visual-group-compare">{{ lt('Compare', '对比') }}</button>
+                    <button class="visual-toggle-btn" id="detail-visual-tab-shares" data-group="shares" role="tab" aria-selected="false" aria-controls="detail-visual-group-shares" tabindex="-1">{{ lt('Shares', '占比') }}</button>
+                    <button class="visual-toggle-btn" id="detail-visual-tab-lane" data-group="lane" role="tab" aria-selected="false" aria-controls="detail-visual-group-lane" tabindex="-1">{{ lt('Lane', '对线') }}</button>
                 </div>
 
                 <div class="visual-group active" id="detail-visual-group-compare" data-group="compare" role="tabpanel" aria-labelledby="detail-visual-tab-compare">
                     <div class="visuals-grid">
-                        {% set visual_labels = {'gold_per_min': 'Gold / Min', 'damage_per_min': 'Damage / Min', 'cs_per_min': 'CS / Min', 'vision_per_min': 'Vision / Min', 'kda': 'KDA'} %}
+                        {% set visual_labels = {'gold_per_min': lt('Gold / Min', '金币 / 分'), 'damage_per_min': lt('Damage / Min', '伤害 / 分'), 'cs_per_min': lt('CS / Min', '补刀 / 分'), 'vision_per_min': lt('Vision / Min', '视野 / 分'), 'kda': 'KDA'} %}
                         {% for metric, label in visual_labels.items() %}
                         {% set player = match_view.visuals.player.get(metric, 0) %}
                         {% set team_avg = match_view.visuals.team_avg.get(metric, 0) %}
@@ -253,9 +253,9 @@
                                     <div class="visual-bar player" style="width: {{ ((player / maxv) * 100) | round(1) }}%"></div>
                                 </div>
                                 <div class="visual-bar-values">
-                                    <span>You: {{ player }}</span>
-                                    <span>Team Avg: {{ team_avg }}</span>
-                                    <span>Lobby Avg: {{ lobby_avg }}</span>
+                                    <span>{{ lt('You', '你') }}: {{ player }}</span>
+                                    <span>{{ lt('Team Avg', '队伍均值') }}: {{ team_avg }}</span>
+                                    <span>{{ lt('Lobby Avg', '对局均值') }}: {{ lobby_avg }}</span>
                                 </div>
                             </div>
                         </div>
@@ -266,7 +266,7 @@
                 <div class="visual-group" id="detail-visual-group-shares" data-group="shares" role="tabpanel" aria-labelledby="detail-visual-tab-shares" hidden>
                     {% set shares = match_view.visuals.shares %}
                     <div class="share-grid">
-                        {% for key, label in [('gold_share_pct','Gold Share'), ('damage_share_pct','Damage Share'), ('cs_share_pct','CS Share'), ('vision_share_pct','Vision Share'), ('kill_participation_pct','Kill Part.')] %}
+                        {% for key, label in [('gold_share_pct',lt('Gold Share','经济占比')), ('damage_share_pct',lt('Damage Share','伤害占比')), ('cs_share_pct',lt('CS Share','补刀占比')), ('vision_share_pct',lt('Vision Share','视野占比')), ('kill_participation_pct',lt('Kill Part.','参团率'))] %}
                         {% set value = shares.get(key, 0) %}
                         <div class="share-card">
                             <div class="share-ring" style="--pct: {{ value }};"><span>{{ value }}%</span></div>
@@ -281,12 +281,12 @@
                     {% if lane and lane.get('opponent') %}
                     <div class="lane-chart-head">
                         {% if lane.opponent.champion_icon %}
-                        <img class="champion-icon champion-icon-sm" src="{{ lane.opponent.champion_icon }}" alt="{{ lane.opponent.champion }}">
+                        <img class="champion-icon champion-icon-sm" src="{{ lane.opponent.champion_icon }}" alt="{{ lane.opponent.champion_label or lane.opponent.champion }}">
                         {% endif %}
-                        <span>Lane vs {{ lane.opponent.champion }}</span>
+                        <span>{{ lt('Lane vs', '对线') }} {{ lane.opponent.champion_label or lane.opponent.champion }}</span>
                     </div>
                     <div class="lane-delta-grid">
-                        {% for key, label in [('gpm_delta','Gold/min Delta'), ('dpm_delta','Damage/min Delta'), ('cspm_delta','CS/min Delta'), ('vpm_delta','Vision/min Delta'), ('kda_delta','KDA Delta')] %}
+                        {% for key, label in [('gpm_delta',lt('Gold/min Delta','金币/分差值')), ('dpm_delta',lt('Damage/min Delta','伤害/分差值')), ('cspm_delta',lt('CS/min Delta','补刀/分差值')), ('vpm_delta',lt('Vision/min Delta','视野/分差值')), ('kda_delta',lt('KDA Delta','KDA 差值'))] %}
                         {% set value = lane.get(key, 0) %}
                         {% set width = [value|abs * 12, 100] | min %}
                         <div class="lane-delta-row">
@@ -299,7 +299,7 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="card-muted">No direct lane opponent data in this match.</p>
+                    <p class="card-muted">{{ lt('No direct lane opponent data in this match.', '该对局缺少直接对位数据。') }}</p>
                     {% endif %}
                 </div>
             </div>
@@ -310,19 +310,19 @@
                 <div class="ai-analysis-shell">
                     <div class="ai-analysis-head">
                         <div>
-                            <h3>AI Match Analysis</h3>
-                            <p class="ai-analysis-sub">Streaming coaching focused on lane pressure, team tempo, and next-match priorities.</p>
+                            <h3>{{ lt('AI Match Analysis', 'AI 对局分析') }}</h3>
+                            <p class="ai-analysis-sub">{{ lt('Streaming coaching focused on lane pressure, team tempo, and next-match priorities.', '实时建议聚焦对线压制、团队节奏和下一局优先事项。') }}</p>
                         </div>
-                        <span class="ai-analysis-chip">Live</span>
+                        <span class="ai-analysis-chip">{{ lt('Live', '实时') }}</span>
                     </div>
                     <div id="detail-ai-content" class="detail-ai-scroll">
-                        <p class="card-muted">Run AI analysis to generate matchup-specific coaching.</p>
+                        <p class="card-muted">{{ lt('Run AI analysis to generate matchup-specific coaching.', '运行 AI 分析以生成针对该对局的建议。') }}</p>
                     </div>
                 </div>
-                <button class="ai-btn{{ ' has-analysis' if analysis.llm_analysis else '' }}" id="detail-ai-btn" data-match-id="{{ analysis.id }}">
-                    {{ 'Regenerate AI Analysis' if analysis.llm_analysis else 'Run AI Analysis' }}
+                <button class="ai-btn{{ ' has-analysis' if initial_ai_analysis else '' }}" id="detail-ai-btn" data-match-id="{{ analysis.id }}">
+                    {{ lt('Regenerate AI Analysis', '重新生成 AI 分析') if initial_ai_analysis else lt('Run AI Analysis', '运行 AI 分析') }}
                 </button>
-                <script type="application/json" id="detail-ai-initial">{{ (analysis.llm_analysis or '') | tojson }}</script>
+                <script type="application/json" id="detail-ai-initial">{{ (initial_ai_analysis or '') | tojson }}</script>
             </div>
         </div>
     </div>

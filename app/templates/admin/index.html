@@ -1,64 +1,64 @@
 {% extends "base.html" %}
 
-{% block title %}Admin - LoL Analyzer{% endblock %}
+{% block title %}{{ lt('Admin - LoL Analyzer', '管理 - LoL 分析器') }}{% endblock %}
 
 {% block content %}
 <div class="container dashboard">
     <div class="dashboard-header">
-        <h1>Admin Panel <span class="admin-badge">Admin</span></h1>
+        <h1>{{ lt('Admin Panel', '管理面板') }} <span class="admin-badge">{{ lt('Admin', '管理') }}</span></h1>
     </div>
 
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-label">Users</div>
+            <div class="stat-label">{{ lt('Users', '用户数') }}</div>
             <div class="stat-value">{{ users|length }}</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Total Analyses</div>
+            <div class="stat-label">{{ lt('Total Analyses', '分析总数') }}</div>
             <div class="stat-value">{{ total_analyses }}</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">LLM Config</div>
-            <div class="stat-value stat-value-sm">{{ 'OK' if config.get('LLM_API_KEY') else 'Missing' }}</div>
+            <div class="stat-label">{{ lt('LLM Config', 'LLM 配置') }}</div>
+            <div class="stat-value stat-value-sm">{{ lt('OK', '正常') if config.get('LLM_API_KEY') else lt('Missing', '缺失') }}</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Discord Bot</div>
-            <div class="stat-value stat-value-sm">{{ 'OK' if config.get('DISCORD_BOT_TOKEN') else 'Missing' }}</div>
+            <div class="stat-label">{{ lt('Discord Bot', 'Discord 机器人') }}</div>
+            <div class="stat-value stat-value-sm">{{ lt('OK', '正常') if config.get('DISCORD_BOT_TOKEN') else lt('Missing', '缺失') }}</div>
         </div>
     </div>
 
     <div class="admin-card">
-        <h3>Test LLM Analysis</h3>
-        <p>Look up a summoner, fetch their latest match, and run the LLM analysis pipeline.</p>
-        <a href="{{ url_for('admin.test_llm') }}" class="btn btn-primary btn-sm">Open LLM Test</a>
+        <h3>{{ lt('Test LLM Analysis', '测试 LLM 分析') }}</h3>
+        <p>{{ lt('Look up a summoner, fetch their latest match, and run the LLM analysis pipeline.', '查询召唤师并获取最近对局，运行 LLM 分析流程。') }}</p>
+        <a href="{{ url_for('admin.test_llm') }}" class="btn btn-primary btn-sm">{{ lt('Open LLM Test', '打开 LLM 测试') }}</a>
     </div>
 
     <div class="admin-card">
-        <h3>Test Discord Notification</h3>
-        <p>Send a test message to a Discord channel.</p>
+        <h3>{{ lt('Test Discord Notification', '测试 Discord 通知') }}</h3>
+        <p>{{ lt('Send a test message to a Discord channel.', '向 Discord 频道发送测试消息。') }}</p>
         <form method="POST" action="{{ url_for('admin.test_discord') }}" class="admin-inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group compact-field">
-                <label class="field-label-inline">Channel ID</label>
+                <label class="field-label-inline">{{ lt('Channel ID', '频道 ID') }}</label>
                 <input type="text" name="channel_id" placeholder="1234567890123456789" required>
             </div>
             <div class="form-group compact-field wide-field">
-                <label class="field-label-inline">Message</label>
-                <input type="text" name="message" value="Test message from LoL Analyzer admin panel.">
+                <label class="field-label-inline">{{ lt('Message', '消息') }}</label>
+                <input type="text" name="message" value="{{ lt('Test message from LoL Analyzer admin panel.', '来自 LoL Analyzer 管理面板的测试消息。') }}">
             </div>
-            <button type="submit" class="btn btn-primary btn-sm">Send</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{ lt('Send', '发送') }}</button>
         </form>
     </div>
 
     <div class="admin-card">
-        <h3>Registered Users</h3>
+        <h3>{{ lt('Registered Users', '注册用户') }}</h3>
         <table class="data-table">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Email</th>
-                    <th>Created</th>
-                    <th>Active</th>
+                    <th>{{ lt('Email', '邮箱') }}</th>
+                    <th>{{ lt('Created', '创建时间') }}</th>
+                    <th>{{ lt('Active', '状态') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -66,8 +66,8 @@
                 <tr>
                     <td>{{ user.id }}</td>
                     <td>{{ user.email }}</td>
-                    <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
-                    <td>{{ 'Yes' if user.is_active_user else 'No' }}</td>
+                    <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ lt('Yes', '是') if user.is_active_user else lt('No', '否') }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

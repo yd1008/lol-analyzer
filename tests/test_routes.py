@@ -502,6 +502,100 @@ class TestAiAnalysisRoute:
         assert events[-1]["type"] == "error"
         assert events[-1]["status"] == 400
 
+    def test_ai_analysis_reads_language_specific_cache(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_lang_cache",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="legacy english cache",
+            llm_analysis_en="english cache",
+            llm_analysis_zh="中文缓存",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp_zh = auth_client.post(
+            f"/dashboard/api/matches/{match.id}/ai-analysis",
+            json={"language": "zh-CN"},
+        )
+        assert resp_zh.status_code == 200
+        payload_zh = resp_zh.get_json()
+        assert payload_zh["analysis"] == "中文缓存"
+        assert payload_zh["cached"] is True
+        assert payload_zh["language"] == "zh-CN"
+
+        resp_en = auth_client.post(
+            f"/dashboard/api/matches/{match.id}/ai-analysis",
+            json={"language": "en"},
+        )
+        assert resp_en.status_code == 200
+        payload_en = resp_en.get_json()
+        assert payload_en["analysis"] == "english cache"
+        assert payload_en["cached"] is True
+        assert payload_en["language"] == "en"
+
+    def test_ai_analysis_force_writes_requested_language_column(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_lang_write",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="legacy english cache",
+            llm_analysis_en="legacy english cache",
+            llm_analysis_zh=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("新的中文分析", None)):
+            resp = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis",
+                json={"force": True, "language": "zh-CN"},
+            )
+
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload["analysis"] == "新的中文分析"
+        assert payload["language"] == "zh-CN"
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis_zh == "新的中文分析"
+        assert reloaded.llm_analysis_en == "legacy english cache"
+
 
 class TestMatchDetailRoute:
     @patch("app.dashboard.routes.champion_icon_url", return_value="")

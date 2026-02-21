@@ -6,6 +6,7 @@ from app.models import User, RiotAccount, MatchAnalysis
 from app.analysis.riot_api import get_watcher, get_routing_value, resolve_puuid, get_recent_matches
 from app.analysis.engine import analyze_match, get_match_summary
 from app.analysis.llm import get_llm_analysis_detailed
+from app.i18n import get_locale, lt, t
 from app.extensions import db
 
 
@@ -15,7 +16,7 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         admin_email = current_app.config.get('ADMIN_EMAIL', '')
         if not admin_email or current_user.email != admin_email:
-            flash('Access denied.', 'error')
+            flash(t('flash.access_denied'), 'error')
             return redirect(url_for('dashboard.index'))
         return f(*args, **kwargs)
     return decorated
@@ -44,7 +45,7 @@ def test_llm():
             region = request.form.get('region', 'na1').strip()
 
             if not summoner or not tagline:
-                flash('Summoner name and tagline are required.', 'error')
+                flash(lt('Summoner name and tagline are required.', '召唤师名称和标签为必填项。'), 'error')
                 return redirect(url_for('admin.test_llm'))
 
             puuid, error = resolve_puuid(summoner, tagline, region)
@@ -54,7 +55,7 @@ def test_llm():
 
             matches = get_recent_matches(region, puuid, count=10)
             if not matches:
-                flash('No recent matches found for this summoner.', 'warning')
+                flash(lt('No recent matches found for this summoner.', '未找到该召唤师最近对局。'), 'warning')
                 return redirect(url_for('admin.test_llm'))
 
             watcher = get_watcher()
@@ -66,7 +67,7 @@ def test_llm():
                     match_list.append(summary)
 
             if not match_list:
-                flash('Failed to fetch match details.', 'error')
+                flash(lt('Failed to fetch match details.', '获取对局详情失败。'), 'error')
                 return redirect(url_for('admin.test_llm'))
 
             return render_template('admin/test_llm.html',
@@ -87,7 +88,7 @@ def test_llm():
             tagline = request.form.get('tagline', '').strip()
 
             if not match_id or not puuid:
-                flash('Missing match or player information.', 'error')
+                flash(lt('Missing match or player information.', '缺少对局或玩家信息。'), 'error')
                 return redirect(url_for('admin.test_llm'))
 
             watcher = get_watcher()
@@ -95,7 +96,7 @@ def test_llm():
             analysis_data = analyze_match(watcher, routing, puuid, match_id)
 
             if not analysis_data:
-                flash('Failed to analyze the selected match.', 'error')
+                flash(lt('Failed to analyze the selected match.', '分析所选对局失败。'), 'error')
                 return redirect(url_for('admin.test_llm'))
             analysis_data['platform_region'] = region
             analysis_data['player_puuid'] = puuid
@@ -115,12 +116,15 @@ def test_llm():
             try:
                 analysis_data = json.loads(analysis_json)
             except (json.JSONDecodeError, TypeError):
-                flash('Invalid analysis data.', 'error')
+                flash(lt('Invalid analysis data.', '分析数据无效。'), 'error')
                 return redirect(url_for('admin.test_llm'))
 
-            result, llm_error = get_llm_analysis_detailed(analysis_data)
+            result, llm_error = get_llm_analysis_detailed(analysis_data, language=get_locale())
             if llm_error:
-                flash(f'LLM error: {llm_error}', 'error')
+                flash(
+                    lt('LLM error: {error}', 'LLM 错误：{error}').format(error=llm_error),
+                    'error',
+                )
 
             return render_template('admin/test_llm.html',
                 analysis_data=analysis_data,
@@ -138,18 +142,21 @@ def test_llm():
 @admin_required
 def test_discord():
     channel_id = request.form.get('channel_id', '').strip()
-    message = request.form.get('message', 'Test message from LoL Analyzer admin panel.').strip()
+    message = request.form.get('message', lt('Test message from LoL Analyzer admin panel.', '来自 LoL Analyzer 管理面板的测试消息。')).strip()
 
     if not channel_id:
-        flash('Channel ID is required.', 'error')
+        flash(t('validation.channel_required'), 'error')
         return redirect(url_for('admin.index'))
 
     from app.analysis.discord_notifier import send_message
     success = send_message(channel_id, message)
 
     if success:
-        flash(f'Message sent to channel {channel_id}.', 'success')
+        flash(lt('Message sent to channel {channel_id}.', '消息已发送到频道 {channel_id}。').format(channel_id=channel_id), 'success')
     else:
-        flash('Failed to send Discord message. Check DISCORD_BOT_TOKEN and channel ID.', 'error')
+        flash(
+            lt('Failed to send Discord message. Check DISCORD_BOT_TOKEN and channel ID.', '发送 Discord 消息失败，请检查 DISCORD_BOT_TOKEN 与频道 ID。'),
+            'error',
+        )
 
     return redirect(url_for('admin.index'))

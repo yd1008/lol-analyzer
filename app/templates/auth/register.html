@@ -1,41 +1,41 @@
 {% extends "base.html" %}
 
-{% block title %}Create Account - LoL Analyzer{% endblock %}
+{% block title %}{{ lt('Create Account - LoL Analyzer', '创建账号 - LoL 分析器') }}{% endblock %}
 
 {% block content %}
 <section class="auth-shell">
     <div class="form-container">
-        <h2>Create your account</h2>
-        <p class="form-subtitle">Start getting AI-powered match analysis.</p>
+        <h2>{{ lt('Create your account', '创建你的账号') }}</h2>
+        <p class="form-subtitle">{{ lt('Start getting AI-powered match analysis.', '开始体验 AI 驱动的对局分析。') }}</p>
         <form method="POST">
             {{ form.hidden_tag() }}
             <div class="form-group">
-                {{ form.email.label }}
-                {{ form.email(placeholder="you@example.com") }}
+                <label for="{{ form.email.id }}">{{ t(form.email.label.text) if form.email.label.text.startswith('form.') else form.email.label.text }}</label>
+                {{ form.email(placeholder=lt("you@example.com", "you@example.com")) }}
                 {% for error in form.email.errors %}
-                    <div class="error">{{ error }}</div>
+                    <div class="error">{{ t(error) }}</div>
                 {% endfor %}
             </div>
             <div class="form-group">
-                {{ form.password.label }}
-                {{ form.password(placeholder="At least 8 characters") }}
+                <label for="{{ form.password.id }}">{{ t(form.password.label.text) if form.password.label.text.startswith('form.') else form.password.label.text }}</label>
+                {{ form.password(placeholder=lt("At least 8 characters", "至少 8 个字符")) }}
                 {% for error in form.password.errors %}
-                    <div class="error">{{ error }}</div>
+                    <div class="error">{{ t(error) }}</div>
                 {% endfor %}
             </div>
             <div class="form-group">
-                {{ form.confirm_password.label }}
-                {{ form.confirm_password(placeholder="Repeat your password") }}
+                <label for="{{ form.confirm_password.id }}">{{ t(form.confirm_password.label.text) if form.confirm_password.label.text.startswith('form.') else form.confirm_password.label.text }}</label>
+                {{ form.confirm_password(placeholder=lt("Repeat your password", "再次输入密码")) }}
                 {% for error in form.confirm_password.errors %}
-                    <div class="error">{{ error }}</div>
+                    <div class="error">{{ t(error) }}</div>
                 {% endfor %}
             </div>
             <div class="form-actions">
-                {{ form.submit(class="btn btn-primary") }}
+                <button type="submit" class="btn btn-primary">{{ lt('Create Account', '创建账号') }}</button>
             </div>
         </form>
         <div class="form-footer">
-            Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+            {{ lt('Already have an account?', '已有账号？') }} <a href="{{ url_for('auth.login') }}">{{ lt('Sign in', '去登录') }}</a>
         </div>
     </div>
 </section>

@@ -47,7 +47,9 @@ def db(app):
 @pytest.fixture()
 def client(app, db):
     """A Flask test client."""
-    return app.test_client()
+    c = app.test_client()
+    c.set_cookie('lanescope-lang', 'en', domain='localhost')
+    return c
 
 
 @pytest.fixture()

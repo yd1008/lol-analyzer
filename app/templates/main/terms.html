@@ -1,8 +1,68 @@
 {% extends "base.html" %}
 
-{% block title %}Terms of Service - LoL Analyzer{% endblock %}
+{% block title %}{{ lt('Terms of Service - LoL Analyzer', '服务条款 - LoL 分析器') }}{% endblock %}
 
 {% block content %}
+{% if current_locale == 'zh-CN' %}
+<div class="container legal-page">
+    <h1>服务条款</h1>
+    <p class="legal-updated">最后更新：2026年2月6日</p>
+
+    <h2>1. 条款接受</h2>
+    <p>当你访问或使用 LoL Performance Analyzer（以下简称“本服务”）时，即表示你同意受本服务条款约束。若你不同意，请勿使用本服务。</p>
+
+    <h2>2. 服务说明</h2>
+    <p>LoL Performance Analyzer 是一个网页平台，旨在通过自动化表现分析、个性化建议和 Discord 通知帮助英雄联盟玩家提升水平。用户可以创建账号、绑定 Riot 召唤师信息，并接收自动化对局分析。</p>
+
+    <h2>3. 用户账号</h2>
+    <ul>
+        <li>创建账号时需提供有效邮箱地址</li>
+        <li>你有责任保护账号凭据安全</li>
+        <li>不得与他人共享账号</li>
+        <li>使用本服务需年满 13 周岁</li>
+    </ul>
+
+    <h2>4. 隐私政策</h2>
+    <p>我们重视你的隐私。请查看我们的<a href="{{ url_for('main.privacy') }}">隐私政策</a>，了解我们如何收集、使用和保护你的数据。</p>
+
+    <h2>5. 用户责任</h2>
+    <p>用户同意：</p>
+    <ul>
+        <li>遵守 Riot Games 服务条款使用本服务</li>
+        <li>不将本服务用于任何违法或未授权用途</li>
+        <li>不尝试未经授权访问任何系统或网络</li>
+        <li>不以影响他人体验的方式滥用本服务</li>
+    </ul>
+
+    <h2>6. 责任限制</h2>
+    <p>本服务按“现状”提供，不附带任何明示或暗示保证。我们不对以下情况负责：</p>
+    <ul>
+        <li>基于分析结果做出的任何决策</li>
+        <li>任何数据、游戏道具或账号状态损失</li>
+        <li>服务中断或技术问题</li>
+    </ul>
+
+    <h2>7. 知识产权</h2>
+    <ul>
+        <li>本服务及其原创内容遵循 MIT 许可证</li>
+        <li>League of Legends 为 Riot Games, Inc. 的商标</li>
+        <li>本项目与 Riot Games 无隶属、赞助或官方背书关系</li>
+    </ul>
+
+    <h2>8. 账号终止</h2>
+    <p>若账号违反本条款，我们保留暂停或终止账号的权利。你可随时通过仪表盘设置删除账号。</p>
+
+    <h2>9. 条款变更</h2>
+    <p>我们保留随时修改本条款的权利。变更后继续使用本服务即视为接受新条款。</p>
+
+    <h2>10. 联系方式</h2>
+    <p>如对本服务条款有疑问，请联系：</p>
+    <ul>
+        <li>GitHub：<a href="https://github.com/yd1008/lol-analyzer">github.com/yd1008/lol-analyzer</a></li>
+        <li>开发者：Elliot Dang（yd1008@nyu.edu）</li>
+    </ul>
+</div>
+{% else %}
 <div class="container legal-page">
     <h1>Terms of Service</h1>
     <p class="legal-updated">Last updated: February 6, 2026</p>
@@ -61,4 +121,5 @@
         <li>Developer: Elliot Dang (yd1008@nyu.edu)</li>
     </ul>
 </div>
+{% endif %}
 {% endblock %}

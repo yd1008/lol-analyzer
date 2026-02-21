@@ -47,7 +47,7 @@ class TestResolvePuuid:
             puuid, error = resolve_puuid("FakePlayer", "FAKE", "na1")
 
         assert puuid is None
-        assert "not found" in error
+        assert ("not found" in error.lower()) or ("未找到" in error)
         assert "FakePlayer#FAKE" in error
 
     @patch("app.analysis.riot_api.http_requests.get")
@@ -60,7 +60,7 @@ class TestResolvePuuid:
             puuid, error = resolve_puuid("Player", "TAG", "euw1")
 
         assert puuid is None
-        assert "invalid or expired" in error
+        assert ("invalid or expired" in error.lower()) or ("无效或已过期" in error)
 
     @patch("app.analysis.riot_api.http_requests.get")
     def test_rate_limited(self, mock_get, app):
@@ -72,7 +72,7 @@ class TestResolvePuuid:
             puuid, error = resolve_puuid("Player", "TAG", "kr")
 
         assert puuid is None
-        assert "Too many requests" in error
+        assert ("too many requests" in error.lower()) or ("请求过于频繁" in error)
 
     @patch("app.analysis.riot_api.http_requests.get")
     def test_server_error(self, mock_get, app):
@@ -94,7 +94,7 @@ class TestResolvePuuid:
             puuid, error = resolve_puuid("Player", "TAG", "na1")
 
         assert puuid is None
-        assert "unexpected error" in error.lower()
+        assert ("unexpected error" in error.lower()) or ("未知错误" in error)
 
     def test_no_api_key(self, app):
         with app.app_context():
@@ -103,7 +103,7 @@ class TestResolvePuuid:
             app.config["RIOT_API_KEY"] = "RGAPI-test-key"
 
         assert puuid is None
-        assert "not configured" in error
+        assert ("not configured" in error.lower()) or ("未配置" in error)
 
 
 class TestGetRecentMatches:

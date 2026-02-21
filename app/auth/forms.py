@@ -5,17 +5,29 @@ from app.models import User
 
 
 class LoginForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    submit = SubmitField('Sign In')
+    email = StringField(
+        'form.email',
+        validators=[DataRequired(message='validation.email_invalid'), Email(message='validation.email_invalid')],
+    )
+    password = PasswordField('form.password', validators=[DataRequired(message='validation.password_required')])
+    submit = SubmitField('form.sign_in')
 
 
 class RegisterForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired(), Length(min=8, message='Password must be at least 8 characters.')])
-    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match.')])
-    submit = SubmitField('Create Account')
+    email = StringField(
+        'form.email',
+        validators=[DataRequired(message='validation.email_invalid'), Email(message='validation.email_invalid')],
+    )
+    password = PasswordField(
+        'form.password',
+        validators=[DataRequired(message='validation.password_min'), Length(min=8, message='validation.password_min')],
+    )
+    confirm_password = PasswordField(
+        'form.confirm_password',
+        validators=[DataRequired(message='validation.password_match'), EqualTo('password', message='validation.password_match')],
+    )
+    submit = SubmitField('form.create_account')
 
     def validate_email(self, field):
         if User.query.filter_by(email=field.data.lower()).first():
-            raise ValidationError('An account with this email already exists.')
+            raise ValidationError('validation.email_exists')
