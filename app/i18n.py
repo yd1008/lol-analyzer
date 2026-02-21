@@ -21,6 +21,7 @@ _LOCK = threading.Lock()
 _VERSION_CACHE = {'value': '', 'expires_at': 0.0}
 _CHAMPION_NAME_CACHE: dict[tuple[str, str], dict[str, str]] = {}
 _ITEM_NAME_CACHE: dict[tuple[str, str], dict[int, str]] = {}
+_REFRESH_IN_FLIGHT: set[str] = set()
 
 QUEUE_LABELS = {
     'en': {
@@ -412,23 +413,77 @@ def _item_name_map(version: str, lang: str) -> dict[int, str]:
     return mapping
 
 
+def _cached_champion_name_map(lang: str) -> dict[str, str]:
+    dd_locale = _dd_locale(lang)
+    with _LOCK:
+        version = _VERSION_CACHE.get('value', '')
+        if not version:
+            return {}
+        cached = _CHAMPION_NAME_CACHE.get((version, dd_locale))
+        if not cached:
+            return {}
+        return {k: v for k, v in cached.items() if k != '_expires_at'}
+
+
+def _cached_item_name_map(lang: str) -> dict[int, str]:
+    dd_locale = _dd_locale(lang)
+    with _LOCK:
+        version = _VERSION_CACHE.get('value', '')
+        if not version:
+            return {}
+        cached = _ITEM_NAME_CACHE.get((version, dd_locale))
+        if not cached:
+            return {}
+        return {k: v for k, v in cached.items() if k >= 0}
+
+
+def _refresh_ddragon_locale_assets(lang: str) -> None:
+    try:
+        version = _fetch_latest_version()
+        if version:
+            _champion_name_map(version, lang)
+            _item_name_map(version, lang)
+    finally:
+        with _LOCK:
+            _REFRESH_IN_FLIGHT.discard(lang)
+
+
+def _schedule_locale_refresh(lang: str) -> None:
+    locale = normalize_locale(lang)
+    if locale != 'zh-CN':
+        return
+    with _LOCK:
+        if locale in _REFRESH_IN_FLIGHT:
+            return
+        _REFRESH_IN_FLIGHT.add(locale)
+    threading.Thread(
+        target=_refresh_ddragon_locale_assets,
+        args=(locale,),
+        daemon=True,
+        name=f'i18n-ddragon-refresh-{locale}',
+    ).start()
+
+
 def champion_name(name: str, locale: str | None = None) -> str:
     lang = normalize_locale(locale) if locale else get_locale()
     if lang != 'zh-CN':
         return name
-    version = _fetch_latest_version()
-    mapping = _champion_name_map(version, lang)
-    return mapping.get(_normalize_alias(name), name)
+    mapping = _cached_champion_name_map(lang)
+    localized = mapping.get(_normalize_alias(name))
+    if localized:
+        return localized
+    _schedule_locale_refresh(lang)
+    return name
 
 
 def item_name(item_id: int | None, fallback: str = '', locale: str | None = None) -> str:
     lang = normalize_locale(locale) if locale else get_locale()
     if lang != 'zh-CN':
         return fallback or (f'Item {item_id}' if item_id else '')
-    version = _fetch_latest_version()
-    mapping = _item_name_map(version, lang)
+    mapping = _cached_item_name_map(lang)
     if item_id is not None and item_id in mapping:
         return mapping[item_id]
+    _schedule_locale_refresh(lang)
     return fallback or (f'物品 {item_id}' if item_id else '')
 
 
