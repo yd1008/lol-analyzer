@@ -1325,6 +1325,68 @@ textarea:focus-visible {
     font-size: 0.73rem;
 }
 
+.ai-analysis-shell {
+    display: grid;
+    gap: 10px;
+}
+
+.ai-analysis-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ai-analysis-head h3 {
+    margin-bottom: 4px;
+}
+
+.ai-analysis-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+}
+
+.ai-analysis-sub {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.79rem;
+    line-height: 1.45;
+    max-width: 56ch;
+}
+
+.ai-analysis-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--accent-border-strong);
+    background: linear-gradient(130deg, var(--accent-bg-soft) 0%, var(--ai-panel-tint) 100%);
+    color: var(--ai-accent-text);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    flex-shrink: 0;
+}
+
+.ai-analysis-chip::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 var(--ai-stream-core-soft);
+    animation: aiChipPulse 1.6s ease-out infinite;
+}
+
+.ai-analysis-head-inline {
+    margin-bottom: 8px;
+}
+
 .ai-btn {
     margin-top: 12px;
     width: 100%;
@@ -1897,6 +1959,7 @@ textarea:focus-visible {
     .team-composition-dual, .composition-split { grid-template-columns: 1fr; }
     .match-box { grid-template-columns: 6px minmax(0, 1fr); }
     .match-box-actions { border-left: 0; border-top: 1px solid var(--border); grid-column: 1 / -1; justify-content: flex-end; }
+    .ai-analysis-head { flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 768px) {
@@ -1942,6 +2005,11 @@ textarea:focus-visible {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+@keyframes aiChipPulse {
+    0% { box-shadow: 0 0 0 0 var(--ai-stream-core-soft); }
+    100% { box-shadow: 0 0 0 10px transparent; }
 }
 
 @keyframes aiOrbPulse {

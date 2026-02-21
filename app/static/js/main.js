@@ -568,6 +568,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<div class="match-tab-panel active" id="' + tabPrefix + '-panel-overview" data-panel="overview" role="tabpanel" aria-labelledby="' + tabPrefix + '-overview">' + overviewHtml + '</div>' +
                     '<div class="match-tab-panel" id="' + tabPrefix + '-panel-visuals" data-panel="visuals" role="tabpanel" aria-labelledby="' + tabPrefix + '-visuals" hidden>' + renderVisualPanel(m, visualPrefix) + '</div>' +
                     '<div class="match-tab-panel" id="' + tabPrefix + '-panel-ai" data-panel="ai" role="tabpanel" aria-labelledby="' + tabPrefix + '-ai" hidden>' +
+                        '<div class="ai-analysis-head ai-analysis-head-inline">' +
+                            '<div>' +
+                                '<p class="ai-analysis-label">AI Match Analysis</p>' +
+                                '<p class="ai-analysis-sub">Live coaching generated from lane, comp, and team-tempo context.</p>' +
+                            '</div>' +
+                            '<span class="ai-analysis-chip">Live</span>' +
+                        '</div>' +
                         '<div class="match-ai-content card-muted">Generate AI coaching for this match from in-game metrics, rank context, and composition.</div>' +
                         '<button class="ai-btn' + aiClass + '" data-match-id="' + m.id + '">' + aiText + '</button>' +
                     '</div>' +
