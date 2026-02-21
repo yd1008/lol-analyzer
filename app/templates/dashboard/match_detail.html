@@ -307,9 +307,17 @@
 
         <div class="detail-tab-panel" id="detail-panel-ai" data-panel="ai" role="tabpanel" aria-labelledby="detail-tab-ai" hidden>
             <div class="card">
-                <h3>AI Match Analysis</h3>
-                <div id="detail-ai-content" class="detail-ai-scroll">
-                    <p class="card-muted">Run AI analysis to generate matchup-specific coaching.</p>
+                <div class="ai-analysis-shell">
+                    <div class="ai-analysis-head">
+                        <div>
+                            <h3>AI Match Analysis</h3>
+                            <p class="ai-analysis-sub">Streaming coaching focused on lane pressure, team tempo, and next-match priorities.</p>
+                        </div>
+                        <span class="ai-analysis-chip">Live</span>
+                    </div>
+                    <div id="detail-ai-content" class="detail-ai-scroll">
+                        <p class="card-muted">Run AI analysis to generate matchup-specific coaching.</p>
+                    </div>
                 </div>
                 <button class="ai-btn{{ ' has-analysis' if analysis.llm_analysis else '' }}" id="detail-ai-btn" data-match-id="{{ analysis.id }}">
                     {{ 'Regenerate AI Analysis' if analysis.llm_analysis else 'Run AI Analysis' }}
