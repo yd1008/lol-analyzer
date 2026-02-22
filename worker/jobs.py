@@ -2,7 +2,7 @@
 
 import logging
 import time
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,7 @@ def send_weekly_summaries(app):
         from app.analysis.engine import generate_weekly_summary
         from app.analysis.discord_notifier import send_message
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         today = now.strftime('%A')
 
         users = User.query.filter_by(is_active_user=True).all()
