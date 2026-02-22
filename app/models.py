@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import db, login_manager
@@ -10,7 +10,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     is_active_user = db.Column(db.Boolean, default=True)
 
     riot_accounts = db.relationship('RiotAccount', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -79,7 +79,7 @@ class MatchAnalysis(db.Model):
     queue_type = db.Column(db.String(32), nullable=True)
     participants_json = db.Column(db.JSON, nullable=True)
     game_start_timestamp = db.Column(db.BigInteger, nullable=True)
-    analyzed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    analyzed_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
 class WeeklySummary(db.Model):
