@@ -89,6 +89,76 @@ def sync_recent_matches(user_id, region, puuid):
     return saved
 
 
+def _build_ai_coach_plan(matches: list[MatchAnalysis]) -> dict:
+    """Build a deterministic AI coaching focus plan from recent matches."""
+    if not matches:
+        return {
+            'coach_score': 0,
+            'strengths': [],
+            'focus_areas': [],
+            'next_game_goal': lt('Play one match to unlock your first coaching plan.', '先完成一局对战即可生成你的首个教练计划。'),
+        }
+
+    total_games = len(matches)
+    wins = sum(1 for m in matches if m.win)
+    win_rate = (wins / total_games) * 100 if total_games else 0
+
+    avg_kda = sum((m.kda or 0) for m in matches) / total_games
+    avg_dpm = sum((m.damage_per_min or 0) for m in matches) / total_games
+    avg_gpm = sum((m.gold_per_min or 0) for m in matches) / total_games
+    avg_vision = sum((m.vision_score or 0) for m in matches) / total_games
+
+    score = 50
+    score += min(20, (win_rate - 50) * 0.8)
+    score += min(15, max(-10, (avg_kda - 3.0) * 5))
+    score += min(10, max(-10, (avg_dpm - 650) / 60))
+    score += min(8, max(-8, (avg_gpm - 380) / 25))
+    score += min(8, max(-8, (avg_vision - 22) / 3))
+    coach_score = int(max(1, min(100, round(score))))
+
+    strengths = []
+    if win_rate >= 55:
+        strengths.append(lt('Strong conversion: your recent win rate is above 55%.', '转化能力强：近期胜率高于 55%。'))
+    if avg_kda >= 3.5:
+        strengths.append(lt('Reliable skirmish execution with high average KDA.', '团战/小规模交锋执行稳定，平均 KDA 较高。'))
+    if avg_dpm >= 700:
+        strengths.append(lt('Healthy damage pressure in recent games.', '最近对局的输出压制力不错。'))
+    if avg_vision >= 25:
+        strengths.append(lt('Vision fundamentals are above baseline.', '视野基本功高于基准线。'))
+
+    focus_areas = []
+    if win_rate < 50:
+        focus_areas.append(lt('Prioritize cleaner mid-game decision making around objectives.', '优先提升中期围绕资源点的决策质量。'))
+    if avg_kda < 2.8:
+        focus_areas.append(lt('Reduce avoidable deaths: target safer wave resets and exits.', '减少可避免死亡：优化推线后的回撤与转线时机。'))
+    if avg_gpm < 360:
+        focus_areas.append(lt('Improve economy: maintain farm tempo between fights.', '提升经济效率：团战间隙维持补刀节奏。'))
+    if avg_vision < 18:
+        focus_areas.append(lt('Upgrade vision routine: one control ward every reset cycle.', '强化视野习惯：每次回城至少补一个控制守卫。'))
+
+    if not strengths:
+        strengths.append(lt('Your baseline is stable—good foundation to scale from.', '你的基础盘面较稳定，是持续进步的良好起点。'))
+    if not focus_areas:
+        focus_areas.append(lt('Keep execution sharp and push for higher objective conversion.', '保持执行力，并进一步提高资源点转化率。'))
+
+    next_game_goal = lt(
+        'Next game goal: maintain deaths ≤ 4 while keeping gold/min above 380.',
+        '下局目标：将死亡控制在 ≤4，同时保持每分钟经济 >380。',
+    )
+    if avg_kda >= 3.5 and avg_gpm >= 390:
+        next_game_goal = lt(
+            'Next game goal: convert your lead by securing first two neutral objectives.',
+            '下局目标：把优势转化为前两条中立资源控制。',
+        )
+
+    return {
+        'coach_score': coach_score,
+        'strengths': strengths[:3],
+        'focus_areas': focus_areas[:3],
+        'next_game_goal': next_game_goal,
+    }
+
+
 @dashboard_bp.route('/')
 @login_required
 def index():
@@ -115,6 +185,7 @@ def index():
     avg_kda = round(sum(m.kda for m in all_matches) / len(all_matches), 2) if all_matches else 0
 
     initial_matches = _serialize_matches(analyses)
+    coach_plan = _build_ai_coach_plan(analyses)
 
     return render_template('dashboard/index.html',
         analyses=analyses,
@@ -123,6 +194,7 @@ def index():
         wins=wins,
         win_rate=win_rate,
         avg_kda=avg_kda,
+        coach_plan=coach_plan,
         riot_account=riot_account,
         discord_config=discord_config,
     )
