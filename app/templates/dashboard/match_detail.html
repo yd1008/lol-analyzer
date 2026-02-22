@@ -319,6 +319,14 @@
                         <p class="card-muted">{{ lt('Run AI analysis to generate matchup-specific coaching.', '运行 AI 分析以生成针对该对局的建议。') }}</p>
                     </div>
                 </div>
+                <div class="coach-mode-controls detail-coach-mode-controls">
+                    <label for="coach-mode-select">{{ lt('Coach style', '教练风格') }}</label>
+                    <select id="coach-mode-select" class="input">
+                        <option value="balanced">{{ lt('Balanced', '均衡') }}</option>
+                        <option value="aggressive">{{ lt('Aggressive', '激进') }}</option>
+                        <option value="supportive">{{ lt('Supportive', '鼓励') }}</option>
+                    </select>
+                </div>
                 <button class="ai-btn{{ ' has-analysis' if initial_ai_analysis else '' }}" id="detail-ai-btn" data-match-id="{{ analysis.id }}">
                     {{ lt('Regenerate AI Analysis', '重新生成 AI 分析') if initial_ai_analysis else lt('Run AI Analysis', '运行 AI 分析') }}
                 </button>

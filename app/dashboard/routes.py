@@ -449,7 +449,19 @@ def _serialize_matches(match_list):
     return [_serialize_match(m, include_scoreboard=False, locale=locale) for m in match_list]
 
 
-def _build_llm_analysis_payload(match: MatchAnalysis, riot_account: RiotAccount | None) -> dict:
+_ALLOWED_COACH_MODES = {'balanced', 'aggressive', 'supportive'}
+
+
+def _resolve_coach_mode(value: str | None) -> str:
+    mode = (value or '').strip().lower()
+    return mode if mode in _ALLOWED_COACH_MODES else 'balanced'
+
+
+def _build_llm_analysis_payload(
+    match: MatchAnalysis,
+    riot_account: RiotAccount | None,
+    coach_mode: str = 'balanced',
+) -> dict:
     participants = match.participants_json or []
     player_position, lane_opponent = derive_lane_context(participants)
     return {
@@ -473,6 +485,7 @@ def _build_llm_analysis_payload(match: MatchAnalysis, riot_account: RiotAccount 
         'participants': participants,
         'platform_region': riot_account.region if riot_account else '',
         'player_puuid': riot_account.puuid if riot_account else '',
+        'coach_mode': _resolve_coach_mode(coach_mode),
     }
 
 
@@ -551,12 +564,13 @@ def api_ai_analysis(match_db_id):
     payload = request.get_json(silent=True)
     force = bool(payload.get('force')) if isinstance(payload, dict) else False
     language = resolve_api_language(payload.get('language') if isinstance(payload, dict) else None)
+    coach_mode = _resolve_coach_mode(payload.get('coach_mode') if isinstance(payload, dict) else None)
     cached_analysis = _get_cached_analysis(match, language)
 
     if cached_analysis and not force:
         return jsonify({'analysis': cached_analysis, 'cached': True, 'language': language})
 
-    analysis_dict = _build_llm_analysis_payload(match, riot_account)
+    analysis_dict = _build_llm_analysis_payload(match, riot_account, coach_mode=coach_mode)
 
     result, error = get_llm_analysis_detailed(analysis_dict, language=language)
     if error:
@@ -586,6 +600,7 @@ def api_ai_analysis_stream(match_db_id):
     payload = request.get_json(silent=True)
     force = bool(payload.get('force')) if isinstance(payload, dict) else False
     language = resolve_api_language(payload.get('language') if isinstance(payload, dict) else None)
+    coach_mode = _resolve_coach_mode(payload.get('coach_mode') if isinstance(payload, dict) else None)
     cached_analysis = _get_cached_analysis(match, language)
 
     def event_stream():
@@ -601,7 +616,7 @@ def api_ai_analysis_stream(match_db_id):
             return
 
         yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force, 'language': language})
-        analysis_dict = _build_llm_analysis_payload(match, riot_account)
+        analysis_dict = _build_llm_analysis_payload(match, riot_account, coach_mode=coach_mode)
         for event in iter_llm_analysis_stream(analysis_dict, language=language):
             event_type = event.get('type')
             if event_type == 'chunk':

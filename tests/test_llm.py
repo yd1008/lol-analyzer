@@ -114,6 +114,24 @@ class TestGetLlmAnalysis:
         assert "Defeat" in user_message
         assert "Current Data Dragon patch" in user_message
 
+    @patch("app.analysis.llm.requests.post")
+    def test_prompt_includes_coach_mode_instruction(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis({**SAMPLE_ANALYSIS, "coach_mode": "aggressive"})
+
+        call_kwargs = mock_post.call_args
+        system_message = call_kwargs[1]["json"]["messages"][0]["content"]
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach mode: aggressive" in system_message
+        assert "Coach Mode: aggressive" in user_message
+
 
 class TestGetLlmAnalysisDetailed:
     @patch("app.analysis.llm.requests.post")

@@ -135,8 +135,51 @@ document.addEventListener('DOMContentLoaded', function () {
         setLocaleCookie(persistedLocale);
     }
 
+    function getCoachMode() {
+        var mode = 'balanced';
+        try {
+            mode = localStorage.getItem(COACH_MODE_STORAGE_KEY) || mode;
+        } catch (err) {
+            // ignore storage failures
+        }
+        if (coachModeSelect && coachModeSelect.value) {
+            mode = coachModeSelect.value;
+        }
+        if (['balanced', 'aggressive', 'supportive'].indexOf(mode) === -1) {
+            mode = 'balanced';
+        }
+        return mode;
+    }
+
+    function initializeCoachMode() {
+        if (!coachModeSelect) return;
+        var saved = 'balanced';
+        try {
+            saved = localStorage.getItem(COACH_MODE_STORAGE_KEY) || 'balanced';
+        } catch (err) {
+            saved = 'balanced';
+        }
+        if (['balanced', 'aggressive', 'supportive'].indexOf(saved) === -1) {
+            saved = 'balanced';
+        }
+        coachModeSelect.value = saved;
+        coachModeSelect.addEventListener('change', function () {
+            var next = coachModeSelect.value || 'balanced';
+            if (['balanced', 'aggressive', 'supportive'].indexOf(next) === -1) {
+                next = 'balanced';
+                coachModeSelect.value = next;
+            }
+            try {
+                localStorage.setItem(COACH_MODE_STORAGE_KEY, next);
+            } catch (err) {
+                // ignore storage failures
+            }
+        });
+    }
+
     initializeLocaleToggle();
     initializeThemeToggle();
+    initializeCoachMode();
 
     var flashes = document.querySelectorAll('.flash');
     flashes.forEach(function (flash) {
@@ -157,6 +200,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var initialMatches = Array.isArray(window.__initialMatches) ? window.__initialMatches : [];
     var currentOffset = 0;
     var currentQueue = '';
+    var COACH_MODE_STORAGE_KEY = 'lanescope-coach-mode';
+    var coachModeSelect = document.getElementById('coach-mode-select');
 
     var POSITION_MAP = I18N.laneShort || {TOP: 'TOP', JUNGLE: 'JGL', MIDDLE: 'MID', BOTTOM: 'BOT', UTILITY: 'SUP'};
     var VISUAL_METRICS = [
@@ -441,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: getCurrentLocale()}),
+                body: JSON.stringify({force: force, language: getCurrentLocale(), coach_mode: getCoachMode()}),
             });
             var data = await resp.json();
             if (data.error && !data.analysis) {
@@ -503,7 +548,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: getCurrentLocale()}),
+                body: JSON.stringify({force: force, language: getCurrentLocale(), coach_mode: getCoachMode()}),
             });
 
             if (!response.ok) {
