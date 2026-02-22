@@ -4,6 +4,7 @@ from app.auth import auth_bp
 from app.auth.forms import LoginForm, RegisterForm
 from app.models import User, UserSettings
 from app.extensions import db
+from app.i18n import t
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -17,9 +18,9 @@ def login():
         if user and user.check_password(form.password.data):
             login_user(user)
             next_page = request.args.get('next')
-            flash('Welcome back!', 'success')
+            flash(t('flash.welcome_back'), 'success')
             return redirect(next_page or url_for('dashboard.index'))
-        flash('Invalid email or password.', 'error')
+        flash(t('flash.invalid_credentials'), 'error')
 
     return render_template('auth/login.html', form=form)
 
@@ -41,7 +42,7 @@ def register():
         db.session.commit()
 
         login_user(user)
-        flash('Account created! Link your Riot account to get started.', 'success')
+        flash(t('flash.account_created'), 'success')
         return redirect(url_for('dashboard.settings'))
 
     return render_template('auth/register.html', form=form)
@@ -50,5 +51,5 @@ def register():
 @auth_bp.route('/logout')
 def logout():
     logout_user()
-    flash('You have been logged out.', 'info')
+    flash(t('flash.logged_out'), 'info')
     return redirect(url_for('main.landing'))

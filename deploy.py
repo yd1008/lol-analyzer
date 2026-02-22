@@ -6,7 +6,8 @@ from app.extensions import db
 
 INITIAL_REVISION = '6d9f34b1d861'
 LLM_REVISION = '104d8bc0e838'
-LATEST_REVISION = 'a3b7c9d2e4f6'
+MATCH_CONTEXT_REVISION = 'a3b7c9d2e4f6'
+LATEST_REVISION = '8f2b7d1c9a11'
 
 def _determine_stamp_revision(table_names: set[str], match_columns: set[str]) -> str | None:
     """Choose Alembic revision to stamp for pre-existing schemas without version tracking."""
@@ -17,9 +18,12 @@ def _determine_stamp_revision(table_names: set[str], match_columns: set[str]) ->
         # Unknown/partial schema: safest is to avoid stamping.
         return None
 
-    latest_columns = {'queue_type', 'participants_json', 'game_start_timestamp'}
-    if latest_columns.issubset(match_columns):
+    match_context_columns = {'queue_type', 'participants_json', 'game_start_timestamp'}
+    language_columns = {'llm_analysis_en', 'llm_analysis_zh'}
+    if match_context_columns.union(language_columns).issubset(match_columns):
         return LATEST_REVISION
+    if match_context_columns.issubset(match_columns):
+        return MATCH_CONTEXT_REVISION
     if 'llm_analysis' in match_columns:
         return LLM_REVISION
     return INITIAL_REVISION

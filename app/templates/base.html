@@ -1,19 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_locale }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}LoL Analyzer{% endblock %}</title>
-    <meta name="description" content="{% block description %}AI-powered League of Legends performance analysis. Get match insights and personalized coaching delivered to your Discord.{% endblock %}">
+    <title>{% block title %}{{ lt('LoL Analyzer', 'LoL 分析器') }}{% endblock %}</title>
+    <meta name="description" content="{% block description %}{{ lt('AI-powered League of Legends performance analysis. Get match insights and personalized coaching delivered to your Discord.', 'AI 驱动的英雄联盟表现分析平台。获取对局洞察与个性化建议，并可发送到你的 Discord。') }}{% endblock %}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="lanescope-locale" content="{{ current_locale }}">
     <script>
         (function () {
             var theme = 'light';
+            var serverLocale = '{{ current_locale }}';
+            var locale = serverLocale;
             var stored = null;
+            var storedLang = null;
             try {
                 stored = localStorage.getItem('lanescope-theme');
+                storedLang = localStorage.getItem('lanescope-lang');
             } catch (err) {
                 stored = null;
+                storedLang = null;
             }
 
             if (stored === 'light' || stored === 'dark') {
@@ -21,41 +27,63 @@
             } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 theme = 'dark';
             }
+
+            if ((storedLang === 'en' || storedLang === 'zh-CN') && storedLang !== serverLocale) {
+                document.cookie = 'lanescope-lang=' + encodeURIComponent(storedLang) + '; path=/; max-age=31536000; SameSite=Lax';
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('lang', storedLang);
+                window.location.replace(window.location.pathname + window.location.search + window.location.hash);
+                return;
+            }
+
+            if (storedLang === 'en' || storedLang === 'zh-CN') {
+                locale = storedLang;
+                document.cookie = 'lanescope-lang=' + encodeURIComponent(locale) + '; path=/; max-age=31536000; SameSite=Lax';
+            }
             document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('lang', locale);
         })();
     </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <a class="skip-link" href="#main-content">Skip to content</a>
+    <a class="skip-link" href="#main-content">{{ lt('Skip to content', '跳转到内容') }}</a>
     <header class="site-header">
         <div class="container">
-            <nav class="site-nav" aria-label="Primary">
+            <nav class="site-nav" aria-label="{{ lt('Primary', '主导航') }}">
                 <a href="{{ url_for('main.landing') }}" class="logo">
                     <span class="logo-mark" aria-hidden="true">LS</span>
                     <span class="logo-text">lane<span>scope</span></span>
                 </a>
                 <ul class="nav-links">
-                    <li><a href="{{ url_for('main.landing') }}#workflow">How It Works</a></li>
-                    <li><a href="{{ url_for('main.landing') }}#features">Features</a></li>
+                    <li><a href="{{ url_for('main.landing') }}#workflow">{{ lt('How It Works', '工作流程') }}</a></li>
+                    <li><a href="{{ url_for('main.landing') }}#features">{{ lt('Features', '功能') }}</a></li>
                     {% if current_user.is_authenticated %}
-                        <li><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
-                        <li><a href="{{ url_for('dashboard.settings') }}">Settings</a></li>
+                        <li><a href="{{ url_for('dashboard.index') }}">{{ lt('Dashboard', '仪表盘') }}</a></li>
+                        <li><a href="{{ url_for('dashboard.settings') }}">{{ lt('Settings', '设置') }}</a></li>
                         {% if current_user.email == config.get('ADMIN_EMAIL', '') %}
-                            <li><a href="{{ url_for('admin.index') }}">Admin</a></li>
+                            <li><a href="{{ url_for('admin.index') }}">{{ lt('Admin', '管理') }}</a></li>
                         {% endif %}
-                        <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                        <li><a href="{{ url_for('auth.logout') }}">{{ lt('Logout', '退出') }}</a></li>
                     {% else %}
-                        <li><a href="{{ url_for('auth.login') }}">Login</a></li>
-                        <li><a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Get Started</a></li>
+                        <li><a href="{{ url_for('auth.login') }}">{{ lt('Login', '登录') }}</a></li>
+                        <li><a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">{{ lt('Get Started', '开始使用') }}</a></li>
                     {% endif %}
                     <li>
-                        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch theme" aria-pressed="false">
+                        <button id="lang-toggle" class="theme-toggle" type="button" aria-label="{{ t('lang.switch_to') }}" aria-pressed="false">
                             <span class="theme-toggle-track" aria-hidden="true">
                                 <span class="theme-toggle-knob"></span>
                             </span>
-                            <span class="theme-toggle-label">Theme</span>
+                            <span class="theme-toggle-label">{{ t('lang.' ~ current_locale) }}</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="{{ t('theme.switch_to', theme=t('theme.dark')) }}" aria-pressed="false">
+                            <span class="theme-toggle-track" aria-hidden="true">
+                                <span class="theme-toggle-knob"></span>
+                            </span>
+                            <span class="theme-toggle-label">{{ t('theme.label') }}</span>
                         </button>
                     </li>
                 </ul>
@@ -82,15 +110,19 @@
 
     <footer class="site-footer">
         <div class="container">
-            <p>Not affiliated with or endorsed by Riot Games, Inc.</p>
+            <p>{{ lt('Not affiliated with or endorsed by Riot Games, Inc.', '本项目与 Riot Games, Inc. 无隶属或背书关系。') }}</p>
             <div class="footer-links">
-                <a href="{{ url_for('main.terms') }}">Terms</a>
-                <a href="{{ url_for('main.privacy') }}">Privacy</a>
+                <a href="{{ url_for('main.terms') }}">{{ lt('Terms', '条款') }}</a>
+                <a href="{{ url_for('main.privacy') }}">{{ lt('Privacy', '隐私') }}</a>
                 <a href="https://github.com/yd1008/lol-analyzer">GitHub</a>
             </div>
         </div>
     </footer>
 
+    <script>
+        window.__currentLocale = {{ current_locale | tojson }};
+        window.__i18n = {{ js_i18n | tojson }};
+    </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>

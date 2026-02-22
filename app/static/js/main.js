@@ -1,6 +1,42 @@
 // Auto-dismiss flash messages after 5 seconds
 document.addEventListener('DOMContentLoaded', function () {
     var THEME_STORAGE_KEY = 'lanescope-theme';
+    var LANG_STORAGE_KEY = 'lanescope-lang';
+    var I18N = window.__i18n || {};
+    var LABELS = I18N.labels || {};
+    var METRICS = I18N.metrics || {};
+
+    function txt(key, fallback) {
+        if (LABELS && Object.prototype.hasOwnProperty.call(LABELS, key)) {
+            return LABELS[key];
+        }
+        return fallback;
+    }
+
+    function metricTxt(key, fallback) {
+        if (METRICS && Object.prototype.hasOwnProperty.call(METRICS, key)) {
+            return METRICS[key];
+        }
+        return fallback;
+    }
+
+    function setLocaleCookie(locale) {
+        document.cookie = 'lanescope-lang=' + encodeURIComponent(locale) + '; path=/; max-age=31536000; SameSite=Lax';
+    }
+
+    function getStoredLocale() {
+        try {
+            var stored = localStorage.getItem(LANG_STORAGE_KEY);
+            return stored === 'en' || stored === 'zh-CN' ? stored : null;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function getCurrentLocale() {
+        var locale = document.documentElement.getAttribute('lang');
+        return locale === 'en' ? 'en' : 'zh-CN';
+    }
 
     function getStoredTheme() {
         try {
@@ -21,13 +57,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var nextTheme = theme === 'dark' ? 'light' : 'dark';
         var label = toggle.querySelector('.theme-toggle-label');
+        var nextThemeLabel = nextTheme === 'dark' ? (I18N.themeDark || 'Dark') : (I18N.themeLight || 'Light');
+        var switchTemplate = I18N.themeSwitchTemplate || 'Switch to {theme} theme';
+        var switchText = switchTemplate.replace('{theme}', nextThemeLabel);
 
         toggle.dataset.theme = theme;
-        toggle.setAttribute('aria-label', 'Switch to ' + nextTheme + ' theme');
-        toggle.setAttribute('title', 'Switch to ' + nextTheme + ' theme');
+        toggle.setAttribute('aria-label', switchText);
+        toggle.setAttribute('title', switchText);
         toggle.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
         if (label) {
-            label.textContent = theme === 'dark' ? 'Dark' : 'Light';
+            label.textContent = theme === 'dark' ? (I18N.themeDark || 'Dark') : (I18N.themeLight || 'Light');
         }
     }
 
@@ -63,6 +102,40 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function updateLocaleToggleUi(locale) {
+        var toggle = document.getElementById('lang-toggle');
+        if (!toggle) return;
+        var label = toggle.querySelector('.theme-toggle-label');
+        if (label) {
+            label.textContent = locale === 'zh-CN' ? '中' : 'EN';
+        }
+        var switchLabel = txt('langSwitch', 'Switch language');
+        toggle.setAttribute('aria-label', switchLabel);
+        toggle.setAttribute('title', switchLabel);
+    }
+
+    function initializeLocaleToggle() {
+        var toggle = document.getElementById('lang-toggle');
+        if (!toggle) return;
+        updateLocaleToggleUi(getCurrentLocale());
+        toggle.addEventListener('click', function () {
+            var nextLocale = getCurrentLocale() === 'zh-CN' ? 'en' : 'zh-CN';
+            try {
+                localStorage.setItem(LANG_STORAGE_KEY, nextLocale);
+            } catch (err) {
+                // Ignore storage failures.
+            }
+            setLocaleCookie(nextLocale);
+            window.location.reload();
+        });
+    }
+
+    var persistedLocale = getStoredLocale();
+    if (persistedLocale && persistedLocale !== getCurrentLocale()) {
+        setLocaleCookie(persistedLocale);
+    }
+
+    initializeLocaleToggle();
     initializeThemeToggle();
 
     var flashes = document.querySelectorAll('.flash');
@@ -76,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var csrfToken = document.querySelector('meta[name="csrf-token"]');
     csrfToken = csrfToken ? csrfToken.getAttribute('content') : '';
 
-    var STREAM_STATUS_MESSAGES = ['Reading lane pressure', 'Comparing team tempo', 'Writing focused coaching'];
+    var STREAM_STATUS_MESSAGES = Array.isArray(I18N.streamStatus) ? I18N.streamStatus : ['Reading lane pressure', 'Comparing team tempo', 'Writing focused coaching'];
     var matchList = document.getElementById('match-list');
     var loadMoreBtn = document.getElementById('load-more-btn');
     var loadMoreContainer = document.getElementById('load-more-container');
@@ -85,13 +158,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var currentOffset = 0;
     var currentQueue = '';
 
-    var POSITION_MAP = {TOP: 'TOP', JUNGLE: 'JGL', MIDDLE: 'MID', BOTTOM: 'BOT', UTILITY: 'SUP'};
+    var POSITION_MAP = I18N.laneShort || {TOP: 'TOP', JUNGLE: 'JGL', MIDDLE: 'MID', BOTTOM: 'BOT', UTILITY: 'SUP'};
     var VISUAL_METRICS = [
-        {key: 'gold_per_min', label: 'Gold/min'},
-        {key: 'damage_per_min', label: 'Damage/min'},
-        {key: 'cs_per_min', label: 'CS/min'},
-        {key: 'vision_per_min', label: 'Vision/min'},
-        {key: 'kda', label: 'KDA'},
+        {key: 'gold_per_min', label: metricTxt('gold_per_min', 'Gold/min')},
+        {key: 'damage_per_min', label: metricTxt('damage_per_min', 'Damage/min')},
+        {key: 'cs_per_min', label: metricTxt('cs_per_min', 'CS/min')},
+        {key: 'vision_per_min', label: metricTxt('vision_per_min', 'Vision/min')},
+        {key: 'kda', label: metricTxt('kda', 'KDA')},
     ];
 
     function escapeHtml(str) {
@@ -109,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function championIconHtml(participant, sizeClass) {
-        var name = participant && participant.champion ? participant.champion : '?';
+        var name = participant && (participant.champion_label || participant.champion) ? (participant.champion_label || participant.champion) : '?';
         var icon = participant && participant.champion_icon ? participant.champion_icon : '';
         if (icon) {
             return '<img class="champion-icon ' + (sizeClass || '') + '" src="' + escapeHtml(icon) + '" alt="' + escapeHtml(name) + '">';
@@ -122,7 +195,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!team || !team.length) return '';
         var html = '<div class="team-composition ' + className + '">';
         team.forEach(function (p) {
-            var title = escapeHtml((p.summoner_name || p.champion) + ' | ' + p.champion + ' | ' + p.kills + '/' + p.deaths + '/' + p.assists);
+            var champLabel = p.champion_label || p.champion;
+            var title = escapeHtml((p.summoner_name || champLabel) + ' | ' + champLabel + ' | ' + p.kills + '/' + p.deaths + '/' + p.assists);
             html += '<div class="team-comp-icon-wrap" title="' + title + '">' +
                 championIconHtml(p, '') +
                 '<span class="lane-mini">' + escapeHtml((p.lane_label || POSITION_MAP[p.position] || '')) + '</span>' +
@@ -142,15 +216,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<div class="lane-row-label">' + escapeHtml(lane.lane_label || lane.lane || '') + '</div>' +
                 '<div class="lane-player ally">';
             if (ally) {
+                var allyChamp = ally.champion_label || ally.champion;
                 html += championIconHtml(ally, 'champion-icon-sm') +
-                    '<div><div class="lane-player-name">' + escapeHtml(ally.summoner_name || ally.champion) + '</div>' +
-                    '<div class="lane-player-sub">' + escapeHtml(ally.champion) + ' | ' + ally.kills + '/' + ally.deaths + '/' + ally.assists + '</div></div>';
+                    '<div><div class="lane-player-name">' + escapeHtml(ally.summoner_name || allyChamp) + '</div>' +
+                    '<div class="lane-player-sub">' + escapeHtml(allyChamp) + ' | ' + ally.kills + '/' + ally.deaths + '/' + ally.assists + '</div></div>';
             }
             html += '</div><div class="lane-player enemy">';
             if (enemy) {
+                var enemyChamp = enemy.champion_label || enemy.champion;
                 html += championIconHtml(enemy, 'champion-icon-sm') +
-                    '<div><div class="lane-player-name">' + escapeHtml(enemy.summoner_name || enemy.champion) + '</div>' +
-                    '<div class="lane-player-sub">' + escapeHtml(enemy.champion) + ' | ' + enemy.kills + '/' + enemy.deaths + '/' + enemy.assists + '</div></div>';
+                    '<div><div class="lane-player-name">' + escapeHtml(enemy.summoner_name || enemyChamp) + '</div>' +
+                    '<div class="lane-player-sub">' + escapeHtml(enemyChamp) + ' | ' + enemy.kills + '/' + enemy.deaths + '/' + enemy.assists + '</div></div>';
             }
             html += '</div></div>';
         });
@@ -179,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<div class="mini-track"><div class="mini-bar team" style="width:' + tW.toFixed(1) + '%"></div></div>' +
                     '<div class="mini-track"><div class="mini-bar lobby" style="width:' + lW.toFixed(1) + '%"></div></div>' +
                 '</div>' +
-                '<div class="compact-visual-values">Y ' + fmtNum(p) + ' | T ' + fmtNum(t) + ' | L ' + fmtNum(l) + '</div>' +
+                '<div class="compact-visual-values">' + txt('you', 'You') + ' ' + fmtNum(p) + ' | ' + txt('team', 'Team Avg') + ' ' + fmtNum(t) + ' | ' + txt('lobby', 'Lobby Avg') + ' ' + fmtNum(l) + '</div>' +
             '</div>';
         });
         html += '</div>';
@@ -189,11 +265,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderShareRings(m) {
         var shares = (m.visuals && m.visuals.shares) ? m.visuals.shares : {};
         var metrics = [
-            {key: 'gold_share_pct', label: 'Gold Share'},
-            {key: 'damage_share_pct', label: 'Damage Share'},
-            {key: 'cs_share_pct', label: 'CS Share'},
-            {key: 'vision_share_pct', label: 'Vision Share'},
-            {key: 'kill_participation_pct', label: 'Kill Part.'},
+            {key: 'gold_share_pct', label: metricTxt('gold_share_pct', 'Gold Share')},
+            {key: 'damage_share_pct', label: metricTxt('damage_share_pct', 'Damage Share')},
+            {key: 'cs_share_pct', label: metricTxt('cs_share_pct', 'CS Share')},
+            {key: 'vision_share_pct', label: metricTxt('vision_share_pct', 'Vision Share')},
+            {key: 'kill_participation_pct', label: metricTxt('kill_participation_pct', 'Kill Part.')},
         ];
         var html = '<div class="share-grid">';
         metrics.forEach(function (metric) {
@@ -211,19 +287,19 @@ document.addEventListener('DOMContentLoaded', function () {
         var lane = (m.visuals && m.visuals.lane) ? m.visuals.lane : {};
         var opponent = lane.opponent || null;
         if (!opponent) {
-            return '<p class="card-muted">No direct lane opponent data in this match.</p>';
+            return '<p class="card-muted">' + escapeHtml(txt('noLaneOpponent', 'No direct lane opponent data in this match.')) + '</p>';
         }
 
         var deltas = [
-            {key: 'gpm_delta', label: 'Gold/min Delta'},
-            {key: 'dpm_delta', label: 'Damage/min Delta'},
-            {key: 'cspm_delta', label: 'CS/min Delta'},
-            {key: 'vpm_delta', label: 'Vision/min Delta'},
-            {key: 'kda_delta', label: 'KDA Delta'},
+            {key: 'gpm_delta', label: metricTxt('gpm_delta', 'Gold/min Delta')},
+            {key: 'dpm_delta', label: metricTxt('dpm_delta', 'Damage/min Delta')},
+            {key: 'cspm_delta', label: metricTxt('cspm_delta', 'CS/min Delta')},
+            {key: 'vpm_delta', label: metricTxt('vpm_delta', 'Vision/min Delta')},
+            {key: 'kda_delta', label: metricTxt('kda_delta', 'KDA Delta')},
         ];
         var html = '<div class="lane-chart-head">' +
             championIconHtml(opponent, 'champion-icon-sm') +
-            '<span>Lane vs ' + escapeHtml(opponent.champion) + '</span>' +
+            '<span>' + escapeHtml(txt('laneVs', 'Lane vs ')) + escapeHtml(opponent.champion_label || opponent.champion) + '</span>' +
         '</div><div class="lane-delta-grid">';
         deltas.forEach(function (metric) {
             var value = Number(lane[metric.key] || 0);
@@ -246,10 +322,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var sharesId = idPrefix + '-shares';
         var laneId = idPrefix + '-lane';
         return '' +
-            '<div class="visual-toggle-bar" role="tablist" aria-label="Visualization groups">' +
-                '<button class="visual-toggle-btn active" id="' + compareId + '-tab" data-group="compare" role="tab" aria-selected="true" aria-controls="' + compareId + '">Compare</button>' +
-                '<button class="visual-toggle-btn" id="' + sharesId + '-tab" data-group="shares" role="tab" aria-selected="false" aria-controls="' + sharesId + '" tabindex="-1">Shares</button>' +
-                '<button class="visual-toggle-btn" id="' + laneId + '-tab" data-group="lane" role="tab" aria-selected="false" aria-controls="' + laneId + '" tabindex="-1">Lane</button>' +
+            '<div class="visual-toggle-bar" role="tablist" aria-label="' + escapeHtml(txt('visuals', 'Visuals')) + '">' +
+                '<button class="visual-toggle-btn active" id="' + compareId + '-tab" data-group="compare" role="tab" aria-selected="true" aria-controls="' + compareId + '">' + escapeHtml(txt('compare', 'Compare')) + '</button>' +
+                '<button class="visual-toggle-btn" id="' + sharesId + '-tab" data-group="shares" role="tab" aria-selected="false" aria-controls="' + sharesId + '" tabindex="-1">' + escapeHtml(txt('shares', 'Shares')) + '</button>' +
+                '<button class="visual-toggle-btn" id="' + laneId + '-tab" data-group="lane" role="tab" aria-selected="false" aria-controls="' + laneId + '" tabindex="-1">' + escapeHtml(txt('lane', 'Lane')) + '</button>' +
             '</div>' +
             '<div class="visual-group active" id="' + compareId + '" data-group="compare" role="tabpanel" aria-labelledby="' + compareId + '-tab">' + renderCompareRows(m) + '</div>' +
             '<div class="visual-group" id="' + sharesId + '" data-group="shares" role="tabpanel" aria-labelledby="' + sharesId + '-tab" hidden>' + renderShareRings(m) + '</div>' +
@@ -286,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderAiError(container, text) {
         clearAiContainerState(container);
-        container.innerHTML = '<p class="card-muted">' + escapeHtml(text || 'AI analysis failed.') + '</p>';
+        container.innerHTML = '<p class="card-muted">' + escapeHtml(text || txt('aiFailed', 'AI analysis failed.')) + '</p>';
     }
 
     function renderAiText(container, text) {
@@ -338,12 +414,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function completeAiButton(button) {
         button.disabled = false;
         button.classList.add('has-analysis');
-        button.textContent = 'Regenerate AI Analysis';
+        button.textContent = txt('regenAi', 'Regenerate AI Analysis');
     }
 
     function resetAiButton(button) {
         button.disabled = false;
-        button.textContent = 'Run AI Analysis';
+        button.textContent = txt('runAi', 'Run AI Analysis');
     }
 
     async function runAiAnalysisSync(options) {
@@ -365,21 +441,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force}),
+                body: JSON.stringify({force: force, language: getCurrentLocale()}),
             });
             var data = await resp.json();
             if (data.error && !data.analysis) {
-                renderAiError(container, data.error || 'AI analysis failed.');
+                renderAiError(container, data.error || txt('aiFailed', 'AI analysis failed.'));
                 resetAiButton(button);
                 return;
             }
             renderAiText(container, data.analysis || '');
             if (data.stale && data.error) {
-                appendAiNote(container, 'Using cached analysis because regeneration failed: ' + data.error, 'card-muted');
+                appendAiNote(container, txt('cachedBecauseFailed', 'Using cached analysis because regeneration failed: ') + data.error, 'card-muted');
             }
             completeAiButton(button);
         } catch (err) {
-            renderAiError(container, 'AI analysis failed.');
+            renderAiError(container, txt('aiFailed', 'AI analysis failed.'));
             resetAiButton(button);
         }
     }
@@ -399,10 +475,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var force = options.force;
         var container = options.container;
         var button = options.button;
-        var streamFallbackNotice = 'Live stream interrupted. Falling back to standard analysis...';
+        var streamFallbackNotice = txt('streamFallback', 'Live stream interrupted. Falling back to standard analysis...');
 
         button.disabled = true;
-        button.textContent = 'Analyzing...';
+        button.textContent = txt('analyzing', 'Analyzing...');
 
         var output = prepareStreamUi(container);
         var streamedText = '';
@@ -415,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 force: force,
                 container: container,
                 button: button,
-                fallbackNotice: 'Live stream is unavailable in this browser. Running standard analysis...',
+                fallbackNotice: txt('streamUnavailable', 'Live stream is unavailable in this browser. Running standard analysis...'),
             });
             return;
         }
@@ -427,7 +503,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force}),
+                body: JSON.stringify({force: force, language: getCurrentLocale()}),
             });
 
             if (!response.ok) {
@@ -471,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                     if (event.type === 'stale') {
-                        streamFallbackNotice = 'Live stream returned cached analysis. Retrying with standard analysis...';
+                        streamFallbackNotice = txt('staleFallback', 'Live stream returned cached analysis. Retrying with standard analysis...');
                         if (event.error) {
                             streamFallbackNotice += ' (' + event.error + ')';
                         }
@@ -493,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     renderAiText(container, tailEvent.analysis || streamedText);
                     completeAiButton(button);
                 } else if (tailEvent && tailEvent.type === 'stale') {
-                    streamFallbackNotice = 'Live stream returned cached analysis. Retrying with standard analysis...';
+                    streamFallbackNotice = txt('staleFallback', 'Live stream returned cached analysis. Retrying with standard analysis...');
                     if (tailEvent.error) {
                         streamFallbackNotice += ' (' + tailEvent.error + ')';
                     }
@@ -519,13 +595,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderMatchBox(m) {
         var winClass = m.win ? 'match-win' : 'match-loss';
-        var resultText = m.win ? 'Victory' : 'Defeat';
-        var queueHtml = m.queue_type ? '<span class="match-queue">' + escapeHtml(m.queue_type) + '</span>' : '';
+        var resultText = m.win ? txt('victory', 'Victory') : txt('defeat', 'Defeat');
+        var queueHtml = m.queue_type ? '<span class="match-queue">' + escapeHtml(m.queue_type_label || m.queue_type) + '</span>' : '';
         var positionBadge = m.player_position && POSITION_MAP[m.player_position]
             ? '<span class="position-badge">' + POSITION_MAP[m.player_position] + '</span>'
             : '';
         var aiClass = m.has_llm_analysis ? ' has-analysis' : '';
-        var aiText = m.has_llm_analysis ? 'Regenerate AI Analysis' : 'Run AI Analysis';
+        var aiText = m.has_llm_analysis ? txt('regenAi', 'Regenerate AI Analysis') : txt('runAi', 'Run AI Analysis');
         var dateHtml = m.analyzed_at ? '<span class="match-duration">' + escapeHtml(m.analyzed_at.slice(0, 10)) + '</span>' : '';
         var tabPrefix = 'match-' + m.id + '-tab';
         var visualPrefix = 'match-' + m.id + '-visual';
@@ -535,15 +611,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<span class="match-kda">' + m.kills + '/' + m.deaths + '/' + m.assists +
                     '<span class="match-kda-ratio">' + m.kda + ' KDA</span></span>' +
                 '<div class="match-stat-pills">' +
-                    '<span class="stat-pill">' + fmtNum(m.gold_per_min) + ' G/m</span>' +
-                    '<span class="stat-pill">' + fmtNum(m.damage_per_min) + ' D/m</span>' +
-                    '<span class="stat-pill">' + fmtNum(m.vision_score) + ' VS</span>' +
+                    '<span class="stat-pill">' + fmtNum(m.gold_per_min) + ' ' + escapeHtml(metricTxt('gold_per_min', 'Gold/min')) + '</span>' +
+                    '<span class="stat-pill">' + fmtNum(m.damage_per_min) + ' ' + escapeHtml(metricTxt('damage_per_min', 'Damage/min')) + '</span>' +
+                    '<span class="stat-pill">' + fmtNum(m.vision_score) + ' ' + escapeHtml(txt('visionShort', 'VS')) + '</span>' +
                     '<span class="stat-pill">' + fmtNum(m.cs_total) + ' CS</span>' +
                 '</div>' +
             '</div>' +
             '<div class="composition-split">' +
-                '<div><div class="team-comp-title">Allies</div>' + renderCompIcons(m.ally_comp, 'ally') + '</div>' +
-                '<div><div class="team-comp-title">Enemies</div>' + renderCompIcons(m.enemy_comp, 'enemy') + '</div>' +
+                '<div><div class="team-comp-title">' + escapeHtml(txt('allies', 'Allies')) + '</div>' + renderCompIcons(m.ally_comp, 'ally') + '</div>' +
+                '<div><div class="team-comp-title">' + escapeHtml(txt('enemies', 'Enemies')) + '</div>' + renderCompIcons(m.enemy_comp, 'enemy') + '</div>' +
             '</div>' +
             renderLaneRows(m.lane_matchups);
 
@@ -551,18 +627,18 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="match-box-indicator"></div>' +
             '<div class="match-box-main">' +
                 '<div class="match-box-header">' +
-                    championIconHtml({champion: m.champion, champion_icon: m.champion_icon}, '') +
-                    '<span class="match-champion">' + escapeHtml(m.champion) + '</span>' +
+                    championIconHtml({champion: m.champion, champion_label: m.champion_label, champion_icon: m.champion_icon}, '') +
+                    '<span class="match-champion">' + escapeHtml(m.champion_label || m.champion) + '</span>' +
                     positionBadge +
                     '<span class="match-result-tag">' + resultText + '</span>' +
                     queueHtml +
                     '<span class="match-duration">' + fmtNum(m.game_duration) + 'm</span>' +
                     dateHtml +
                 '</div>' +
-                '<div class="match-tab-bar" role="tablist" aria-label="Match views">' +
-                    '<button class="match-tab-btn active" id="' + tabPrefix + '-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="' + tabPrefix + '-panel-overview">Overview</button>' +
-                    '<button class="match-tab-btn" id="' + tabPrefix + '-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-visuals" tabindex="-1">Visuals</button>' +
-                    '<button class="match-tab-btn" id="' + tabPrefix + '-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-ai" tabindex="-1">AI Analysis</button>' +
+                '<div class="match-tab-bar" role="tablist" aria-label="' + escapeHtml(txt('overview', 'Overview')) + '">' +
+                    '<button class="match-tab-btn active" id="' + tabPrefix + '-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="' + tabPrefix + '-panel-overview">' + escapeHtml(txt('overview', 'Overview')) + '</button>' +
+                    '<button class="match-tab-btn" id="' + tabPrefix + '-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-visuals" tabindex="-1">' + escapeHtml(txt('visuals', 'Visuals')) + '</button>' +
+                    '<button class="match-tab-btn" id="' + tabPrefix + '-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-ai" tabindex="-1">' + escapeHtml(txt('aiAnalysis', 'AI Analysis')) + '</button>' +
                 '</div>' +
                 '<div class="match-tab-stage">' +
                     '<div class="match-tab-panel active" id="' + tabPrefix + '-panel-overview" data-panel="overview" role="tabpanel" aria-labelledby="' + tabPrefix + '-overview">' + overviewHtml + '</div>' +
@@ -570,18 +646,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<div class="match-tab-panel" id="' + tabPrefix + '-panel-ai" data-panel="ai" role="tabpanel" aria-labelledby="' + tabPrefix + '-ai" hidden>' +
                         '<div class="ai-analysis-head ai-analysis-head-inline">' +
                             '<div>' +
-                                '<p class="ai-analysis-label">AI Match Analysis</p>' +
-                                '<p class="ai-analysis-sub">Live coaching generated from lane, comp, and team-tempo context.</p>' +
+                                '<p class="ai-analysis-label">' + escapeHtml(txt('aiHeader', 'AI Match Analysis')) + '</p>' +
+                                '<p class="ai-analysis-sub">' + escapeHtml(txt('aiSub', 'Live coaching generated from lane, comp, and team-tempo context.')) + '</p>' +
                             '</div>' +
-                            '<span class="ai-analysis-chip">Live</span>' +
+                            '<span class="ai-analysis-chip">' + escapeHtml(txt('live', 'Live')) + '</span>' +
                         '</div>' +
-                        '<div class="match-ai-content card-muted">Generate AI coaching for this match from in-game metrics, rank context, and composition.</div>' +
+                        '<div class="match-ai-content card-muted">' + escapeHtml(txt('aiEmpty', 'Generate AI coaching for this match from in-game metrics, rank context, and composition.')) + '</div>' +
                         '<button class="ai-btn' + aiClass + '" data-match-id="' + m.id + '">' + aiText + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
             '<div class="match-box-actions">' +
-                '<a href="/dashboard/matches/' + m.id + '" class="btn btn-ghost btn-sm">Details</a>' +
+                '<a href="/dashboard/matches/' + m.id + '" class="btn btn-ghost btn-sm">' + escapeHtml(txt('details', 'Details')) + '</a>' +
             '</div>' +
         '</div>';
     }
@@ -591,7 +667,7 @@ document.addEventListener('DOMContentLoaded', function () {
             matchList.innerHTML = '';
         }
         if (!matches.length && !append) {
-            matchList.innerHTML = '<div class="empty-state"><p>No matches found for this filter.</p></div>';
+            matchList.innerHTML = '<div class="empty-state"><p>' + escapeHtml(txt('noMatches', 'No matches found for this filter.')) + '</p></div>';
             return;
         }
         matches.forEach(function (m) {
@@ -604,7 +680,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof hasMore === 'boolean') {
             loadMoreContainer.style.display = hasMore ? '' : 'none';
             loadMoreBtn.disabled = !hasMore;
-            loadMoreBtn.textContent = 'Load More';
+            loadMoreBtn.textContent = txt('loadMore', 'Load More');
             return;
         }
         loadMoreContainer.style.display = currentOffset < total ? '' : 'none';
@@ -613,7 +689,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadMore() {
         if (!loadMoreBtn) return;
         loadMoreBtn.disabled = true;
-        loadMoreBtn.textContent = 'Loading...';
+        loadMoreBtn.textContent = txt('loading', 'Loading...');
 
         var url = '/dashboard/api/matches?offset=' + currentOffset + '&limit=10';
         if (currentQueue) url += '&queue=' + encodeURIComponent(currentQueue);
@@ -628,7 +704,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(function () {
                 loadMoreBtn.disabled = false;
-                loadMoreBtn.textContent = 'Load More';
+                loadMoreBtn.textContent = txt('loadMore', 'Load More');
             });
     }
 
@@ -639,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function () {
             loadMoreContainer.style.display = '';
             if (loadMoreBtn) {
                 loadMoreBtn.disabled = true;
-                loadMoreBtn.textContent = 'Loading...';
+                loadMoreBtn.textContent = txt('loading', 'Loading...');
             }
         }
 
@@ -657,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(function () {
                 if (loadMoreBtn) {
                     loadMoreBtn.disabled = false;
-                    loadMoreBtn.textContent = 'Load More';
+                    loadMoreBtn.textContent = txt('loadMore', 'Load More');
                 }
             });
     }
@@ -821,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (initialText) {
                 renderAiText(detailAiContent, initialText);
                 detailAiBtn.classList.add('has-analysis');
-                detailAiBtn.textContent = 'Regenerate AI Analysis';
+                detailAiBtn.textContent = txt('regenAi', 'Regenerate AI Analysis');
             }
 
             detailAiBtn.addEventListener('click', function () {

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}404 - Page Not Found{% endblock %}
+{% block title %}404 - {{ lt('Page Not Found', '页面不存在') }}{% endblock %}
 
 {% block content %}
 <div class="container error-shell">
     <h1>404</h1>
-    <p>The page you're looking for doesn't exist.</p>
-    <a href="{{ url_for('main.landing') }}" class="btn btn-primary">Go Home</a>
+    <p>{{ lt("The page you're looking for doesn't exist.", '你访问的页面不存在。') }}</p>
+    <a href="{{ url_for('main.landing') }}" class="btn btn-primary">{{ lt('Go Home', '返回首页') }}</a>
 </div>
 {% endblock %}

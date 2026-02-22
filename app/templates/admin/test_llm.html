@@ -1,32 +1,32 @@
 {% extends "base.html" %}
 
-{% block title %}Test LLM - Admin{% endblock %}
+{% block title %}{{ lt('Test LLM - Admin', '测试 LLM - 管理') }}{% endblock %}
 
 {% block content %}
 <div class="container dashboard">
     <div class="dashboard-header">
-        <h1>Test LLM Analysis <span class="admin-badge">Admin</span></h1>
-        <a href="{{ url_for('admin.index') }}" class="btn btn-secondary btn-sm">Back to Admin</a>
+        <h1>{{ lt('Test LLM Analysis', '测试 LLM 分析') }} <span class="admin-badge">{{ lt('Admin', '管理') }}</span></h1>
+        <a href="{{ url_for('admin.index') }}" class="btn btn-secondary btn-sm">{{ lt('Back to Admin', '返回管理页') }}</a>
     </div>
 
     <!-- Step 1: Look up summoner -->
     <div class="admin-card">
-        <h3>Step 1: Look Up Summoner</h3>
-        <p>Enter a summoner name to fetch their recent matches.</p>
+        <h3>{{ lt('Step 1: Look Up Summoner', '第 1 步：查询召唤师') }}</h3>
+        <p>{{ lt('Enter a summoner name to fetch their recent matches.', '输入召唤师信息以获取最近对局。') }}</p>
         <form method="POST" class="loading-form admin-lookup-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="lookup">
             <div class="admin-lookup-grid">
                 <div class="form-group compact-field">
-                    <label>Summoner Name</label>
+                    <label>{{ lt('Summoner Name', '召唤师名称') }}</label>
                     <input type="text" name="summoner_name" placeholder="e.g. Faker" value="{{ summoner_name or '' }}" required>
                 </div>
                 <div class="form-group compact-field">
-                    <label>Tagline</label>
+                    <label>{{ lt('Tagline', '标签') }}</label>
                     <input type="text" name="tagline" placeholder="e.g. KR1" value="{{ tagline or '' }}" required>
                 </div>
                 <div class="form-group compact-field">
-                    <label>Region</label>
+                    <label>{{ lt('Region', '大区') }}</label>
                     <select name="region">
                         {% for r in ['na1','euw1','eun1','kr','br1','la1','la2','oc1','tr1','ru','jp1'] %}
                         <option value="{{ r }}" {{ 'selected' if region == r }}>{{ r.upper() }}</option>
@@ -34,34 +34,34 @@
                     </select>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-sm admin-form-submit">Fetch Matches</button>
+            <button type="submit" class="btn btn-primary btn-sm admin-form-submit">{{ lt('Fetch Matches', '获取对局') }}</button>
         </form>
     </div>
 
     {% if match_list %}
     <!-- Step 2: Select a match -->
     <div class="admin-card">
-        <h3>Step 2: Select a Match</h3>
-        <p>Choose a match to analyze with the LLM.</p>
+        <h3>{{ lt('Step 2: Select a Match', '第 2 步：选择对局') }}</h3>
+        <p>{{ lt('Choose a match to analyze with the LLM.', '选择一场对局进行 LLM 分析。') }}</p>
         <table class="match-select-table">
             <thead>
                 <tr>
-                    <th>Champion</th>
-                    <th>Result</th>
+                    <th>{{ lt('Champion', '英雄') }}</th>
+                    <th>{{ lt('Result', '结果') }}</th>
                     <th>KDA</th>
-                    <th>Duration</th>
-                    <th>Queue</th>
+                    <th>{{ lt('Duration', '时长') }}</th>
+                    <th>{{ lt('Queue', '队列') }}</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for match in match_list %}
                 <tr>
-                    <td>{{ match.champion }}</td>
-                    <td><span class="{{ 'win' if match.win else 'loss' }}">{{ 'Win' if match.win else 'Loss' }}</span></td>
+                    <td>{{ champion_name_i18n(match.champion) }}</td>
+                    <td><span class="{{ 'win' if match.win else 'loss' }}">{{ lt('Win', '胜') if match.win else lt('Loss', '负') }}</span></td>
                     <td>{{ match.kills }}/{{ match.deaths }}/{{ match.assists }}</td>
-                    <td>{{ match.game_duration }} min</td>
-                    <td>{{ match.queue_type }}</td>
+                    <td>{{ match.game_duration }} {{ lt('min', '分钟') }}</td>
+                    <td>{{ queue_label(match.queue_type) }}</td>
                     <td>
                         <form method="POST" class="loading-form inline-action-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -71,7 +71,7 @@
                             <input type="hidden" name="region" value="{{ region }}">
                             <input type="hidden" name="summoner_name" value="{{ summoner_name }}">
                             <input type="hidden" name="tagline" value="{{ tagline }}">
-                            <button type="submit" class="btn btn-primary btn-sm">Select</button>
+                            <button type="submit" class="btn btn-primary btn-sm">{{ lt('Select', '选择') }}</button>
                         </form>
                     </td>
                 </tr>
@@ -84,30 +84,30 @@
     {% if analysis_data %}
     <!-- Step 3: Match data preview -->
     <div class="admin-card">
-        <h3>Step 3: Match Data</h3>
+        <h3>{{ lt('Step 3: Match Data', '第 3 步：对局数据') }}</h3>
         <div class="match-stats-grid admin-preview-grid">
             <div class="stat-card">
-                <div class="stat-label">Champion</div>
-                <div class="stat-value stat-value-lg">{{ analysis_data.champion }}</div>
+                <div class="stat-label">{{ lt('Champion', '英雄') }}</div>
+                <div class="stat-value stat-value-lg">{{ champion_name_i18n(analysis_data.champion) }}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Result</div>
-                <div class="stat-value stat-value-lg {{ 'win' if analysis_data.win else 'loss' }}">{{ 'Win' if analysis_data.win else 'Loss' }}</div>
+                <div class="stat-label">{{ lt('Result', '结果') }}</div>
+                <div class="stat-value stat-value-lg {{ 'win' if analysis_data.win else 'loss' }}">{{ lt('Win', '胜') if analysis_data.win else lt('Loss', '负') }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">KDA</div>
                 <div class="stat-value stat-value-lg">{{ analysis_data.kills }}/{{ analysis_data.deaths }}/{{ analysis_data.assists }}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Gold/min</div>
+                <div class="stat-label">{{ lt('Gold/min', '金币/分') }}</div>
                 <div class="stat-value stat-value-lg">{{ analysis_data.gold_per_min }}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">DMG/min</div>
+                <div class="stat-label">{{ lt('DMG/min', '伤害/分') }}</div>
                 <div class="stat-value stat-value-lg">{{ analysis_data.damage_per_min }}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Vision</div>
+                <div class="stat-label">{{ lt('Vision', '视野') }}</div>
                 <div class="stat-value stat-value-lg">{{ analysis_data.vision_score }}</div>
             </div>
         </div>
@@ -117,13 +117,13 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="run_llm">
             <input type="hidden" name="analysis_json" value='{{ analysis_data | tojson }}'>
-            <button type="submit" class="btn btn-primary btn-sm" id="llm-btn">Run LLM Analysis</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="llm-btn">{{ lt('Run LLM Analysis', '运行 LLM 分析') }}</button>
         </form>
         <div id="llm-loading" class="loading-indicator">
             <div class="loading-spinner"></div>
             <div class="loading-text">
-                <strong>Generating AI analysis...</strong>
-                <span class="loading-subtext">This may take 30-60 seconds with reasoning models</span>
+                <strong>{{ lt('Generating AI analysis...', '正在生成 AI 分析...') }}</strong>
+                <span class="loading-subtext">{{ lt('This may take 30-60 seconds with reasoning models', '推理模型可能需要 30-60 秒') }}</span>
             </div>
         </div>
     </div>
@@ -132,7 +132,7 @@
     {% if result %}
     <!-- Step 5: LLM Result -->
     <div class="admin-card">
-        <h3>Step 4: LLM Output</h3>
+        <h3>{{ lt('Step 4: LLM Output', '第 4 步：LLM 输出') }}</h3>
         <div class="admin-result">{{ result }}</div>
     </div>
     {% endif %}
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var btn = document.getElementById('llm-btn');
             var loading = document.getElementById('llm-loading');
             btn.disabled = true;
-            btn.textContent = 'Analyzing...';
+            btn.textContent = {{ lt('Analyzing...', '分析中...') | tojson }};
             btn.style.opacity = '0.5';
             loading.style.display = 'flex';
         });
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var btn = form.querySelector('button[type="submit"]');
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = 'Loading...';
+                btn.textContent = {{ lt('Loading...', '加载中...') | tojson }};
                 btn.style.opacity = '0.5';
             }
         });
