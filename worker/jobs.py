@@ -1,114 +1,159 @@
 """Background jobs for checking matches and sending summaries."""
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
-import time
 from datetime import datetime, date, timedelta
 
 logger = logging.getLogger(__name__)
 
 
-def check_all_users_matches(app):
-    """Check for new matches for all active users with linked Riot accounts."""
+def _process_user_matches(app, user_id: int) -> int:
+    """Process new matches for one user in an isolated app/session context."""
     with app.app_context():
+        from sqlalchemy.exc import IntegrityError
         from app.extensions import db
         from app.models import User, RiotAccount, DiscordConfig, MatchAnalysis, UserSettings
         from app.analysis.riot_api import get_watcher, get_routing_value
+        from app.analysis.rate_limit import throttle_riot_api
         from app.analysis.engine import analyze_match, format_analysis_report
         from app.analysis.llm import get_llm_analysis
         from app.analysis.discord_notifier import send_message
+        from app.i18n import normalize_locale
 
-        users = User.query.filter_by(is_active_user=True).all()
+        user = db.session.get(User, user_id)
+        if not user or not user.is_active_user:
+            return 0
 
-        for user in users:
+        analyzed_count = 0
+        try:
+            riot_account = RiotAccount.query.filter_by(
+                user_id=user.id, is_verified=True
+            ).first()
+            if not riot_account:
+                return 0
+
+            watcher = get_watcher()
+            routing = get_routing_value(riot_account.region)
+
             try:
-                riot_account = RiotAccount.query.filter_by(
-                    user_id=user.id, is_verified=True
-                ).first()
-                if not riot_account:
-                    continue
-
-                watcher = get_watcher()
-                routing = get_routing_value(riot_account.region)
-
-                # Get latest match
-                try:
-                    match_list = watcher.match.matchlist_by_puuid(
-                        routing, riot_account.puuid, count=5
-                    )
-                except Exception as e:
-                    logger.error("Error fetching matches for user %d: %s", user.id, e)
-                    continue
-
-                if not match_list:
-                    continue
-
-                for match_id in match_list:
-                    # Skip already analyzed matches
-                    existing = MatchAnalysis.query.filter_by(
-                        user_id=user.id, match_id=match_id
-                    ).first()
-                    if existing:
-                        continue
-
-                    analysis = analyze_match(watcher, routing, riot_account.puuid, match_id)
-                    if not analysis:
-                        continue
-                    analysis['platform_region'] = riot_account.region
-
-                    # Run LLM analysis
-                    llm_text = None
-                    try:
-                        llm_text = get_llm_analysis(analysis)
-                    except Exception as e:
-                        logger.error("LLM analysis failed for match %s: %s", match_id, e)
-
-                    # Save to database
-                    record = MatchAnalysis(
-                        user_id=user.id,
-                        match_id=analysis['match_id'],
-                        champion=analysis['champion'],
-                        win=analysis['win'],
-                        kills=analysis['kills'],
-                        deaths=analysis['deaths'],
-                        assists=analysis['assists'],
-                        kda=analysis['kda'],
-                        gold_earned=analysis['gold_earned'],
-                        gold_per_min=analysis['gold_per_min'],
-                        total_damage=analysis['total_damage'],
-                        damage_per_min=analysis['damage_per_min'],
-                        vision_score=analysis['vision_score'],
-                        cs_total=analysis['cs_total'],
-                        game_duration=analysis['game_duration'],
-                        recommendations=analysis['recommendations'],
-                        llm_analysis=llm_text,
-                        llm_analysis_en=llm_text,
-                        llm_analysis_zh=None,
-                        queue_type=analysis.get('queue_type'),
-                        participants_json=analysis.get('participants'),
-                        game_start_timestamp=analysis.get('game_start_timestamp'),
-                    )
-                    db.session.add(record)
-                    db.session.commit()
-
-                    # Send Discord notification
-                    settings = UserSettings.query.filter_by(user_id=user.id).first()
-                    if settings and not settings.notifications_enabled:
-                        continue
-
-                    discord_config = DiscordConfig.query.filter_by(
-                        user_id=user.id, is_active=True
-                    ).first()
-                    if discord_config:
-                        report = format_analysis_report(analysis)
-                        if llm_text:
-                            report += f"\n**AI Coach**:\n{llm_text[:800]}"
-                        send_message(discord_config.channel_id, report)
-
-                    logger.info("Analyzed match %s for user %d", match_id, user.id)
-
+                throttle_riot_api('matchlist_worker')
+                match_list = watcher.match.matchlist_by_puuid(
+                    routing, riot_account.puuid, count=5
+                )
             except Exception as e:
-                logger.error("Error processing user %d: %s", user.id, e)
-                continue
+                logger.error("Error fetching matches for user %d: %s", user.id, e)
+                return 0
+
+            if not match_list:
+                return 0
+
+            settings = UserSettings.query.filter_by(user_id=user.id).first()
+            preferred_locale = normalize_locale((settings.preferred_locale if settings else None) or 'zh-CN')
+            notifications_enabled = bool(settings.notifications_enabled) if settings else True
+
+            for match_id in match_list:
+                existing = MatchAnalysis.query.filter_by(
+                    user_id=user.id, match_id=match_id
+                ).first()
+                if existing:
+                    continue
+
+                analysis = analyze_match(watcher, routing, riot_account.puuid, match_id)
+                if not analysis:
+                    continue
+                analysis['platform_region'] = riot_account.region
+
+                llm_text = None
+                try:
+                    llm_text = get_llm_analysis(analysis, language=preferred_locale)
+                except Exception as e:
+                    logger.error("LLM analysis failed for match %s: %s", match_id, e)
+
+                llm_analysis_en = llm_text if preferred_locale == 'en' else None
+                llm_analysis_zh = llm_text if preferred_locale == 'zh-CN' else None
+                legacy_llm = llm_text if preferred_locale == 'en' else None
+
+                record = MatchAnalysis(
+                    user_id=user.id,
+                    match_id=analysis['match_id'],
+                    champion=analysis['champion'],
+                    win=analysis['win'],
+                    kills=analysis['kills'],
+                    deaths=analysis['deaths'],
+                    assists=analysis['assists'],
+                    kda=analysis['kda'],
+                    gold_earned=analysis['gold_earned'],
+                    gold_per_min=analysis['gold_per_min'],
+                    total_damage=analysis['total_damage'],
+                    damage_per_min=analysis['damage_per_min'],
+                    vision_score=analysis['vision_score'],
+                    cs_total=analysis['cs_total'],
+                    game_duration=analysis['game_duration'],
+                    recommendations=analysis['recommendations'],
+                    llm_analysis=legacy_llm,
+                    llm_analysis_en=llm_analysis_en,
+                    llm_analysis_zh=llm_analysis_zh,
+                    queue_type=analysis.get('queue_type'),
+                    participants_json=analysis.get('participants'),
+                    game_start_timestamp=analysis.get('game_start_timestamp'),
+                )
+                db.session.add(record)
+                try:
+                    db.session.commit()
+                except IntegrityError:
+                    db.session.rollback()
+                    logger.info(
+                        "Skipped duplicate worker insert user=%d match_id=%s due to unique constraint",
+                        user.id,
+                        analysis['match_id'],
+                    )
+                    continue
+
+                analyzed_count += 1
+                if not notifications_enabled:
+                    continue
+
+                discord_config = DiscordConfig.query.filter_by(
+                    user_id=user.id, is_active=True
+                ).first()
+                if discord_config:
+                    report = format_analysis_report(analysis)
+                    if llm_text:
+                        report += f"\n**AI Coach**:\n{llm_text[:800]}"
+                    send_message(discord_config.channel_id, report)
+
+                logger.info("Analyzed match %s for user %d", match_id, user.id)
+
+            return analyzed_count
+        finally:
+            db.session.remove()
+
+
+def check_all_users_matches(app):
+    """Check for new matches for all active users with linked Riot accounts."""
+    with app.app_context():
+        from app.models import User
+
+        user_ids = [
+            user.id for user in User.query.filter_by(is_active_user=True).all()
+        ]
+        if not user_ids:
+            return
+
+        max_workers = max(1, int(app.config.get('WORKER_MAX_WORKERS', 4) or 4))
+        max_workers = min(max_workers, len(user_ids))
+
+    total_analyzed = 0
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix='match-sync') as pool:
+        future_to_user = {pool.submit(_process_user_matches, app, user_id): user_id for user_id in user_ids}
+        for future in as_completed(future_to_user):
+            user_id = future_to_user[future]
+            try:
+                total_analyzed += int(future.result() or 0)
+            except Exception as e:
+                logger.error("Error processing user %d: %s", user_id, e)
+
+    logger.info("Match sync run complete. users=%d analyzed=%d workers=%d", len(user_ids), total_analyzed, max_workers)
 
 
 def send_weekly_summaries(app):

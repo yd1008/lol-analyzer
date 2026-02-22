@@ -5,6 +5,7 @@ import requests as http_requests
 from flask import current_app
 from riotwatcher import LolWatcher, ApiError
 from app.i18n import lt
+from app.analysis.rate_limit import throttle_riot_api
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ def resolve_puuid(summoner_name: str, tagline: str, region: str) -> tuple[str | 
         api_key = current_app.config['RIOT_API_KEY']
         routing = get_routing_value(region)
         url = f"https://{routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{summoner_name}/{tagline}"
+        throttle_riot_api('resolve_puuid')
         resp = http_requests.get(url, headers={"X-Riot-Token": api_key}, timeout=10)
 
         if resp.status_code == 200:
@@ -114,6 +116,7 @@ def get_recent_matches(region: str, puuid: str, count: int = 10) -> list[str]:
     try:
         watcher = get_watcher()
         routing = get_routing_value(region)
+        throttle_riot_api('matchlist_recent')
         return watcher.match.matchlist_by_puuid(routing, puuid, count=count)
     except ApiError as e:
         logger.error("Riot API error fetching matches for %s: %s", puuid, e)
@@ -128,6 +131,7 @@ def get_matches_since(region: str, puuid: str, start_timestamp_ms: int) -> list[
     try:
         watcher = get_watcher()
         routing = get_routing_value(region)
+        throttle_riot_api('matchlist_since')
         return watcher.match.matchlist_by_puuid(
             routing, puuid,
             start_time=start_timestamp_ms // 1000,

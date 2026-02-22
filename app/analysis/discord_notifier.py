@@ -3,6 +3,7 @@
 import logging
 import requests
 from flask import current_app
+from app.analysis.rate_limit import throttle_discord_api
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ def send_message(channel_id: str, content: str) -> bool:
         content = content[:1997] + '...'
 
     try:
+        throttle_discord_api('send_message')
         resp = requests.post(url, json={'content': content}, headers=headers, timeout=10)
         if resp.status_code in (200, 201):
             return True

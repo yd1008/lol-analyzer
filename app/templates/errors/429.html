@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lt('Too Many Requests', '请求过多') }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>{{ lt('Too many requests', '请求过于频繁') }}</h1>
+        <p>{{ t('flash.too_many_attempts') }}</p>
+    </div>
+</section>
+{% endblock %}

@@ -3,7 +3,7 @@
 import json
 from unittest.mock import patch
 
-from app.models import User, MatchAnalysis
+from app.models import AdminAuditLog, MatchAnalysis, User
 
 
 class TestLandingPage:
@@ -99,6 +99,27 @@ class TestLogin:
         assert resp.status_code == 200
         assert b"Invalid" in resp.data
 
+    def test_login_rate_limit_returns_429(self, client, user, app):
+        app.config["LOGIN_RATE_LIMIT"] = "2 per minute"
+
+        for _ in range(2):
+            resp = client.post(
+                "/auth/login",
+                data={"email": "test@example.com", "password": "wrongpassword"},
+                follow_redirects=False,
+            )
+            assert resp.status_code == 200
+
+        blocked = client.post(
+            "/auth/login",
+            data={"email": "test@example.com", "password": "wrongpassword"},
+            follow_redirects=False,
+        )
+        assert blocked.status_code == 429
+        assert b"Too many attempts" in blocked.data
+
+        app.config["LOGIN_RATE_LIMIT"] = "1000 per minute"
+
 
 class TestLogout:
     def test_logout(self, auth_client):
@@ -142,6 +163,31 @@ class TestAdminAccess:
         })
         resp = client.get("/admin/")
         assert resp.status_code == 200
+
+    def test_admin_accessible_for_role_admin_without_env_match(self, client, db, app):
+        previous_admin_email = app.config.get("ADMIN_EMAIL")
+        app.config["ADMIN_EMAIL"] = "different-admin@example.com"
+        admin = User(email="role-admin@example.com", role="admin")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "role-admin@example.com", "password": "adminpass"})
+        resp = client.get("/admin/")
+        assert resp.status_code == 200
+        app.config["ADMIN_EMAIL"] = previous_admin_email
+
+    def test_admin_access_logs_audit_event(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
+        resp = client.get("/admin/")
+        assert resp.status_code == 200
+        assert AdminAuditLog.query.filter_by(action="admin_access_allowed").count() >= 1
 
 
 class TestAiAnalysisRoute:
@@ -664,3 +710,44 @@ class TestMatchDetailRoute:
         resp = auth_client.get(f"/dashboard/matches/{match.id}")
         assert resp.status_code == 200
         assert b"Gold Total" in resp.data
+
+
+class TestLocalePersistenceRoute:
+    def test_locale_endpoint_requires_login(self, client):
+        resp = client.post("/dashboard/settings/locale", json={"locale": "en"})
+        assert resp.status_code in (302, 401)
+
+    def test_locale_endpoint_rejects_invalid_locale(self, auth_client):
+        resp = auth_client.post("/dashboard/settings/locale", json={"locale": "fr"})
+        assert resp.status_code == 400
+        payload = resp.get_json()
+        assert payload["error"]
+
+    def test_locale_endpoint_persists_user_preference(self, auth_client, db, user):
+        resp = auth_client.post("/dashboard/settings/locale", json={"locale": "en"})
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload["ok"] is True
+        assert payload["locale"] == "en"
+        reloaded = db.session.get(User, user.id)
+        assert reloaded.settings.preferred_locale == "en"
+
+
+class TestAdminLlmInputSize:
+    def test_test_llm_rejects_oversized_json(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        app.config["ADMIN_ANALYSIS_JSON_MAX_BYTES"] = 128
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
+        oversized = '{"foo":"' + ("x" * 300) + '"}'
+        resp = client.post(
+            "/admin/test-llm",
+            data={"action": "run_llm", "analysis_json": oversized},
+            follow_redirects=True,
+        )
+        assert resp.status_code == 200
+        assert b"too large" in resp.data.lower()

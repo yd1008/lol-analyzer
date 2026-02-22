@@ -10,6 +10,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(16), nullable=False, default='user', server_default='user')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active_user = db.Column(db.Boolean, default=True)
 
@@ -18,12 +19,17 @@ class User(UserMixin, db.Model):
     match_analyses = db.relationship('MatchAnalysis', backref='user', lazy=True, cascade='all, delete-orphan')
     weekly_summaries = db.relationship('WeeklySummary', backref='user', lazy=True, cascade='all, delete-orphan')
     settings = db.relationship('UserSettings', backref='user', uselist=False, cascade='all, delete-orphan')
+    admin_audit_logs = db.relationship('AdminAuditLog', backref='actor', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_admin(self) -> bool:
+        return (self.role or '').strip().lower() == 'admin'
 
 
 @login_manager.user_loader
@@ -55,6 +61,9 @@ class DiscordConfig(db.Model):
 
 class MatchAnalysis(db.Model):
     __tablename__ = 'match_analyses'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'match_id', name='uq_match_analyses_user_match'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -107,3 +116,18 @@ class UserSettings(db.Model):
     weekly_summary_day = db.Column(db.String(16), default='Monday')
     weekly_summary_time = db.Column(db.String(8), default='09:00')
     notifications_enabled = db.Column(db.Boolean, default=True)
+    preferred_locale = db.Column(db.String(8), nullable=False, default='zh-CN', server_default='zh-CN')
+
+
+class AdminAuditLog(db.Model):
+    __tablename__ = 'admin_audit_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    actor_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    action = db.Column(db.String(64), nullable=False)
+    route = db.Column(db.String(256), nullable=False)
+    method = db.Column(db.String(16), nullable=False)
+    ip_address = db.Column(db.String(64), nullable=True)
+    user_agent = db.Column(db.String(512), nullable=True)
+    metadata_json = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

@@ -3,6 +3,7 @@ import logging
 
 from flask import render_template, redirect, url_for, flash, request, jsonify, Response, stream_with_context
 from flask_login import login_required, current_user
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from app.dashboard import dashboard_bp
 from app.dashboard.forms import RiotAccountForm, DiscordConfigForm, PreferencesForm
@@ -17,6 +18,7 @@ from app.i18n import (
     get_locale,
     lane_label,
     lt,
+    normalize_locale,
     queue_label,
     resolve_api_language,
     t,
@@ -80,10 +82,18 @@ def sync_recent_matches(user_id, region, puuid):
             game_start_timestamp=analysis.get('game_start_timestamp'),
         )
         db.session.add(row)
-        saved += 1
+        try:
+            db.session.commit()
+            saved += 1
+        except IntegrityError:
+            db.session.rollback()
+            logger.info(
+                "Skipped duplicate match insert user=%d match_id=%s due to unique constraint",
+                user_id,
+                analysis['match_id'],
+            )
 
     if saved:
-        db.session.commit()
         logger.info("Synced %d new matches for user %d", saved, user_id)
 
     return saved
@@ -111,8 +121,8 @@ def index():
     wins = MatchAnalysis.query.filter_by(user_id=current_user.id, win=True).count()
     win_rate = round((wins / total_games) * 100, 1) if total_games > 0 else 0
 
-    all_matches = base_query.all()
-    avg_kda = round(sum(m.kda for m in all_matches) / len(all_matches), 2) if all_matches else 0
+    avg_kda_raw = db.session.query(func.avg(MatchAnalysis.kda)).filter_by(user_id=current_user.id).scalar()
+    avg_kda = round(float(avg_kda_raw), 2) if avg_kda_raw is not None else 0
 
     initial_matches = _serialize_matches(analyses)
 
@@ -779,3 +789,26 @@ def settings_preferences():
                 flash(t(error), 'error')
 
     return redirect(url_for('dashboard.settings'))
+
+
+@dashboard_bp.route('/settings/locale', methods=['POST'])
+@login_required
+def settings_locale():
+    """Persist user's preferred locale for worker-side language generation."""
+    payload = request.get_json(silent=True) or {}
+    locale_raw = payload.get('locale')
+    if locale_raw not in ('en', 'zh-CN'):
+        return jsonify({
+            'error': lt('Unsupported locale.', '不支持的语言。'),
+            'supported': ['en', 'zh-CN'],
+        }), 400
+
+    preferred_locale = normalize_locale(locale_raw)
+    settings = current_user.settings
+    if not settings:
+        settings = UserSettings(user_id=current_user.id)
+        db.session.add(settings)
+
+    settings.preferred_locale = preferred_locale
+    db.session.commit()
+    return jsonify({'ok': True, 'locale': preferred_locale})

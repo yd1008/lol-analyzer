@@ -64,5 +64,5 @@ if ($testResponse.ToLower() -eq 'y' -or $testResponse.ToLower() -eq 'yes') {
     }
 }
 
-Write-Host "`nSetup complete! To run the analyzer, use: python lol_analyzer.py" -ForegroundColor Green
+Write-Host "`nSetup complete! To run the web app, use: python run.py" -ForegroundColor Green
 Write-Host "Make sure to keep the program running to receive automatic updates." -ForegroundColor Green
