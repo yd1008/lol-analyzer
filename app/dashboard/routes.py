@@ -159,6 +159,63 @@ def _build_ai_coach_plan(matches: list[MatchAnalysis]) -> dict:
     }
 
 
+def _build_trend_snapshot(matches: list[MatchAnalysis]) -> dict:
+    """Compare recent window vs previous window to show trajectory."""
+    if not matches:
+        return {
+            'headline': lt('No trend yet', '暂无趋势数据'),
+            'signals': [lt('Complete more matches to unlock trend intelligence.', '完成更多对局后可解锁趋势洞察。')],
+        }
+
+    recent = matches[:5]
+    previous = matches[5:10]
+    if not previous:
+        return {
+            'headline': lt('Collecting baseline', '正在建立基线'),
+            'signals': [lt('Play 5 more matches to compare your trajectory.', '再完成 5 局后可对比成长轨迹。')],
+        }
+
+    def _avg(rows: list[MatchAnalysis], field: str) -> float:
+        vals = [getattr(r, field) or 0 for r in rows]
+        return sum(vals) / len(vals) if vals else 0.0
+
+    recent_win = sum(1 for r in recent if r.win) / len(recent)
+    prev_win = sum(1 for r in previous if r.win) / len(previous)
+
+    deltas = {
+        'win_rate': round((recent_win - prev_win) * 100, 1),
+        'kda': round(_avg(recent, 'kda') - _avg(previous, 'kda'), 2),
+        'gpm': round(_avg(recent, 'gold_per_min') - _avg(previous, 'gold_per_min'), 1),
+        'dpm': round(_avg(recent, 'damage_per_min') - _avg(previous, 'damage_per_min'), 1),
+    }
+
+    positives = sum(1 for value in deltas.values() if value > 0)
+    if positives >= 3:
+        headline = lt('You are trending up', '你正在上升期')
+    elif positives <= 1:
+        headline = lt('Stabilize fundamentals this week', '本周先稳住基本功')
+    else:
+        headline = lt('Mixed trend — refine execution', '趋势分化，建议精炼执行细节')
+
+    def _signal(label_en: str, label_zh: str, value: float, suffix: str = '') -> str:
+        arrow = '↑' if value > 0 else ('↓' if value < 0 else '→')
+        prefix = '+' if value > 0 else ''
+        text = f"{arrow} {lt(label_en, label_zh)} {prefix}{value}{suffix}"
+        return text
+
+    signals = [
+        _signal('Win rate delta', '胜率变化', deltas['win_rate'], '%'),
+        _signal('KDA delta', 'KDA 变化', deltas['kda']),
+        _signal('Gold/min delta', '每分钟经济变化', deltas['gpm']),
+        _signal('Damage/min delta', '每分钟伤害变化', deltas['dpm']),
+    ]
+
+    return {
+        'headline': headline,
+        'signals': signals,
+    }
+
+
 @dashboard_bp.route('/')
 @login_required
 def index():
@@ -186,6 +243,7 @@ def index():
 
     initial_matches = _serialize_matches(analyses)
     coach_plan = _build_ai_coach_plan(analyses)
+    trend_snapshot = _build_trend_snapshot(analyses)
 
     return render_template('dashboard/index.html',
         analyses=analyses,
@@ -195,6 +253,7 @@ def index():
         win_rate=win_rate,
         avg_kda=avg_kda,
         coach_plan=coach_plan,
+        trend_snapshot=trend_snapshot,
         riot_account=riot_account,
         discord_config=discord_config,
     )
