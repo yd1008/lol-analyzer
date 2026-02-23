@@ -1304,6 +1304,29 @@ class TestSettingsIntegrationsRoute:
         assert riot_account is None
 
 
+class TestErrorPages:
+    def test_404_renders_custom_template(self, auth_client):
+        resp = auth_client.get("/definitely-not-a-real-route")
+        assert resp.status_code == 404
+        assert b"404" in resp.data
+        assert b"Go Home" in resp.data
+        assert b"Page Not Found" in resp.data
+
+    def test_500_renders_custom_template(self, client, app):
+        previous_propagate = app.config.get("PROPAGATE_EXCEPTIONS")
+        app.config["PROPAGATE_EXCEPTIONS"] = False
+
+        with patch("app.main.routes.render_template", side_effect=RuntimeError("boom")):
+            resp = client.get("/")
+
+        app.config["PROPAGATE_EXCEPTIONS"] = previous_propagate
+
+        assert resp.status_code == 500
+        assert b"500" in resp.data
+        assert b"Server Error" in resp.data
+        assert b"Go Home" in resp.data
+
+
 class TestLocalePersistenceRoute:
     def test_locale_endpoint_requires_login(self, client):
         resp = client.post("/dashboard/settings/locale", json={"locale": "en"})
