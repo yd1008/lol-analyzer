@@ -944,8 +944,12 @@ document.addEventListener('DOMContentLoaded', function () {
             filterBar.addEventListener('click', function (e) {
                 var btn = e.target.closest('.filter-btn');
                 if (!btn) return;
-                filterBar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+                filterBar.querySelectorAll('.filter-btn').forEach(function (b) {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-pressed', 'false');
+                });
                 btn.classList.add('active');
+                btn.setAttribute('aria-pressed', 'true');
                 filterByQueue(btn.getAttribute('data-queue'));
             });
         }
