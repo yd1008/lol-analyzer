@@ -1422,6 +1422,106 @@ class TestAdminLlmInputSize:
         assert kwargs["language"] == "en"
 
 
+    def test_test_llm_lookup_renders_match_selection(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
+
+        watcher = object()
+        with patch("app.admin.routes.resolve_puuid", return_value=("puuid-123", None)), patch(
+            "app.admin.routes.get_recent_matches",
+            return_value=["NA1_1", "NA1_2"],
+        ), patch("app.admin.routes.get_watcher", return_value=watcher), patch(
+            "app.admin.routes.get_routing_value",
+            return_value="americas",
+        ), patch(
+            "app.admin.routes.get_match_summary",
+            side_effect=[
+                {
+                    "match_id": "NA1_1",
+                    "champion": "Ahri",
+                    "win": True,
+                    "kills": 8,
+                    "deaths": 2,
+                    "assists": 7,
+                    "game_duration": 30,
+                    "queue_type": "Ranked Solo",
+                },
+                {
+                    "match_id": "NA1_2",
+                    "champion": "Lux",
+                    "win": False,
+                    "kills": 3,
+                    "deaths": 5,
+                    "assists": 6,
+                    "game_duration": 28,
+                    "queue_type": "Ranked Solo",
+                },
+            ],
+        ):
+            resp = client.post(
+                "/admin/test-llm",
+                data={
+                    "action": "lookup",
+                    "summoner_name": "Tester",
+                    "tagline": "NA1",
+                    "region": "na1",
+                },
+                follow_redirects=True,
+            )
+
+        assert resp.status_code == 200
+        assert b"Step 2: Select a Match" in resp.data
+        assert b"Ahri" in resp.data
+        assert b"Lux" in resp.data
+
+    def test_test_llm_select_renders_match_preview(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
+
+        analysis_payload = {
+            "match_id": "NA1_1",
+            "champion": "Ahri",
+            "win": True,
+            "kills": 8,
+            "deaths": 2,
+            "assists": 7,
+            "gold_per_min": 420.0,
+            "damage_per_min": 760.0,
+            "vision_score": 27,
+        }
+
+        with patch("app.admin.routes.get_watcher", return_value=object()), patch(
+            "app.admin.routes.get_routing_value",
+            return_value="americas",
+        ), patch("app.admin.routes.analyze_match", return_value=analysis_payload):
+            resp = client.post(
+                "/admin/test-llm",
+                data={
+                    "action": "select",
+                    "match_id": "NA1_1",
+                    "puuid": "puuid-123",
+                    "region": "na1",
+                    "summoner_name": "Tester",
+                    "tagline": "NA1",
+                },
+                follow_redirects=True,
+            )
+
+        assert resp.status_code == 200
+        assert b"Step 3: Match Data" in resp.data
+        assert b"Run LLM Analysis" in resp.data
+
+
 class TestAdminDiscordRoute:
     def test_test_discord_success_calls_notifier(self, client, db, app):
         app.config["ADMIN_EMAIL"] = "admin@test.com"
