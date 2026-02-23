@@ -52,6 +52,24 @@
         </div>
     </div>
 
+    <div class="card coach-mode-card">
+        <div class="section-head">
+            <div>
+                <div class="section-label">{{ lt('Personalization', '个性化') }}</div>
+                <h3>{{ lt('AI Coach Mode', 'AI 教练模式') }}</h3>
+            </div>
+        </div>
+        <p class="card-muted">{{ lt('Choose how strict or supportive your coaching tone should be. This mode applies to all AI analyses.', '选择建议风格偏激进、均衡或鼓励。此模式会应用到所有 AI 分析。') }}</p>
+        <div class="coach-mode-controls">
+            <label for="coach-mode-select">{{ lt('Coach style', '教练风格') }}</label>
+            <select id="coach-mode-select" class="input">
+                <option value="balanced">{{ lt('Balanced', '均衡') }}</option>
+                <option value="aggressive">{{ lt('Aggressive', '激进') }}</option>
+                <option value="supportive">{{ lt('Supportive', '鼓励') }}</option>
+            </select>
+        </div>
+    </div>
+
     <div class="card coach-plan-card">
         <div class="section-head">
             <div>
