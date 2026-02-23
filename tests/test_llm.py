@@ -345,6 +345,24 @@ class TestGetLlmAnalysisDetailed:
         assert mock_sleep.call_args_list[0].args[0] == 1.5
         assert mock_sleep.call_args_list[1].args[0] == 3.0
 
+    @patch("app.analysis.llm_client.time.sleep", return_value=None)
+    @patch("app.analysis.llm_client.requests.post")
+    def test_non_retryable_http_error_skips_backoff_retries(self, mock_post, mock_sleep, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 404
+        mock_resp.text = "Not Found"
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            app.config["LLM_RETRIES"] = 3
+            app.config["LLM_RETRY_BACKOFF_SECONDS"] = 2.0
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert result is None
+        assert "404" in error
+        assert mock_post.call_count == 1
+        mock_sleep.assert_not_called()
+
     @patch("app.analysis.llm_client.requests.post")
     @patch("app.analysis.llm_prompt.requests.get")
     def test_opencode_zen_deepseek_falls_back_to_glm(self, mock_get, mock_post, app):
