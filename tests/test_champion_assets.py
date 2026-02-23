@@ -119,6 +119,69 @@ class TestItemAndRuneIcons:
         assert calls['n'] == 2
         assert refreshed == {1001, 2003, 3157}
 
+    def test_rune_map_cache_expiry_refetches_data(self, monkeypatch):
+        _reset_cache_state()
+
+        payloads = [
+            [
+                {
+                    'id': 8200,
+                    'icon': 'perk-images/Styles/7202_Sorcery.png',
+                    'slots': [
+                        {
+                            'runes': [
+                                {'id': 8229, 'icon': 'perk-images/Styles/Sorcery/ArcaneComet/ArcaneComet.png'},
+                            ]
+                        }
+                    ],
+                }
+            ],
+            [
+                {
+                    'id': 8200,
+                    'icon': 'perk-images/Styles/7202_Sorcery.png',
+                    'slots': [
+                        {
+                            'runes': [
+                                {'id': 8229, 'icon': 'perk-images/Styles/Sorcery/ArcaneComet/ArcaneComet.png'},
+                                {'id': 8230, 'icon': 'perk-images/Styles/Sorcery/PhaseRush/PhaseRush.png'},
+                            ]
+                        }
+                    ],
+                }
+            ],
+        ]
+        calls = {'n': 0}
+
+        class Resp:
+            status_code = 200
+
+            def __init__(self, data):
+                self._data = data
+
+            def json(self):
+                return self._data
+
+        def fake_get(*args, **kwargs):
+            calls['n'] += 1
+            idx = 0 if calls['n'] == 1 else 1
+            return Resp(payloads[idx])
+
+        monkeypatch.setattr(assets.requests, 'get', fake_get)
+
+        initial = assets._get_rune_maps('26.3.1')
+        cached = assets._get_rune_maps('26.3.1')
+
+        assert calls['n'] == 1
+        assert 8229 in initial['perks']
+        assert 8230 not in cached['perks']
+
+        assets._RUNE_CACHE['26.3.1']['expires_at'] = 0.0
+        refreshed = assets._get_rune_maps('26.3.1')
+
+        assert calls['n'] == 2
+        assert 8230 in refreshed['perks']
+
     def test_rune_icons_from_mapped_paths(self, monkeypatch):
         monkeypatch.setattr(assets, '_fetch_latest_version', lambda: '26.3.1')
         monkeypatch.setattr(
