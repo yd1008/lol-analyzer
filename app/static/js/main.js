@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var I18N = window.__i18n || {};
     var LABELS = I18N.labels || {};
     var METRICS = I18N.metrics || {};
+    var COACH_MODE_STORAGE_KEY = 'lanescope-coach-mode';
+    var coachModeSelect = document.getElementById('coach-mode-select');
 
     function txt(key, fallback) {
         if (LABELS && Object.prototype.hasOwnProperty.call(LABELS, key)) {
@@ -218,9 +220,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var initialMatches = Array.isArray(window.__initialMatches) ? window.__initialMatches : [];
     var currentOffset = 0;
     var currentQueue = '';
-    var COACH_MODE_STORAGE_KEY = 'lanescope-coach-mode';
-    var coachModeSelect = document.getElementById('coach-mode-select');
-
     var POSITION_MAP = I18N.laneShort || {TOP: 'TOP', JUNGLE: 'JGL', MIDDLE: 'MID', BOTTOM: 'BOT', UTILITY: 'SUP'};
     var VISUAL_METRICS = [
         {key: 'gold_per_min', label: metricTxt('gold_per_min', 'Gold/min')},

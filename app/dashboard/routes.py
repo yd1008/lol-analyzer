@@ -658,9 +658,9 @@ def api_ai_analysis(match_db_id):
     focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
     cache_read_enabled = focus == 'general'
     persist_generated_analysis = focus == 'general'
-    cached_analysis = _get_cached_analysis(match, language) if cache_read_enabled else None
+    cached_analysis = _get_cached_analysis(match, language)
 
-    if cached_analysis and not force:
+    if cache_read_enabled and cached_analysis and not force:
         return jsonify({'analysis': cached_analysis, 'cached': True, 'language': language, 'focus': focus, 'persisted': True})
 
     analysis_dict = _build_llm_analysis_payload(match, riot_account, coach_mode=coach_mode)
@@ -707,10 +707,10 @@ def api_ai_analysis_stream(match_db_id):
     focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
     cache_read_enabled = focus == 'general'
     persist_generated_analysis = focus == 'general'
-    cached_analysis = _get_cached_analysis(match, language) if cache_read_enabled else None
+    cached_analysis = _get_cached_analysis(match, language)
 
     def event_stream():
-        if cached_analysis and not force:
+        if cache_read_enabled and cached_analysis and not force:
             yield _ndjson_line({'type': 'meta', 'cached': True, 'regenerated': False, 'language': language, 'focus': focus, 'persisted': True})
             yield _ndjson_line({
                 'type': 'done',
