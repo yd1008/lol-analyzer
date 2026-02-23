@@ -208,6 +208,16 @@ class TestSyncRecentMatches:
         assert row.champion == "Lux"
         assert row.queue_type == "Ranked Solo"
 
+    def test_sync_recent_matches_handles_recent_match_fetch_error(self, db, user):
+        with patch("app.dashboard.routes.get_recent_matches", side_effect=RuntimeError("riot timeout")), patch(
+            "app.dashboard.routes.get_watcher"
+        ) as mock_watcher, patch("app.dashboard.routes.analyze_match") as mock_analyze:
+            saved = sync_recent_matches(user.id, "na1", "puuid-test")
+
+        assert saved == 0
+        mock_watcher.assert_not_called()
+        mock_analyze.assert_not_called()
+
 
 class TestAdminAccess:
     def test_admin_requires_login(self, client):

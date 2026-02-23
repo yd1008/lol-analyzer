@@ -37,7 +37,11 @@ _match_order = (
 
 def sync_recent_matches(user_id, region, puuid):
     """Fetch recent matches from Riot API, analyze new ones, and store in DB."""
-    match_ids = get_recent_matches(region, puuid, count=10)
+    try:
+        match_ids = get_recent_matches(region, puuid, count=10)
+    except Exception as exc:
+        logger.warning("Failed to fetch recent matches user=%s region=%s: %s", user_id, region, exc)
+        return 0
     if not match_ids:
         return 0
 
