@@ -328,6 +328,84 @@ class TestAiAnalysisRoute:
         llm_payload = mock_llm.call_args[0][0]
         assert llm_payload["coach_mode"] == "balanced"
 
+    def test_ai_analysis_focus_uses_valid_focus_and_forwards_to_llm(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_focus_forward",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("fresh analysis", None)) as mock_llm:
+            resp_force = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis",
+                json={"force": True, "focus": "vision"},
+            )
+
+        assert resp_force.status_code == 200
+        force_json = resp_force.get_json()
+        assert force_json["focus"] == "vision"
+        assert mock_llm.call_args[1]["focus"] == "vision"
+
+    def test_ai_analysis_invalid_focus_defaults_to_general(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_focus_invalid",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("fresh analysis", None)) as mock_llm:
+            resp_force = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis",
+                json={"force": True, "focus": "invalid"},
+            )
+
+        assert resp_force.status_code == 200
+        force_json = resp_force.get_json()
+        assert force_json["focus"] == "general"
+        assert mock_llm.call_args[1]["focus"] == "general"
+
     def test_ai_analysis_timeout_returns_504_without_cached_analysis(self, auth_client, db, user):
         match = MatchAnalysis(
             user_id=user.id,
@@ -481,6 +559,48 @@ class TestAiAnalysisRoute:
         assert events[1]["type"] == "done"
         assert events[1]["analysis"] == "already cached"
         assert events[1]["cached"] is True
+
+    def test_ai_analysis_stream_forwards_focus_to_iter_analysis(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_focus",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch("app.dashboard.routes.iter_llm_analysis_stream", return_value=[{"type": "done", "analysis": "streamed analysis"}]) as mock_stream:
+            resp = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis/stream",
+                json={"force": True, "focus": "teamfight"},
+            )
+            events = self._parse_ndjson(resp)
+
+        assert resp.status_code == 200
+        assert events[0]["type"] == "meta"
+        assert events[0]["focus"] == "teamfight"
+        assert events[1]["type"] == "done"
+        assert events[1]["focus"] == "teamfight"
+        assert mock_stream.call_args[1]["focus"] == "teamfight"
 
     def test_ai_analysis_stream_emits_chunk_then_done_and_persists(self, auth_client, db, user):
         match = MatchAnalysis(
