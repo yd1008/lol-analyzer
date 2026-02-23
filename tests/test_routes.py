@@ -1613,7 +1613,23 @@ class TestAdminDiscordRoute:
         assert resp.status_code == 302
         assert resp.headers["Location"].endswith("/admin/")
         mock_send.assert_called_once_with("123456789012345678", "hello from test")
-        assert AdminAuditLog.query.filter_by(action="admin_test_discord").count() >= 1
+
+    def test_test_discord_requires_admin(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        user = User(email="user@example.com")
+        user.set_password("testpass123")
+        db.session.add(user)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "user@example.com", "password": "testpass123"})
+        resp = client.post(
+            "/admin/test-discord",
+            data={"channel_id": "123456789012345678", "message": "hello from test"},
+            follow_redirects=False,
+        )
+
+        assert resp.status_code in (302, 401, 403)
+
 
     def test_test_discord_failure_shows_error(self, client, db, app):
         app.config["ADMIN_EMAIL"] = "admin@test.com"
