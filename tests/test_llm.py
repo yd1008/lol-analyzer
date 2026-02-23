@@ -321,6 +321,30 @@ class TestGetLlmAnalysisDetailed:
         assert result == "Recovered analysis"
         assert mock_post.call_count == 2
 
+    @patch("app.analysis.llm_client.time.sleep", return_value=None)
+    @patch("app.analysis.llm_client.requests.post")
+    def test_timeout_retries_use_exponential_backoff(self, mock_post, mock_sleep, app):
+        import requests
+
+        mock_post.side_effect = [
+            requests.Timeout("timed out #1"),
+            requests.Timeout("timed out #2"),
+            requests.Timeout("timed out #3"),
+        ]
+
+        with app.app_context():
+            app.config["LLM_TIMEOUT_SECONDS"] = 5
+            app.config["LLM_RETRIES"] = 2
+            app.config["LLM_RETRY_BACKOFF_SECONDS"] = 1.5
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert result is None
+        assert "attempt 3/3" in error
+        assert mock_post.call_count == 3
+        assert mock_sleep.call_count == 2
+        assert mock_sleep.call_args_list[0].args[0] == 1.5
+        assert mock_sleep.call_args_list[1].args[0] == 3.0
+
     @patch("app.analysis.llm_client.requests.post")
     @patch("app.analysis.llm_prompt.requests.get")
     def test_opencode_zen_deepseek_falls_back_to_glm(self, mock_get, mock_post, app):
