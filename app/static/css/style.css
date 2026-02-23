@@ -109,105 +109,105 @@
 
 :root[data-theme='dark'] {
     color-scheme: dark;
-    --bg-primary: #0a111c;
-    --bg-secondary: #101a29;
-    --bg-card: #111d2d;
-    --bg-soft: #0d1624;
-    --border: #26384f;
-    --border-strong: #395471;
-    --text-primary: #e8f0ff;
-    --text-secondary: #aab9d0;
-    --text-muted: #7f92ad;
-    --accent: #32d7ff;
-    --accent-soft: rgba(50, 215, 255, 0.16);
-    --signal: #eef7ff;
-    --signal-soft: rgba(238, 247, 255, 0.08);
-    --success: #47d08c;
-    --danger: #ff7a7a;
-    --bg-grad-1: rgba(50, 215, 255, 0.17);
-    --bg-grad-2: rgba(122, 237, 174, 0.12);
-    --bg-grad-base: #07101c;
-    --dot-color: rgba(232, 240, 255, 0.08);
-    --link-hover: #86eaff;
-    --skip-link-text: #031621;
-    --header-bg: rgba(7, 13, 22, 0.86);
-    --footer-bg: rgba(7, 14, 24, 0.82);
-    --nav-hover-bg: rgba(232, 240, 255, 0.09);
-    --shadow-card-1: rgba(2, 6, 12, 0.58);
-    --shadow-card-2: rgba(2, 6, 12, 0.5);
-    --bg-chip: #17263a;
-    --bg-chip-soft: #132033;
-    --bg-muted: #101a2a;
-    --bg-panel: #0f1928;
-    --bg-lane: #0f1a2a;
-    --bg-player: #132134;
-    --track-bg: #20324a;
-    --btn-primary-bg: #32d7ff;
-    --btn-primary-hover: #5ee1ff;
-    --btn-primary-text: #03131d;
-    --btn-active-bg: #32d7ff;
-    --btn-active-text: #03131d;
-    --flash-success-bg: rgba(71, 208, 140, 0.16);
-    --flash-success-border: rgba(71, 208, 140, 0.4);
-    --flash-success-text: #94f4c8;
-    --flash-danger-bg: rgba(255, 122, 122, 0.13);
-    --flash-danger-border: rgba(255, 122, 122, 0.35);
-    --flash-danger-text: #ffc8c8;
-    --flash-info-bg: rgba(50, 215, 255, 0.14);
-    --flash-info-border: rgba(50, 215, 255, 0.34);
-    --flash-info-text: #9feeff;
+    --bg-primary: #060708;
+    --bg-secondary: #0d0e10;
+    --bg-card: #101114;
+    --bg-soft: #0b0c0e;
+    --border: #23262b;
+    --border-strong: #353942;
+    --text-primary: #f3f4f6;
+    --text-secondary: #b8bcc5;
+    --text-muted: #8d929d;
+    --accent: #7cf5c7;
+    --accent-soft: rgba(124, 245, 199, 0.16);
+    --signal: #f7f8fb;
+    --signal-soft: rgba(247, 248, 251, 0.06);
+    --success: #67d29b;
+    --danger: #ff8585;
+    --bg-grad-1: rgba(124, 245, 199, 0.12);
+    --bg-grad-2: rgba(242, 245, 251, 0.08);
+    --bg-grad-base: #050607;
+    --dot-color: rgba(243, 244, 246, 0.07);
+    --link-hover: #b8fce4;
+    --skip-link-text: #020304;
+    --header-bg: rgba(8, 9, 11, 0.88);
+    --footer-bg: rgba(8, 9, 11, 0.84);
+    --nav-hover-bg: rgba(243, 244, 246, 0.08);
+    --shadow-card-1: rgba(0, 0, 0, 0.55);
+    --shadow-card-2: rgba(0, 0, 0, 0.62);
+    --bg-chip: #17191d;
+    --bg-chip-soft: #14161a;
+    --bg-muted: #101216;
+    --bg-panel: #0f1115;
+    --bg-lane: #0f1114;
+    --bg-player: #14171b;
+    --track-bg: #20242b;
+    --btn-primary-bg: #f3f4f6;
+    --btn-primary-hover: #ffffff;
+    --btn-primary-text: #050607;
+    --btn-active-bg: #17191d;
+    --btn-active-text: #f3f4f6;
+    --flash-success-bg: rgba(103, 210, 155, 0.16);
+    --flash-success-border: rgba(103, 210, 155, 0.38);
+    --flash-success-text: #b9f6d6;
+    --flash-danger-bg: rgba(255, 133, 133, 0.14);
+    --flash-danger-border: rgba(255, 133, 133, 0.36);
+    --flash-danger-text: #ffd0d0;
+    --flash-info-bg: rgba(124, 245, 199, 0.14);
+    --flash-info-border: rgba(124, 245, 199, 0.3);
+    --flash-info-text: #c4fbe5;
     --flash-warning-bg: rgba(252, 190, 75, 0.16);
     --flash-warning-border: rgba(252, 190, 75, 0.34);
     --flash-warning-text: #ffe2a4;
-    --badge-success-text: #7cf0b8;
-    --badge-success-bg: rgba(71, 208, 140, 0.17);
-    --badge-success-border: rgba(71, 208, 140, 0.42);
-    --badge-danger-text: #ffb8b8;
-    --badge-danger-bg: rgba(255, 122, 122, 0.13);
-    --badge-danger-border: rgba(255, 122, 122, 0.36);
-    --mono-success: #85efbc;
-    --mono-accent: #88e8ff;
-    --ring-hole: #111d2d;
-    --ring-track: #2b405a;
-    --table-ally-bg: rgba(71, 208, 140, 0.1);
-    --table-enemy-bg: rgba(255, 122, 122, 0.09);
-    --ai-accent-bg: rgba(50, 215, 255, 0.15);
-    --ai-accent-text: #99edff;
-    --ai-panel-glow: rgba(50, 215, 255, 0.2);
-    --ai-panel-tint: rgba(50, 215, 255, 0.11);
-    --ai-stream-core: #32d7ff;
-    --ai-stream-core-soft: rgba(50, 215, 255, 0.3);
-    --ai-stream-line: rgba(50, 215, 255, 0.25);
-    --ai-scroll-thumb: rgba(50, 215, 255, 0.55);
-    --ai-scroll-track: rgba(50, 215, 255, 0.14);
-    --error-text: #ffacac;
-    --bar-player-start: #1fa78a;
-    --bar-team-start: #82e5b0;
-    --bar-team-end: #39bc7e;
-    --bar-lobby-start: #ffadad;
-    --bar-lobby-end: #f47474;
-    --theme-toggle-bg: #192a40;
-    --theme-toggle-border: #2d4764;
-    --theme-toggle-knob: #32d7ff;
-    --theme-toggle-track: rgba(129, 162, 195, 0.3);
-    --theme-toggle-text: #b2cae7;
-    --theme-toggle-shadow: rgba(4, 9, 16, 0.38);
-    --accent-border-subtle: rgba(50, 215, 255, 0.24);
-    --accent-border-soft: rgba(50, 215, 255, 0.28);
-    --accent-border: rgba(50, 215, 255, 0.32);
-    --accent-border-strong: rgba(50, 215, 255, 0.38);
-    --accent-bg-soft: rgba(50, 215, 255, 0.14);
-    --accent-indicator-top: rgba(50, 215, 255, 0.88);
-    --accent-indicator-bottom: rgba(50, 215, 255, 0.44);
-    --spinner-track: rgba(50, 215, 255, 0.3);
-    --success-indicator-top: rgba(71, 208, 140, 0.9);
-    --success-indicator-bottom: rgba(71, 208, 140, 0.48);
-    --danger-indicator-top: rgba(255, 122, 122, 0.9);
-    --danger-indicator-bottom: rgba(255, 122, 122, 0.48);
-    --hero-badge-bg: rgba(50, 215, 255, 0.14);
-    --hero-emphasis: #81e8ff;
-    --step-number-bg: #17263a;
-    --step-number-text: #b7c9e2;
+    --badge-success-text: #b1f5d3;
+    --badge-success-bg: rgba(103, 210, 155, 0.16);
+    --badge-success-border: rgba(103, 210, 155, 0.35);
+    --badge-danger-text: #ffc8c8;
+    --badge-danger-bg: rgba(255, 133, 133, 0.13);
+    --badge-danger-border: rgba(255, 133, 133, 0.34);
+    --mono-success: #9be8c1;
+    --mono-accent: #b8fce4;
+    --ring-hole: #101114;
+    --ring-track: #2b3038;
+    --table-ally-bg: rgba(103, 210, 155, 0.09);
+    --table-enemy-bg: rgba(255, 133, 133, 0.08);
+    --ai-accent-bg: rgba(124, 245, 199, 0.14);
+    --ai-accent-text: #bdfbe3;
+    --ai-panel-glow: rgba(124, 245, 199, 0.18);
+    --ai-panel-tint: rgba(124, 245, 199, 0.1);
+    --ai-stream-core: #7cf5c7;
+    --ai-stream-core-soft: rgba(124, 245, 199, 0.28);
+    --ai-stream-line: rgba(124, 245, 199, 0.24);
+    --ai-scroll-thumb: rgba(124, 245, 199, 0.45);
+    --ai-scroll-track: rgba(124, 245, 199, 0.14);
+    --error-text: #ffc1c1;
+    --bar-player-start: #53c793;
+    --bar-team-start: #9cebc8;
+    --bar-team-end: #57b888;
+    --bar-lobby-start: #ffaaaa;
+    --bar-lobby-end: #f57777;
+    --theme-toggle-bg: #17191d;
+    --theme-toggle-border: #2d3139;
+    --theme-toggle-knob: #7cf5c7;
+    --theme-toggle-track: rgba(170, 176, 186, 0.3);
+    --theme-toggle-text: #d4d8df;
+    --theme-toggle-shadow: rgba(0, 0, 0, 0.4);
+    --accent-border-subtle: rgba(124, 245, 199, 0.24);
+    --accent-border-soft: rgba(124, 245, 199, 0.28);
+    --accent-border: rgba(124, 245, 199, 0.32);
+    --accent-border-strong: rgba(124, 245, 199, 0.4);
+    --accent-bg-soft: rgba(124, 245, 199, 0.12);
+    --accent-indicator-top: rgba(124, 245, 199, 0.86);
+    --accent-indicator-bottom: rgba(124, 245, 199, 0.42);
+    --spinner-track: rgba(124, 245, 199, 0.28);
+    --success-indicator-top: rgba(103, 210, 155, 0.9);
+    --success-indicator-bottom: rgba(103, 210, 155, 0.46);
+    --danger-indicator-top: rgba(255, 133, 133, 0.9);
+    --danger-indicator-bottom: rgba(255, 133, 133, 0.46);
+    --hero-badge-bg: rgba(124, 245, 199, 0.12);
+    --hero-emphasis: #b6fbe2;
+    --step-number-bg: #17191d;
+    --step-number-text: #c7ccd5;
 }
 
 * {
@@ -1685,10 +1685,15 @@ html[data-theme="light"] .llm-analysis--rich code {
     font-size: 0.73rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    animation: aiStatusCycle 6s steps(3, end) infinite;
 }
 
-.ai-stream-status span {
+.ai-stream-status-track {
+    display: grid;
+    will-change: transform;
+    animation: aiStatusGlide 7.2s cubic-bezier(0.28, 0.05, 0.34, 0.98) infinite;
+}
+
+.ai-stream-status-line {
     display: block;
     line-height: 18px;
 }
@@ -2038,12 +2043,12 @@ html[data-theme="light"] .llm-analysis--rich code {
 }
 
 :root[data-theme='dark'] {
-    --surface-outline: rgba(232, 240, 255, 0.14);
-    --surface-overlay: rgba(14, 24, 38, 0.78);
-    --surface-soft-overlay: rgba(13, 24, 38, 0.68);
-    --surface-shadow-strong: rgba(3, 8, 15, 0.62);
-    --nav-pill-hover: rgba(50, 215, 255, 0.2);
-    --hero-rim: rgba(50, 215, 255, 0.28);
+    --surface-outline: rgba(243, 244, 246, 0.12);
+    --surface-overlay: rgba(11, 12, 14, 0.8);
+    --surface-soft-overlay: rgba(14, 15, 18, 0.72);
+    --surface-shadow-strong: rgba(0, 0, 0, 0.65);
+    --nav-pill-hover: rgba(124, 245, 199, 0.16);
+    --hero-rim: rgba(124, 245, 199, 0.24);
 }
 
 body {
@@ -2239,6 +2244,49 @@ h4,
 .dashboard-header h1 {
     font-size: clamp(1.8rem, 3vw, 2.4rem);
     line-height: 1.06;
+}
+
+.hud-artboard {
+    position: relative;
+    border: 1px solid var(--accent-border-subtle);
+    border-radius: calc(var(--radius) + 2px);
+    background:
+        radial-gradient(130% 110% at 0% 0%, var(--accent-bg-soft) 0%, transparent 66%),
+        linear-gradient(160deg, var(--surface-soft-overlay) 0%, var(--bg-panel) 100%);
+    min-height: 84px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.hud-art-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, var(--accent-border-subtle) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--accent-border-subtle) 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: 0.22;
+}
+
+.hud-art-orb {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    right: -28px;
+    top: -26px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 35% 35%, var(--accent) 0%, var(--ai-stream-core) 44%, transparent 70%);
+    filter: blur(0.4px);
+    opacity: 0.78;
+}
+
+.hud-art-scan {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(102deg, transparent 24%, var(--ai-stream-line) 50%, transparent 76%);
+    background-size: 200% 100%;
+    animation: hudSweep 2.8s ease-in-out infinite;
 }
 
 .quick-guide-step {
@@ -2501,11 +2549,11 @@ h4,
     50% { transform: scaleY(1); opacity: 1; }
 }
 
-@keyframes aiStatusCycle {
-    0% { transform: translateY(0); }
-    33% { transform: translateY(-18px); }
-    66% { transform: translateY(-36px); }
-    100% { transform: translateY(0); }
+@keyframes aiStatusGlide {
+    0%, 18% { transform: translateY(0); }
+    30%, 48% { transform: translateY(-18px); }
+    60%, 78% { transform: translateY(-36px); }
+    90%, 100% { transform: translateY(-54px); }
 }
 
 @keyframes aiShimmer {
@@ -2516,6 +2564,12 @@ h4,
 @keyframes aiSweep {
     from { background-position: 160% 0; }
     to { background-position: -60% 0; }
+}
+
+@keyframes hudSweep {
+    0%, 12% { background-position: 180% 0; }
+    58% { background-position: -40% 0; }
+    100% { background-position: -40% 0; }
 }
 
 @keyframes aiCursorBlink {

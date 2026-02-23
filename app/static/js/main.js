@@ -496,9 +496,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function buildStatusMarkup() {
-        return STREAM_STATUS_MESSAGES.map(function (message) {
-            return '<span>' + escapeHtml(message) + '</span>';
-        }).join('');
+        var messages = STREAM_STATUS_MESSAGES.slice();
+        if (!messages.length) {
+            messages = ['Analyzing'];
+        }
+        if (messages.length > 1) {
+            messages.push(messages[0]);
+        }
+        return '<div class="ai-stream-status-track">' + messages.map(function (message) {
+            return '<span class="ai-stream-status-line">' + escapeHtml(message) + '</span>';
+        }).join('') + '</div>';
     }
 
     function prepareStreamUi(container) {
