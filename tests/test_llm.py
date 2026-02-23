@@ -443,7 +443,9 @@ class TestGetLlmAnalysisDetailed:
         assert result == "Detailed analysis"
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
         assert "Target length: about 280 tokens" in user_prompt
-        assert "Output plain text only" in user_prompt
+        assert "Output in concise Markdown" in user_prompt
+        assert "## Match Snapshot" in user_prompt
+        assert "## Action Plan (Next 3 Games)" in user_prompt
 
     @patch("app.analysis.llm.requests.post")
     def test_response_text_is_normalized_from_markdownish_content(self, mock_post, app):
@@ -459,7 +461,7 @@ class TestGetLlmAnalysisDetailed:
             result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
 
         assert error is None
-        assert result == "Overall\nGood lane control\nPractice wave timing"
+        assert result == "# Overall\n- **Good** lane control\n1. `Practice` wave timing"
 
     @patch("app.analysis.llm.requests.post")
     def test_chinese_language_prompt_scaffold(self, mock_post, app):
@@ -478,7 +480,9 @@ class TestGetLlmAnalysisDetailed:
         assert result == "中文分析"
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
         assert "对局数据" in user_prompt
-        assert "仅输出纯文本" in user_prompt
+        assert "Markdown" in user_prompt
+        assert "## 对局快照" in user_prompt
+        assert "## 三局行动计划" in user_prompt
 
 
 class TestIterLlmAnalysisStream:
@@ -531,4 +535,4 @@ class TestIterLlmAnalysisStream:
             events = list(iter_llm_analysis_stream(SAMPLE_ANALYSIS))
 
         assert [e["type"] for e in events] == ["chunk", "chunk", "done"]
-        assert events[-1]["analysis"] == "Header\nTip text"
+        assert events[-1]["analysis"] == "# Header\n- **Tip** text"

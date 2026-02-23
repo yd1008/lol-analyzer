@@ -319,9 +319,19 @@
                         <p class="card-muted">{{ lt('Run AI analysis to generate matchup-specific coaching.', '运行 AI 分析以生成针对该对局的建议。') }}</p>
                     </div>
                 </div>
-                <div class="coach-mode-controls detail-coach-mode-controls">
-                    <label for="coach-mode-select">{{ lt('Coach style', '教练风格') }}</label>
-                    <select id="coach-mode-select" class="input">
+                <div class="ai-coach-options">
+                    <label class="ai-focus-label" for="ai-focus-select">{{ lt('Coach Focus:', '教练重点：') }}</label>
+                    <select id="ai-focus-select" class="ai-focus-select">
+                        <option value="general">{{ lt('General Analysis', '综合分析') }}</option>
+                        <option value="laning">{{ lt('Laning Phase', '对线期') }}</option>
+                        <option value="teamfight">{{ lt('Teamfighting', '团战') }}</option>
+                        <option value="macro">{{ lt('Macro & Objectives', '宏观与资源') }}</option>
+                        <option value="vision">{{ lt('Vision & Map Control', '视野与地图控制') }}</option>
+                        <option value="mechanics">{{ lt('Champion Mechanics', '英雄操作') }}</option>
+                    </select>
+
+                    <label class="ai-focus-label" for="coach-mode-select">{{ lt('Coach style', '教练风格') }}</label>
+                    <select id="coach-mode-select" class="ai-focus-select">
                         <option value="balanced">{{ lt('Balanced', '均衡') }}</option>
                         <option value="aggressive">{{ lt('Aggressive', '激进') }}</option>
                         <option value="supportive">{{ lt('Supportive', '鼓励') }}</option>

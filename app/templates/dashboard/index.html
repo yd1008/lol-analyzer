@@ -105,6 +105,21 @@
         </div>
     </div>
 
+    <div class="card trend-snapshot-card">
+        <div class="section-head">
+            <div>
+                <div class="section-label">{{ lt('Progress Tracking', '进展追踪') }}</div>
+                <h3>{{ lt('Performance Trend Snapshot', '表现趋势快照') }}</h3>
+            </div>
+        </div>
+        <p class="trend-headline">{{ trend_snapshot.headline }}</p>
+        <ul class="trend-signal-list">
+            {% for signal in trend_snapshot.signals %}
+            <li>{{ signal }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
     <div class="card matches-card">
         <div class="section-head">
             <div>

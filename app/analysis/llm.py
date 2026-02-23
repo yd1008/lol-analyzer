@@ -149,20 +149,24 @@ def _strip_html(text: str) -> str:
 
 
 def _soft_text_clean(value: str) -> str:
-    """Convert markdown-ish formatting to plain text for UI-safe rendering."""
+    """Sanitize LLM output while preserving lightweight Markdown structure.
+
+    We keep headings/bullets/backticks because the web UI renders a safe subset
+    of Markdown (it escapes HTML and only re-introduces a small set of tags).
+    """
+
     text = (value or '').replace('\r\n', '\n').replace('\r', '\n').strip()
     if not text:
         return ''
 
-    text = re.sub(r'^\s{0,3}#{1,6}\s*', '', text, flags=re.MULTILINE)
-    text = re.sub(r'^\s*>\s?', '', text, flags=re.MULTILINE)
-    text = re.sub(r'^\s*[-*+]\s+', '', text, flags=re.MULTILINE)
-    text = re.sub(r'^\s*\d+[.)]\s+', '', text, flags=re.MULTILINE)
+    # Strip HTML tags (defense-in-depth; UI also escapes).
+    text = re.sub(r'<[^>]+>', '', text)
 
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-    text = re.sub(r'__(.*?)__', r'\1', text)
-    text = re.sub(r'`([^`]+)`', r'\1', text)
-    text = re.sub(r'[*_]{1,3}([^*_]+)[*_]{1,3}', r'\1', text)
+    # Remove fenced code blocks markers while keeping inner content.
+    text = re.sub(r'^```[a-zA-Z0-9_-]*\s*\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^```\s*$', '', text, flags=re.MULTILINE)
+
+    # Collapse excessive blank lines.
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 
@@ -908,12 +912,33 @@ def _coach_mode_instruction(mode: str, language: str = 'en') -> str:
     )
 
 
-def _build_prompt(analysis: dict, language: str = 'en') -> tuple[str, str]:
+def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') -> tuple[str, str]:
     """Build the system and user prompts for LLM analysis."""
     is_zh = normalize_locale(language) == 'zh-CN'
     result_str = result_label(analysis['win'], locale=language)
+
     coach_mode = (analysis.get('coach_mode') or 'balanced').strip().lower()
     coach_mode_instruction = _coach_mode_instruction(coach_mode, language=language)
+
+    focus_key = (focus or 'general').strip().lower()
+    focus_labels = {
+        'general': ('General analysis', '综合分析'),
+        'laning': ('Laning phase', '对线期'),
+        'teamfight': ('Teamfighting', '团战'),
+        'macro': ('Macro & objectives', '宏观与资源'),
+        'vision': ('Vision & map control', '视野与地图控制'),
+        'mechanics': ('Champion mechanics', '英雄操作'),
+    }
+    if focus_key not in focus_labels:
+        focus_key = 'general'
+    focus_en, focus_zh = focus_labels[focus_key]
+    focus_line = ''
+    if focus_key != 'general':
+        focus_line = (
+            f"教练重点：{focus_zh}。请优先围绕该维度展开分析与建议，但仍需覆盖所有要求。\n\n"
+            if is_zh else
+            f"Coach focus: {focus_en}. Prioritize this dimension in the analysis and recommendations while still covering all required sections.\n\n"
+        )
     system = (
         '你是一名简洁、专业的英雄联盟教练。请基于提供的对局数据和知识上下文，给出具体、可验证的建议。'
         '若某项知识字段缺失，请简要说明，不要猜测。'
@@ -1017,6 +1042,7 @@ def _build_prompt(analysis: dict, language: str = 'en') -> tuple[str, str]:
     if is_zh:
         user = (
             "请分析这场《英雄联盟》对局，并给出聚焦、可执行的复盘建议。\n\n"
+            f"{focus_line}"
             "对局数据：\n"
             f"- 英雄：{champ_label}\n"
             f"{position_line}"
@@ -1033,7 +1059,13 @@ def _build_prompt(analysis: dict, language: str = 'en') -> tuple[str, str]:
             f"{team_section}\n"
             "知识上下文：\n"
             f"{knowledge_section}\n\n"
-            "请用 3-5 段简短文字覆盖以下内容：\n"
+            "请按“结构化教练简报”输出，并严格包含以下二级标题（按顺序）：\n"
+            "## 对局快照\n"
+            "## 对局成因\n"
+            "## 三局行动计划\n"
+            "## 下一局任务\n\n"
+            "每个标题下写 2-4 条项目符号（-），并尽量给出可执行、可量化的阈值（例如时间点、次数、数值目标）。\n"
+            "请确保要点覆盖：\n"
             "1. 本场整体表现，相对于该分路/英雄预期的偏差\n"
             f"{matchup_instruction}"
             f"{'3' if lane_opp else '2'}. 出装、段位环境、阵容如何共同影响了这场对局\n"
@@ -1041,12 +1073,13 @@ def _build_prompt(analysis: dict, language: str = 'en') -> tuple[str, str]:
             f"{'5' if lane_opp else '4'}. 下一局可直接执行的具体改进点\n"
             f"{'6' if lane_opp else '5'}. 下一局唯一的练习重点\n\n"
             "内容要直接、具体，严格围绕本场数据，避免空泛套话。\n"
-            "仅输出纯文本，不要使用 Markdown、代码块或列表标记。\n"
+            "请使用简洁的 Markdown 结构：用二级标题（##）分段，行动建议用项目符号（-）。不要使用代码块（```）。\n"
             f"{length_instruction}"
         )
     else:
         user = (
             "Analyze this League of Legends match and provide focused coaching advice.\n\n"
+            f"{focus_line}"
             "Match Data:\n"
             f"- Champion: {analysis['champion']}\n"
             f"{position_line}"
@@ -1063,7 +1096,13 @@ def _build_prompt(analysis: dict, language: str = 'en') -> tuple[str, str]:
             f"{team_section}\n"
             "Knowledge Context:\n"
             f"{knowledge_section}\n\n"
-            "Provide a concise analysis (3-5 short paragraphs) covering:\n"
+            "Output a structured coaching brief and include these exact level-2 headings in order:\n"
+            "## Match Snapshot\n"
+            "## Why This Game Happened\n"
+            "## Action Plan (Next 3 Games)\n"
+            "## Next-Game Mission\n\n"
+            "Under each heading, provide 2-4 bullet points (-) with concrete, measurable targets whenever possible (timings, counts, numeric goals).\n"
+            "Ensure the brief covers:\n"
             "1. Overall performance in this match relative to role/champion expectations\n"
             f"{matchup_instruction}"
             f"{'3' if lane_opp else '2'}. How itemization, rank context, and team compositions shaped this game\n"
@@ -1071,7 +1110,7 @@ def _build_prompt(analysis: dict, language: str = 'en') -> tuple[str, str]:
             f"{'5' if lane_opp else '4'}. Specific, actionable improvements for next games\n"
             f"{'6' if lane_opp else '5'}. One concrete practice focus for the next game\n\n"
             "Keep it direct and specific to this data. Avoid generic filler.\n"
-            "Output plain text only. Do not use Markdown syntax, code fences, or list markers.\n"
+            "Output in concise Markdown: use level-2 headings (##) for sections and bullet lists (-) for action items. Do not use code fences (```).\n"
             f"{length_instruction}"
         )
     return system, user
@@ -1183,7 +1222,7 @@ def _extract_stream_delta(choice: dict) -> str:
     return _coerce_stream_text(choice.get('text')) if isinstance(choice, dict) else ''
 
 
-def iter_llm_analysis_stream(analysis: dict, language: str = 'en'):
+def iter_llm_analysis_stream(analysis: dict, language: str = 'en', focus: str = 'general'):
     """Yield stream events: chunk/done/error for OpenAI-compatible chat-completions stream."""
     settings, settings_error = _llm_request_settings()
     if settings_error:
@@ -1197,7 +1236,7 @@ def iter_llm_analysis_stream(analysis: dict, language: str = 'en'):
     retry_backoff = settings['retry_backoff']
     headers = settings['headers']
 
-    system_prompt, user_prompt = _build_prompt(analysis, language=language)
+    system_prompt, user_prompt = _build_prompt(analysis, language=language, focus=focus)
     base_body = _build_base_request_body(system_prompt, user_prompt, model, settings['max_tokens'])
     body_variants = _request_body_variants(api_url, base_body)
 
@@ -1306,15 +1345,15 @@ def iter_llm_analysis_stream(analysis: dict, language: str = 'en'):
     yield {'type': 'error', 'error': last_error or 'Unknown LLM stream request failure.'}
 
 
-def get_llm_analysis(analysis: dict, language: str = 'en') -> str | None:
+def get_llm_analysis(analysis: dict, language: str = 'en', focus: str = 'general') -> str | None:
     """Generate deep AI analysis for a match using the LLM API."""
-    result, error = get_llm_analysis_detailed(analysis, language=language)
+    result, error = get_llm_analysis_detailed(analysis, language=language, focus=focus)
     if error:
         logger.error('LLM analysis failed: %s', error)
     return result
 
 
-def get_llm_analysis_detailed(analysis: dict, language: str = 'en') -> tuple[str | None, str | None]:
+def get_llm_analysis_detailed(analysis: dict, language: str = 'en', focus: str = 'general') -> tuple[str | None, str | None]:
     """Generate LLM analysis and return (result, error_message)."""
     settings, settings_error = _llm_request_settings()
     if settings_error:
@@ -1327,7 +1366,7 @@ def get_llm_analysis_detailed(analysis: dict, language: str = 'en') -> tuple[str
     retry_backoff = settings['retry_backoff']
     headers = settings['headers']
 
-    system_prompt, user_prompt = _build_prompt(analysis, language=language)
+    system_prompt, user_prompt = _build_prompt(analysis, language=language, focus=focus)
     base_body = _build_base_request_body(system_prompt, user_prompt, model, settings['max_tokens'])
 
     last_error = ''
