@@ -152,10 +152,12 @@ class TestDashboardAccess:
         resp = auth_client.get("/dashboard/")
         assert resp.status_code == 200
         assert b'id="match-filter-bar"' in resp.data
-        assert b'role="toolbar"' in resp.data
+        assert b'role="tablist"' in resp.data
         assert b'aria-label="Filter matches by queue"' in resp.data
-        assert b'data-queue="" aria-pressed="true"' in resp.data
-        assert b'data-queue="Ranked Solo" aria-pressed="false"' in resp.data
+        assert b'id="queue-filter-all"' in resp.data
+        assert b'role="tab"' in resp.data
+        assert b'data-queue="" role="tab" aria-selected="true" aria-controls="match-list" tabindex="0"' in resp.data
+        assert b'data-queue="Ranked Solo" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1"' in resp.data
 
 
 class TestSyncRecentMatches:

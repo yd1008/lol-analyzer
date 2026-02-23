@@ -941,16 +941,50 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (filterBar) {
+            function setActiveQueueFilter(btn, focus) {
+                if (!btn) return;
+                filterBar.querySelectorAll('.filter-btn').forEach(function (b) {
+                    var isActive = b === btn;
+                    b.classList.toggle('active', isActive);
+                    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    b.tabIndex = isActive ? 0 : -1;
+                });
+                if (focus) {
+                    btn.focus();
+                }
+            }
+
             filterBar.addEventListener('click', function (e) {
                 var btn = e.target.closest('.filter-btn');
                 if (!btn) return;
-                filterBar.querySelectorAll('.filter-btn').forEach(function (b) {
-                    b.classList.remove('active');
-                    b.setAttribute('aria-pressed', 'false');
-                });
-                btn.classList.add('active');
-                btn.setAttribute('aria-pressed', 'true');
+                setActiveQueueFilter(btn, false);
                 filterByQueue(btn.getAttribute('data-queue'));
+            });
+
+            filterBar.addEventListener('keydown', function (e) {
+                var current = e.target.closest('.filter-btn');
+                if (!current) return;
+                var buttons = Array.prototype.slice.call(filterBar.querySelectorAll('.filter-btn'));
+                var currentIndex = buttons.indexOf(current);
+                if (currentIndex < 0) return;
+
+                var nextIndex = currentIndex;
+                if (e.key === 'ArrowRight') {
+                    nextIndex = (currentIndex + 1) % buttons.length;
+                } else if (e.key === 'ArrowLeft') {
+                    nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                } else if (e.key === 'Home') {
+                    nextIndex = 0;
+                } else if (e.key === 'End') {
+                    nextIndex = buttons.length - 1;
+                } else {
+                    return;
+                }
+
+                e.preventDefault();
+                var next = buttons[nextIndex];
+                setActiveQueueFilter(next, true);
+                filterByQueue(next.getAttribute('data-queue'));
             });
         }
 
