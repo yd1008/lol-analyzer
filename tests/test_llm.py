@@ -443,9 +443,9 @@ class TestGetLlmAnalysisDetailed:
         assert result == "Detailed analysis"
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
         assert "Target length: about 280 tokens" in user_prompt
-        assert "Output in concise Markdown" in user_prompt
-        assert "## Match Snapshot" in user_prompt
-        assert "## Action Plan (Next 3 Games)" in user_prompt
+        assert "Use concise Markdown" in user_prompt
+        assert "## Summary" in user_prompt
+        assert "## 2 Drills" in user_prompt
 
     @patch("app.analysis.llm.requests.post")
     def test_prompt_enforces_structured_coaching_brief_schema(self, mock_post, app):
@@ -469,6 +469,18 @@ class TestGetLlmAnalysisDetailed:
         assert "## Next-Game Mission" in user_prompt
         assert "## 2 Drills" in user_prompt
         assert "In [situation Y], do [action X], and measure success with [observable criterion]." in user_prompt
+        assert "## Match Snapshot" not in user_prompt
+        assert "## Why This Game Happened" not in user_prompt
+        assert "## Action Plan (Next 3 Games)" not in user_prompt
+        ordered_sections = [
+            "## Summary",
+            "## Top 3 Issues",
+            "## Evidence",
+            "## Next-Game Mission",
+            "## 2 Drills",
+        ]
+        indices = [user_prompt.index(section) for section in ordered_sections]
+        assert indices == sorted(indices)
 
     @patch("app.analysis.llm.requests.post")
     def test_response_text_is_normalized_from_markdownish_content(self, mock_post, app):
@@ -506,8 +518,12 @@ class TestGetLlmAnalysisDetailed:
         assert "Markdown" in user_prompt
         assert "## 总结" in user_prompt
         assert "## 3个首要问题" in user_prompt
-        assert "## 对局快照" in user_prompt
-        assert "## 三局行动计划" in user_prompt
+        assert "## 证据" in user_prompt
+        assert "## 下一局任务" in user_prompt
+        assert "## 2个训练" in user_prompt
+        assert "## 对局快照" not in user_prompt
+        assert "## 对局成因" not in user_prompt
+        assert "## 三局行动计划" not in user_prompt
 
 
 class TestIterLlmAnalysisStream:
