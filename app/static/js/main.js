@@ -334,21 +334,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function normalizeAiText(text) {
         var normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        normalized = normalized.replace(/^\s{0,3}#{1,6}\s*/gm, '');
-        normalized = normalized.replace(/^\s*>\s?/gm, '');
-        normalized = normalized.replace(/^\s*[-*+]\s+/gm, '');
-        normalized = normalized.replace(/^\s*\d+[.)]\s+/gm, '');
-        normalized = normalized.replace(/\*\*(.*?)\*\*/g, '$1');
-        normalized = normalized.replace(/__(.*?)__/g, '$1');
-        normalized = normalized.replace(/`([^`]+)`/g, '$1');
-        normalized = normalized.replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1');
         normalized = normalized.replace(/\n{3,}/g, '\n\n');
         return normalized.trim();
     }
 
     function clearAiContainerState(container) {
         container.classList.remove('card-muted');
-        container.classList.remove('ai-stream-host', 'is-loading', 'is-streaming', 'ai-stream-fallback', 'llm-analysis');
+        container.classList.remove('ai-stream-host', 'is-loading', 'is-streaming', 'ai-stream-fallback', 'llm-analysis', 'llm-analysis--rich');
         container.setAttribute('aria-busy', 'false');
         container.setAttribute('aria-live', 'polite');
     }
@@ -365,10 +357,80 @@ document.addEventListener('DOMContentLoaded', function () {
         container.innerHTML = '<p class="card-muted">' + escapeHtml(text || txt('aiFailed', 'AI analysis failed.')) + '</p>';
     }
 
+    function aiInlineHtml(raw) {
+        var safe = escapeHtml(String(raw || ''));
+        // Inline code
+        safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Bold + italic (minimal)
+        safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        safe = safe.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+        safe = safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        safe = safe.replace(/_([^_]+)_/g, '<em>$1</em>');
+        return safe;
+    }
+
+    function renderAiMarkdownLite(text) {
+        var lines = normalizeAiText(text).split('\n');
+        var html = '';
+        var inUl = false;
+        var inOl = false;
+
+        function closeLists() {
+            if (inUl) { html += '</ul>'; inUl = false; }
+            if (inOl) { html += '</ol>'; inOl = false; }
+        }
+
+        function openUl() {
+            if (!inUl) { closeLists(); html += '<ul class="ai-list">'; inUl = true; }
+        }
+
+        function openOl() {
+            if (!inOl) { closeLists(); html += '<ol class="ai-list ai-list-ol">'; inOl = true; }
+        }
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            var trimmed = line.trim();
+
+            if (!trimmed) {
+                closeLists();
+                continue;
+            }
+
+            var heading = trimmed.match(/^(#{1,6})\s+(.*)$/);
+            if (heading) {
+                closeLists();
+                var level = Math.min(4, Math.max(2, heading[1].length));
+                html += '<h' + level + ' class="ai-h">' + aiInlineHtml(heading[2]) + '</h' + level + '>';
+                continue;
+            }
+
+            var bullet = trimmed.match(/^[-*+]\s+(.*)$/);
+            if (bullet) {
+                openUl();
+                html += '<li>' + aiInlineHtml(bullet[1]) + '</li>';
+                continue;
+            }
+
+            var numbered = trimmed.match(/^\d+[.)]\s+(.*)$/);
+            if (numbered) {
+                openOl();
+                html += '<li>' + aiInlineHtml(numbered[1]) + '</li>';
+                continue;
+            }
+
+            closeLists();
+            html += '<p class="ai-p">' + aiInlineHtml(trimmed) + '</p>';
+        }
+
+        closeLists();
+        return html || '<p class="card-muted">' + escapeHtml(txt('runAi', 'Run AI Analysis')) + '</p>';
+    }
+
     function renderAiText(container, text) {
         clearAiContainerState(container);
-        container.classList.add('llm-analysis');
-        container.textContent = normalizeAiText(text);
+        container.classList.add('llm-analysis', 'llm-analysis--rich');
+        container.innerHTML = renderAiMarkdownLite(text);
     }
 
     function buildStatusMarkup() {
@@ -425,6 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function runAiAnalysisSync(options) {
         var matchId = options.matchId;
         var force = options.force;
+        var focus = options.focus || 'general';
         var container = options.container;
         var button = options.button;
         var fallbackNotice = options.fallbackNotice || '';
@@ -441,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: getCurrentLocale()}),
+                body: JSON.stringify({force: force, language: getCurrentLocale(), focus: focus}),
             });
             var data = await resp.json();
             if (data.error && !data.analysis) {
@@ -473,6 +536,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function runAiAnalysisWithStreaming(options) {
         var matchId = options.matchId;
         var force = options.force;
+        var focus = options.focus || 'general';
         var container = options.container;
         var button = options.button;
         var streamFallbackNotice = txt('streamFallback', 'Live stream interrupted. Falling back to standard analysis...');
@@ -489,6 +553,7 @@ document.addEventListener('DOMContentLoaded', function () {
             await runAiAnalysisSync({
                 matchId: matchId,
                 force: force,
+                focus: focus,
                 container: container,
                 button: button,
                 fallbackNotice: txt('streamUnavailable', 'Live stream is unavailable in this browser. Running standard analysis...'),
@@ -503,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: getCurrentLocale()}),
+                body: JSON.stringify({force: force, language: getCurrentLocale(), focus: focus}),
             });
 
             if (!response.ok) {
@@ -586,6 +651,7 @@ document.addEventListener('DOMContentLoaded', function () {
             await runAiAnalysisSync({
                 matchId: matchId,
                 force: force,
+                focus: focus,
                 container: container,
                 button: button,
                 fallbackNotice: streamFallbackNotice,
@@ -738,6 +804,11 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function getAiFocusValue() {
+        var select = document.getElementById('ai-focus-select');
+        return select ? select.value : 'general';
+    }
+
     function handleAiAnalysis(btn) {
         var matchId = btn.getAttribute('data-match-id');
         var aiPanel = btn.closest('.match-tab-panel');
@@ -749,6 +820,7 @@ document.addEventListener('DOMContentLoaded', function () {
             force: btn.classList.contains('has-analysis'),
             container: content,
             button: btn,
+            focus: getAiFocusValue(),
         });
     }
 
@@ -906,6 +978,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     force: detailAiBtn.classList.contains('has-analysis'),
                     container: detailAiContent,
                     button: detailAiBtn,
+                    focus: getAiFocusValue(),
                 });
             });
         }
