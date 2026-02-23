@@ -426,6 +426,8 @@ class TestGetLlmAnalysisDetailed:
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
         assert "Target length: about 280 tokens" in user_prompt
         assert "Output in concise Markdown" in user_prompt
+        assert "## Match Snapshot" in user_prompt
+        assert "## Action Plan (Next 3 Games)" in user_prompt
 
     @patch("app.analysis.llm.requests.post")
     def test_response_text_is_normalized_from_markdownish_content(self, mock_post, app):
@@ -461,6 +463,8 @@ class TestGetLlmAnalysisDetailed:
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
         assert "对局数据" in user_prompt
         assert "Markdown" in user_prompt
+        assert "## 对局快照" in user_prompt
+        assert "## 三局行动计划" in user_prompt
 
 
 class TestIterLlmAnalysisStream:
