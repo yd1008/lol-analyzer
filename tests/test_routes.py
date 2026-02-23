@@ -838,6 +838,46 @@ class TestAiAnalysisRoute:
         assert "trace id" in payload["error"].lower()
         assert "not compatible with /chat/completions" not in payload["error"].lower()
 
+    def test_ai_analysis_authentication_error_returns_401_without_cached_analysis(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_auth_401",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Authentication failed (401). Check your API key."),
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={"force": True})
+
+        assert resp.status_code == 401
+        payload = resp.get_json()
+        assert payload["trace_id"]
+        assert "trace id" in payload["error"].lower()
+        assert "authentication failed" not in payload["error"].lower()
+
     def test_ai_analysis_configuration_error_is_visible_to_admin(self, client, db, app):
         app.config["ADMIN_EMAIL"] = "admin@test.com"
         admin = User(email="admin@test.com")
@@ -1144,6 +1184,48 @@ class TestAiAnalysisRoute:
         assert events[-1]["trace_id"]
         assert "trace id" in events[-1]["error"].lower()
         assert "not compatible with /chat/completions" not in events[-1]["error"].lower()
+
+    def test_ai_analysis_stream_emits_401_error_when_stream_auth_fails_without_cache(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_error_401",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.iter_llm_analysis_stream",
+            return_value=[{"type": "error", "error": "Authentication failed (401). Check your API key."}],
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
+            events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
+
+        assert resp.status_code == 200
+        assert events[-1]["type"] == "error"
+        assert events[-1]["status"] == 401
+        assert events[-1]["trace_id"]
+        assert "trace id" in events[-1]["error"].lower()
+        assert "authentication failed" not in events[-1]["error"].lower()
 
     def test_ai_analysis_reads_language_specific_cache(self, auth_client, db, user):
         match = MatchAnalysis(

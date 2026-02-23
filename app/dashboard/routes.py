@@ -617,6 +617,13 @@ def _ai_error_status(error: str) -> int:
     if 'timed out' in error_l:
         return 504
     if (
+        'authentication failed' in error_l
+        or 'invalid api key' in error_l
+        or 'status 401' in error_l
+        or '401 unauthorized' in error_l
+    ):
+        return 401
+    if (
         'not compatible with /chat/completions' in error_l
         or 'not available on opencode zen' in error_l
         or 'llm_' in error_l
