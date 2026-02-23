@@ -53,6 +53,17 @@ def db(app):
         _db.session.commit()
 
 
+@pytest.fixture(autouse=True)
+def session_isolation(app):
+    """Reduce cross-test SQLAlchemy identity/session leakage."""
+    with app.app_context():
+        _db.session.expunge_all()
+    yield
+    with app.app_context():
+        _db.session.rollback()
+        _db.session.expunge_all()
+
+
 @pytest.fixture()
 def client(app, db):
     """A Flask test client."""
