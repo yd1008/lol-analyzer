@@ -1649,6 +1649,33 @@ class TestAdminLlmInputSize:
         assert b"Ahri" in resp.data
         assert b"Lux" in resp.data
 
+    def test_test_llm_lookup_resolve_error_shows_message_and_skips_match_fetch(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
+
+        with patch("app.admin.routes.resolve_puuid", return_value=(None, "Invalid API key")), patch(
+            "app.admin.routes.get_recent_matches"
+        ) as mock_recent:
+            resp = client.post(
+                "/admin/test-llm",
+                data={
+                    "action": "lookup",
+                    "summoner_name": "Tester",
+                    "tagline": "NA1",
+                    "region": "na1",
+                },
+                follow_redirects=True,
+            )
+
+        assert resp.status_code == 200
+        assert b"Invalid API key" in resp.data
+        mock_recent.assert_not_called()
+
     def test_test_llm_select_renders_match_preview(self, client, db, app):
         app.config["ADMIN_EMAIL"] = "admin@test.com"
         admin = User(email="admin@test.com")
