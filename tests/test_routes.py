@@ -25,6 +25,14 @@ class TestLandingPage:
         resp = client.get("/privacy")
         assert resp.status_code == 200
 
+    def test_landing_has_mobile_stack_hooks_for_hero_actions(self, client):
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert b'class="cta-buttons hero-mobile-stack"' in resp.data
+        assert b'class="signal-row hero-mobile-stack"' in resp.data
+        assert b'class="features-grid feature-min-grid"' in resp.data
+        assert b'class="steps"' in resp.data
+
 
 class TestRegister:
     def test_register_page_loads(self, client):

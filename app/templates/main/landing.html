@@ -9,7 +9,7 @@
             <div class="hero-badge">{{ lt('Built For Deliberate Improvement', '为有意识提升而生') }}</div>
             <h1>{{ lt('Review every match with ', '用') }}<em>{{ lt('clarity', '清晰') }}</em>{{ lt(', not noise', '而非噪音复盘每场对局') }}</h1>
             <p>{{ lt('Track what happened, why it happened, and what to change next queue. LaneScope turns each game into a concise coaching workflow.', '追踪发生了什么、为什么会发生，以及下一局要改什么。LaneScope 将每场对局整理成简洁可执行的复盘流程。') }}</p>
-            <div class="cta-buttons">
+            <div class="cta-buttons hero-mobile-stack">
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">{{ lt('Open Dashboard', '打开仪表盘') }}</a>
                     <a href="{{ url_for('dashboard.settings') }}" class="btn btn-secondary">{{ lt('Update Settings', '更新设置') }}</a>
@@ -18,7 +18,7 @@
                     <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">{{ lt('Sign In', '登录') }}</a>
                 {% endif %}
             </div>
-            <div class="signal-row">
+            <div class="signal-row hero-mobile-stack">
                 <span class="signal-pill">{{ lt('Automatic Match Sync', '自动同步对局') }}</span>
                 <span class="signal-pill">{{ lt('Role + Matchup Context', '分路 + 对位上下文') }}</span>
                 <span class="signal-pill">{{ lt('One-Action Coaching', '单点可执行建议') }}</span>
