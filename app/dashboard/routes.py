@@ -653,7 +653,7 @@ def api_ai_analysis(match_db_id):
     coach_mode = _resolve_coach_mode(payload.get('coach_mode') if isinstance(payload, dict) else None)
     focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
     cache_read_enabled = focus == 'general'
-    persist_generated_analysis = True
+    persist_generated_analysis = focus == 'general'
     cached_analysis = _get_cached_analysis(match, language) if cache_read_enabled else None
 
     if cached_analysis and not force:
@@ -702,7 +702,7 @@ def api_ai_analysis_stream(match_db_id):
     coach_mode = _resolve_coach_mode(payload.get('coach_mode') if isinstance(payload, dict) else None)
     focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
     cache_read_enabled = focus == 'general'
-    persist_generated_analysis = True
+    persist_generated_analysis = focus == 'general'
     cached_analysis = _get_cached_analysis(match, language) if cache_read_enabled else None
 
     def event_stream():
@@ -1003,3 +1003,5 @@ def settings_locale():
     settings.preferred_locale = preferred_locale
     db.session.commit()
     return jsonify({'ok': True, 'locale': preferred_locale})
+
+
