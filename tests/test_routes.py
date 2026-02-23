@@ -1543,7 +1543,91 @@ class TestMatchesApi:
         assert payload["matches"][0]["initial_ai_analysis"] == "legacy cache only"
         assert payload["matches"][0]["has_llm_analysis_en"] is True
 
+    def test_api_matches_filters_by_single_and_multi_queue_values(self, auth_client, db, user):
+        matches = [
+            MatchAnalysis(
+                user_id=user.id,
+                match_id="NA1_queue_ranked_solo",
+                champion="Ahri",
+                win=True,
+                kills=5,
+                deaths=2,
+                assists=7,
+                kda=6.0,
+                gold_earned=12000,
+                gold_per_min=400.0,
+                total_damage=20000,
+                damage_per_min=700.0,
+                vision_score=25,
+                cs_total=180,
+                game_duration=30.0,
+                recommendations=[],
+                queue_type="Ranked Solo",
+                participants_json=[
+                    {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                ],
+            ),
+            MatchAnalysis(
+                user_id=user.id,
+                match_id="NA1_queue_ranked_flex",
+                champion="Lux",
+                win=False,
+                kills=3,
+                deaths=6,
+                assists=9,
+                kda=2.0,
+                gold_earned=11000,
+                gold_per_min=366.7,
+                total_damage=18000,
+                damage_per_min=600.0,
+                vision_score=28,
+                cs_total=170,
+                game_duration=30.0,
+                recommendations=[],
+                queue_type="Ranked Flex",
+                participants_json=[
+                    {"is_player": True, "team_id": 100, "position": "SUPPORT", "champion": "Lux"},
+                ],
+            ),
+            MatchAnalysis(
+                user_id=user.id,
+                match_id="NA1_queue_normal",
+                champion="Jinx",
+                win=True,
+                kills=8,
+                deaths=4,
+                assists=6,
+                kda=3.5,
+                gold_earned=13000,
+                gold_per_min=433.3,
+                total_damage=24000,
+                damage_per_min=800.0,
+                vision_score=18,
+                cs_total=210,
+                game_duration=30.0,
+                recommendations=[],
+                queue_type="Normal Draft",
+                participants_json=[
+                    {"is_player": True, "team_id": 100, "position": "BOTTOM", "champion": "Jinx"},
+                ],
+            ),
+        ]
+        db.session.add_all(matches)
+        db.session.commit()
 
+        resp_ranked = auth_client.get("/dashboard/api/matches?offset=0&limit=10&queue=Ranked Solo")
+        assert resp_ranked.status_code == 200
+        payload_ranked = resp_ranked.get_json()
+        assert payload_ranked["total"] == 1
+        assert len(payload_ranked["matches"]) == 1
+        assert payload_ranked["matches"][0]["match_id"] == "NA1_queue_ranked_solo"
+
+        resp_multi = auth_client.get("/dashboard/api/matches?offset=0&limit=10&queue=Ranked Solo,Normal Draft")
+        assert resp_multi.status_code == 200
+        payload_multi = resp_multi.get_json()
+        assert payload_multi["total"] == 2
+        assert {m["match_id"] for m in payload_multi["matches"]} == {"NA1_queue_ranked_solo", "NA1_queue_normal"}
+        assert payload_multi["has_more"] is False
 
 
     def test_ai_analysis_stream_focus_does_not_persist_general_cache(self, auth_client, db, user):
