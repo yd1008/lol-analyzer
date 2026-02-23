@@ -81,6 +81,44 @@ class TestItemAndRuneIcons:
         assert assets.item_icon_url(999999) == ''
         assert assets.item_icon_url(0) == ''
 
+    def test_item_set_cache_expiry_refetches_data(self, monkeypatch):
+        _reset_cache_state()
+
+        payloads = [
+            {'1001': {}, '2003': {}},
+            {'1001': {}, '2003': {}, '3157': {}},
+        ]
+        calls = {'n': 0}
+
+        class Resp:
+            status_code = 200
+
+            def __init__(self, data):
+                self._data = data
+
+            def json(self):
+                return {'data': self._data}
+
+        def fake_get(*args, **kwargs):
+            calls['n'] += 1
+            idx = 0 if calls['n'] == 1 else 1
+            return Resp(payloads[idx])
+
+        monkeypatch.setattr(assets.requests, 'get', fake_get)
+
+        initial = assets._get_item_set('26.3.1')
+        cached = assets._get_item_set('26.3.1')
+
+        assert initial == {1001, 2003}
+        assert cached == {1001, 2003}
+        assert calls['n'] == 1
+
+        assets._ITEM_CACHE['26.3.1']['expires_at'] = 0.0
+        refreshed = assets._get_item_set('26.3.1')
+
+        assert calls['n'] == 2
+        assert refreshed == {1001, 2003, 3157}
+
     def test_rune_icons_from_mapped_paths(self, monkeypatch):
         monkeypatch.setattr(assets, '_fetch_latest_version', lambda: '26.3.1')
         monkeypatch.setattr(
