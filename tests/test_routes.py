@@ -136,6 +136,13 @@ class TestDashboardAccess:
         resp = auth_client.get("/dashboard/")
         assert resp.status_code == 200
 
+    def test_dashboard_shows_ai_coach_focus_plan(self, auth_client):
+        resp = auth_client.get("/dashboard/")
+        assert resp.status_code == 200
+        assert b"AI Coach Focus Plan" in resp.data
+        assert b"Actionable next-game goal" in resp.data
+        assert b"Performance Trend Snapshot" in resp.data
+
     def test_settings_requires_login(self, client):
         resp = client.get("/dashboard/settings")
         assert resp.status_code in (302, 401)

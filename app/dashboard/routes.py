@@ -99,6 +99,133 @@ def sync_recent_matches(user_id, region, puuid):
     return saved
 
 
+def _build_ai_coach_plan(matches: list[MatchAnalysis]) -> dict:
+    """Build a deterministic AI coaching focus plan from recent matches."""
+    if not matches:
+        return {
+            'coach_score': 0,
+            'strengths': [],
+            'focus_areas': [],
+            'next_game_goal': lt('Play one match to unlock your first coaching plan.', '先完成一局对战即可生成你的首个教练计划。'),
+        }
+
+    total_games = len(matches)
+    wins = sum(1 for m in matches if m.win)
+    win_rate = (wins / total_games) * 100 if total_games else 0
+
+    avg_kda = sum((m.kda or 0) for m in matches) / total_games
+    avg_dpm = sum((m.damage_per_min or 0) for m in matches) / total_games
+    avg_gpm = sum((m.gold_per_min or 0) for m in matches) / total_games
+    avg_vision = sum((m.vision_score or 0) for m in matches) / total_games
+
+    score = 50
+    score += min(20, (win_rate - 50) * 0.8)
+    score += min(15, max(-10, (avg_kda - 3.0) * 5))
+    score += min(10, max(-10, (avg_dpm - 650) / 60))
+    score += min(8, max(-8, (avg_gpm - 380) / 25))
+    score += min(8, max(-8, (avg_vision - 22) / 3))
+    coach_score = int(max(1, min(100, round(score))))
+
+    strengths = []
+    if win_rate >= 55:
+        strengths.append(lt('Strong conversion: your recent win rate is above 55%.', '转化能力强：近期胜率高于 55%。'))
+    if avg_kda >= 3.5:
+        strengths.append(lt('Reliable skirmish execution with high average KDA.', '团战/小规模交锋执行稳定，平均 KDA 较高。'))
+    if avg_dpm >= 700:
+        strengths.append(lt('Healthy damage pressure in recent games.', '最近对局的输出压制力不错。'))
+    if avg_vision >= 25:
+        strengths.append(lt('Vision fundamentals are above baseline.', '视野基本功高于基准线。'))
+
+    focus_areas = []
+    if win_rate < 50:
+        focus_areas.append(lt('Prioritize cleaner mid-game decision making around objectives.', '优先提升中期围绕资源点的决策质量。'))
+    if avg_kda < 2.8:
+        focus_areas.append(lt('Reduce avoidable deaths: target safer wave resets and exits.', '减少可避免死亡：优化推线后的回撤与转线时机。'))
+    if avg_gpm < 360:
+        focus_areas.append(lt('Improve economy: maintain farm tempo between fights.', '提升经济效率：团战间隙维持补刀节奏。'))
+    if avg_vision < 18:
+        focus_areas.append(lt('Upgrade vision routine: one control ward every reset cycle.', '强化视野习惯：每次回城至少补一个控制守卫。'))
+
+    if not strengths:
+        strengths.append(lt('Your baseline is stable—good foundation to scale from.', '你的基础盘面较稳定，是持续进步的良好起点。'))
+    if not focus_areas:
+        focus_areas.append(lt('Keep execution sharp and push for higher objective conversion.', '保持执行力，并进一步提高资源点转化率。'))
+
+    next_game_goal = lt(
+        'Next game goal: maintain deaths ≤ 4 while keeping gold/min above 380.',
+        '下局目标：将死亡控制在 ≤4，同时保持每分钟经济 >380。',
+    )
+    if avg_kda >= 3.5 and avg_gpm >= 390:
+        next_game_goal = lt(
+            'Next game goal: convert your lead by securing first two neutral objectives.',
+            '下局目标：把优势转化为前两条中立资源控制。',
+        )
+
+    return {
+        'coach_score': coach_score,
+        'strengths': strengths[:3],
+        'focus_areas': focus_areas[:3],
+        'next_game_goal': next_game_goal,
+    }
+
+
+def _build_trend_snapshot(matches: list[MatchAnalysis]) -> dict:
+    """Compare recent window vs previous window to show trajectory."""
+    if not matches:
+        return {
+            'headline': lt('No trend yet', '暂无趋势数据'),
+            'signals': [lt('Complete more matches to unlock trend intelligence.', '完成更多对局后可解锁趋势洞察。')],
+        }
+
+    recent = matches[:5]
+    previous = matches[5:10]
+    if not previous:
+        return {
+            'headline': lt('Collecting baseline', '正在建立基线'),
+            'signals': [lt('Play 5 more matches to compare your trajectory.', '再完成 5 局后可对比成长轨迹。')],
+        }
+
+    def _avg(rows: list[MatchAnalysis], field: str) -> float:
+        vals = [getattr(r, field) or 0 for r in rows]
+        return sum(vals) / len(vals) if vals else 0.0
+
+    recent_win = sum(1 for r in recent if r.win) / len(recent)
+    prev_win = sum(1 for r in previous if r.win) / len(previous)
+
+    deltas = {
+        'win_rate': round((recent_win - prev_win) * 100, 1),
+        'kda': round(_avg(recent, 'kda') - _avg(previous, 'kda'), 2),
+        'gpm': round(_avg(recent, 'gold_per_min') - _avg(previous, 'gold_per_min'), 1),
+        'dpm': round(_avg(recent, 'damage_per_min') - _avg(previous, 'damage_per_min'), 1),
+    }
+
+    positives = sum(1 for value in deltas.values() if value > 0)
+    if positives >= 3:
+        headline = lt('You are trending up', '你正在上升期')
+    elif positives <= 1:
+        headline = lt('Stabilize fundamentals this week', '本周先稳住基本功')
+    else:
+        headline = lt('Mixed trend — refine execution', '趋势分化，建议精炼执行细节')
+
+    def _signal(label_en: str, label_zh: str, value: float, suffix: str = '') -> str:
+        arrow = '↑' if value > 0 else ('↓' if value < 0 else '→')
+        prefix = '+' if value > 0 else ''
+        text = f"{arrow} {lt(label_en, label_zh)} {prefix}{value}{suffix}"
+        return text
+
+    signals = [
+        _signal('Win rate delta', '胜率变化', deltas['win_rate'], '%'),
+        _signal('KDA delta', 'KDA 变化', deltas['kda']),
+        _signal('Gold/min delta', '每分钟经济变化', deltas['gpm']),
+        _signal('Damage/min delta', '每分钟伤害变化', deltas['dpm']),
+    ]
+
+    return {
+        'headline': headline,
+        'signals': signals,
+    }
+
+
 @dashboard_bp.route('/')
 @login_required
 def index():
@@ -125,6 +252,8 @@ def index():
     avg_kda = round(float(avg_kda_raw), 2) if avg_kda_raw is not None else 0
 
     initial_matches = _serialize_matches(analyses)
+    coach_plan = _build_ai_coach_plan(analyses)
+    trend_snapshot = _build_trend_snapshot(analyses)
 
     return render_template('dashboard/index.html',
         analyses=analyses,
@@ -133,6 +262,8 @@ def index():
         wins=wins,
         win_rate=win_rate,
         avg_kda=avg_kda,
+        coach_plan=coach_plan,
+        trend_snapshot=trend_snapshot,
         riot_account=riot_account,
         discord_config=discord_config,
     )
@@ -414,6 +545,21 @@ def _build_llm_analysis_payload(match: MatchAnalysis, riot_account: RiotAccount 
     }
 
 
+_ALLOWED_COACH_FOCUS = {
+    'general',
+    'laning',
+    'teamfight',
+    'macro',
+    'vision',
+    'mechanics',
+}
+
+
+def _resolve_coach_focus(value: str | None) -> str:
+    focus = (value or '').strip().lower()
+    return focus if focus in _ALLOWED_COACH_FOCUS else 'general'
+
+
 def _analysis_column_for_language(language: str) -> str:
     return 'llm_analysis_zh' if language == 'zh-CN' else 'llm_analysis_en'
 
@@ -489,14 +635,16 @@ def api_ai_analysis(match_db_id):
     payload = request.get_json(silent=True)
     force = bool(payload.get('force')) if isinstance(payload, dict) else False
     language = resolve_api_language(payload.get('language') if isinstance(payload, dict) else None)
-    cached_analysis = _get_cached_analysis(match, language)
+    focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
+    persist = focus == 'general'
+    cached_analysis = _get_cached_analysis(match, language) if persist else None
 
     if cached_analysis and not force:
-        return jsonify({'analysis': cached_analysis, 'cached': True, 'language': language})
+        return jsonify({'analysis': cached_analysis, 'cached': True, 'language': language, 'focus': focus, 'persisted': True})
 
     analysis_dict = _build_llm_analysis_payload(match, riot_account)
 
-    result, error = get_llm_analysis_detailed(analysis_dict, language=language)
+    result, error = get_llm_analysis_detailed(analysis_dict, language=language, focus=focus)
     if error:
         if cached_analysis:
             return jsonify({
@@ -505,14 +653,24 @@ def api_ai_analysis(match_db_id):
                 'stale': True,
                 'error': error,
                 'language': language,
+                'focus': focus,
+                'persisted': True,
             }), 200
         status = _ai_error_status(error)
-        return jsonify({'error': error, 'language': language}), status
+        return jsonify({'error': error, 'language': language, 'focus': focus}), status
 
-    _set_cached_analysis(match, language, result)
-    db.session.commit()
+    if persist:
+        _set_cached_analysis(match, language, result)
+        db.session.commit()
 
-    return jsonify({'analysis': result, 'cached': False, 'regenerated': force, 'language': language})
+    return jsonify({
+        'analysis': result,
+        'cached': False,
+        'regenerated': force or (not persist),
+        'language': language,
+        'focus': focus,
+        'persisted': persist,
+    })
 
 
 @dashboard_bp.route('/api/matches/<int:match_db_id>/ai-analysis/stream', methods=['POST'])
@@ -524,23 +682,27 @@ def api_ai_analysis_stream(match_db_id):
     payload = request.get_json(silent=True)
     force = bool(payload.get('force')) if isinstance(payload, dict) else False
     language = resolve_api_language(payload.get('language') if isinstance(payload, dict) else None)
-    cached_analysis = _get_cached_analysis(match, language)
+    focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
+    persist = focus == 'general'
+    cached_analysis = _get_cached_analysis(match, language) if persist else None
 
     def event_stream():
         if cached_analysis and not force:
-            yield _ndjson_line({'type': 'meta', 'cached': True, 'regenerated': False, 'language': language})
+            yield _ndjson_line({'type': 'meta', 'cached': True, 'regenerated': False, 'language': language, 'focus': focus, 'persisted': True})
             yield _ndjson_line({
                 'type': 'done',
                 'analysis': cached_analysis,
                 'cached': True,
                 'regenerated': False,
                 'language': language,
+                'focus': focus,
+                'persisted': True,
             })
             return
 
-        yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force, 'language': language})
+        yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force or (not persist), 'language': language, 'focus': focus, 'persisted': persist})
         analysis_dict = _build_llm_analysis_payload(match, riot_account)
-        for event in iter_llm_analysis_stream(analysis_dict, language=language):
+        for event in iter_llm_analysis_stream(analysis_dict, language=language, focus=focus):
             event_type = event.get('type')
             if event_type == 'chunk':
                 delta = event.get('delta', '')
@@ -550,15 +712,17 @@ def api_ai_analysis_stream(match_db_id):
 
             if event_type == 'done':
                 final_text = event.get('analysis', '')
-                if final_text:
+                if final_text and persist:
                     _set_cached_analysis(match, language, final_text)
                     db.session.commit()
                 yield _ndjson_line({
                     'type': 'done',
                     'analysis': final_text,
                     'cached': False,
-                    'regenerated': force,
+                    'regenerated': force or (not persist),
                     'language': language,
+                    'focus': focus,
+                    'persisted': persist,
                 })
                 return
 
@@ -572,6 +736,8 @@ def api_ai_analysis_stream(match_db_id):
                         'stale': True,
                         'error': error,
                         'language': language,
+                        'focus': focus,
+                        'persisted': True,
                     })
                 else:
                     yield _ndjson_line({
@@ -579,6 +745,8 @@ def api_ai_analysis_stream(match_db_id):
                         'error': error,
                         'status': _ai_error_status(error),
                         'language': language,
+                        'focus': focus,
+                        'persisted': persist,
                     })
                 return
 
@@ -591,6 +759,8 @@ def api_ai_analysis_stream(match_db_id):
                 'stale': True,
                 'error': fallback_error,
                 'language': language,
+                'focus': focus,
+                'persisted': True,
             })
         else:
             yield _ndjson_line({
@@ -598,6 +768,8 @@ def api_ai_analysis_stream(match_db_id):
                 'error': fallback_error,
                 'status': 502,
                 'language': language,
+                'focus': focus,
+                'persisted': persist,
             })
 
     response = Response(stream_with_context(event_stream()), mimetype='application/x-ndjson')
