@@ -474,6 +474,7 @@ def _serialize_match(m, include_scoreboard: bool = False, locale: str | None = N
             'kda': m.kda,
         }
 
+    initial_ai_analysis = _get_cached_analysis(m, locale) or ''
     has_llm_analysis_en = bool(m.llm_analysis_en or m.llm_analysis)
     has_llm_analysis_zh = bool(m.llm_analysis_zh)
     has_llm_analysis = has_llm_analysis_zh if locale == 'zh-CN' else has_llm_analysis_en
@@ -496,6 +497,7 @@ def _serialize_match(m, include_scoreboard: bool = False, locale: str | None = N
         'game_duration': m.game_duration,
         'queue_type': m.queue_type or '',
         'queue_type_label': queue_label(m.queue_type or '', locale=locale),
+        'initial_ai_analysis': initial_ai_analysis,
         'has_llm_analysis': has_llm_analysis,
         'has_llm_analysis_en': has_llm_analysis_en,
         'has_llm_analysis_zh': has_llm_analysis_zh,
