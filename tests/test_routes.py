@@ -148,6 +148,17 @@ class TestDashboardAccess:
         resp = client.get("/dashboard/settings")
         assert resp.status_code in (302, 401)
 
+    def test_dashboard_queue_filters_have_accessibility_semantics(self, auth_client):
+        resp = auth_client.get("/dashboard/")
+        assert resp.status_code == 200
+        assert b'id="match-filter-bar"' in resp.data
+        assert b'role="tablist"' in resp.data
+        assert b'aria-label="Filter matches by queue"' in resp.data
+        assert b'id="queue-filter-all"' in resp.data
+        assert b'role="tab"' in resp.data
+        assert b'data-queue="" role="tab" aria-selected="true" aria-controls="match-list" tabindex="0"' in resp.data
+        assert b'data-queue="Ranked Solo" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1"' in resp.data
+
 
 class TestSyncRecentMatches:
     def test_sync_recent_matches_skips_existing_and_saves_new(self, db, user):
