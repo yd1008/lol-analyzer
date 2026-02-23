@@ -820,6 +820,57 @@ class TestAiAnalysisRoute:
         assert reloaded.llm_analysis_zh == "新的中文分析"
         assert reloaded.llm_analysis_en == "legacy english cache"
 
+    def test_ai_analysis_non_general_focus_persists_latest_analysis(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_focus_persist",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            llm_analysis_en=None,
+            llm_analysis_zh=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("vision-focused analysis", None)):
+            resp = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis",
+                json={"force": True, "focus": "vision", "language": "en"},
+            )
+
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload["analysis"] == "vision-focused analysis"
+        assert payload["focus"] == "vision"
+        assert payload["persisted"] is True
+
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis_en == "vision-focused analysis"
+        assert reloaded.llm_analysis == "vision-focused analysis"
+
+        resp_matches = auth_client.get("/dashboard/api/matches?offset=0&limit=10")
+        assert resp_matches.status_code == 200
+        data = resp_matches.get_json()
+        assert data["matches"][0]["initial_ai_analysis"] == "vision-focused analysis"
+
 
 class TestMatchesApi:
     def test_api_matches_includes_cached_ai_analysis_for_english_locale(self, auth_client, db, user):
