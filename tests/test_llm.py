@@ -114,6 +114,24 @@ class TestGetLlmAnalysis:
         assert "Defeat" in user_message
         assert "Current Data Dragon patch" in user_message
 
+    @patch("app.analysis.llm.requests.post")
+    def test_prompt_includes_coach_mode_instruction(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis({**SAMPLE_ANALYSIS, "coach_mode": "aggressive"})
+
+        call_kwargs = mock_post.call_args
+        system_message = call_kwargs[1]["json"]["messages"][0]["content"]
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach mode: aggressive" in system_message
+        assert "Coach Mode: aggressive" in user_message
+
 
 class TestGetLlmAnalysisDetailed:
     @patch("app.analysis.llm_client.requests.post")
@@ -429,7 +447,30 @@ class TestGetLlmAnalysisDetailed:
         assert "## Match Snapshot" in user_prompt
         assert "## Action Plan (Next 3 Games)" in user_prompt
 
-    @patch("app.analysis.llm_client.requests.post")
+    @patch("app.analysis.llm.requests.post")
+    def test_prompt_enforces_structured_coaching_brief_schema(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Detailed analysis"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"Detailed analysis"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert error is None
+        assert result == "Detailed analysis"
+        user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
+        assert "## Summary" in user_prompt
+        assert "## Top 3 Issues" in user_prompt
+        assert "## Evidence" in user_prompt
+        assert "## Next-Game Mission" in user_prompt
+        assert "## 2 Drills" in user_prompt
+        assert "In [situation Y], do [action X], and measure success with [observable criterion]." in user_prompt
+
+    @patch("app.analysis.llm.requests.post")
     def test_response_text_is_normalized_from_markdownish_content(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -463,6 +504,8 @@ class TestGetLlmAnalysisDetailed:
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
         assert "对局数据" in user_prompt
         assert "Markdown" in user_prompt
+        assert "## 总结" in user_prompt
+        assert "## 3个首要问题" in user_prompt
         assert "## 对局快照" in user_prompt
         assert "## 三局行动计划" in user_prompt
 

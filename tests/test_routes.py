@@ -272,10 +272,10 @@ class TestAiAnalysisRoute:
         assert cached_json["cached"] is True
         assert cached_json["analysis"] == "cached analysis"
 
-        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("fresh analysis", None)):
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("fresh analysis", None)) as mock_llm:
             resp_force = auth_client.post(
                 f"/dashboard/api/matches/{match.id}/ai-analysis",
-                json={"force": True},
+                json={"force": True, "coach_mode": "aggressive"},
             )
 
         assert resp_force.status_code == 200
@@ -284,8 +284,49 @@ class TestAiAnalysisRoute:
         assert force_json["regenerated"] is True
         assert force_json["analysis"] == "fresh analysis"
 
+        llm_payload = mock_llm.call_args[0][0]
+        assert llm_payload["coach_mode"] == "aggressive"
+
         reloaded = db.session.get(MatchAnalysis, match.id)
         assert reloaded.llm_analysis == "fresh analysis"
+
+    def test_ai_analysis_invalid_coach_mode_falls_back_to_balanced(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_mode_fallback",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("fresh analysis", None)) as mock_llm:
+            resp_force = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis",
+                json={"force": True, "coach_mode": "ultra-tilt-mode"},
+            )
+
+        assert resp_force.status_code == 200
+        llm_payload = mock_llm.call_args[0][0]
+        assert llm_payload["coach_mode"] == "balanced"
 
     def test_ai_analysis_timeout_returns_504_without_cached_analysis(self, auth_client, db, user):
         match = MatchAnalysis(

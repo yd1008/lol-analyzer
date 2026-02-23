@@ -890,10 +890,35 @@ def _format_knowledge_context(context: dict, language: str = 'en') -> str:
     return '\n'.join(lines)
 
 
+def _coach_mode_instruction(mode: str, language: str = 'en') -> str:
+    mode = (mode or 'balanced').strip().lower()
+    is_zh = normalize_locale(language) == 'zh-CN'
+    if mode == 'aggressive':
+        return (
+            '教练风格：偏进攻。强调主动找机会、滚雪球和高回报决策，但必须标注风险条件。'
+            if is_zh else
+            'Coach mode: aggressive. Emphasize proactive windows, snowballing, and high-upside decisions while clearly calling out risk conditions.'
+        )
+    if mode == 'supportive':
+        return (
+            '教练风格：偏支持。强调稳定执行、心态管理和可持续提升，语气更鼓励。'
+            if is_zh else
+            'Coach mode: supportive. Emphasize stable execution, confidence, and sustainable improvement with a more encouraging tone.'
+        )
+    return (
+        '教练风格：平衡。保持客观、直接、可执行，兼顾激进与稳健。'
+        if is_zh else
+        'Coach mode: balanced. Keep advice objective, direct, and actionable with balanced risk posture.'
+    )
+
+
 def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') -> tuple[str, str]:
     """Build the system and user prompts for LLM analysis."""
     is_zh = normalize_locale(language) == 'zh-CN'
     result_str = result_label(analysis['win'], locale=language)
+
+    coach_mode = (analysis.get('coach_mode') or 'balanced').strip().lower()
+    coach_mode_instruction = _coach_mode_instruction(coach_mode, language=language)
 
     focus_key = (focus or 'general').strip().lower()
     focus_labels = {
@@ -921,7 +946,7 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
         'You are a concise, expert League of Legends coach. '
         'Use provided match data and knowledge context to produce specific, evidence-based advice. '
         'If a knowledge field is unavailable, say so briefly instead of guessing.'
-    )
+    ) + '\n' + coach_mode_instruction
 
     position = analysis.get('player_position', '')
     position_line = (
@@ -1012,6 +1037,27 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
     else:
         length_instruction = "在保证覆盖全部要求的前提下尽量简洁。" if is_zh else "Keep the response concise while fully addressing each requested section."
 
+    if is_zh:
+        structured_brief_instruction = (
+            "请严格按以下顺序输出 Coaching Brief，并全部使用二级标题（##）：\n"
+            "## 总结\n"
+            "## 3个首要问题\n"
+            "## 证据\n"
+            "## 下一局任务\n"
+            "## 2个训练\n"
+            "其中“3个首要问题”和“2个训练”里的每条建议都必须写成：在[场景Y]执行[动作X]，并用[可观察标准]判断是否达成。"
+        )
+    else:
+        structured_brief_instruction = (
+            "Return a Coaching Brief in this exact section order using level-2 headings (##):\n"
+            "## Summary\n"
+            "## Top 3 Issues\n"
+            "## Evidence\n"
+            "## Next-Game Mission\n"
+            "## 2 Drills\n"
+            "For every item under 'Top 3 Issues' and '2 Drills', write it as: In [situation Y], do [action X], and measure success with [observable criterion]."
+        )
+
     champ_label = champion_name(analysis['champion'], locale=language)
     queue_label_text = queue_label(analysis.get('queue_type', 'Unknown'), locale=language)
     if is_zh:
@@ -1023,6 +1069,7 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
             f"{position_line}"
             f"- 结果：{result_str}\n"
             f"- 队列：{queue_label_text}\n"
+            f"- 教练模式：{coach_mode}\n"
             f"- KDA：{analysis['kills']}/{analysis['deaths']}/{analysis['assists']}（比值：{analysis['kda']}）\n"
             f"- 经济：总计 {analysis['gold_earned']}（{analysis['gold_per_min']}/分）\n"
             f"- 伤害：总计 {analysis['total_damage']}（{analysis['damage_per_min']}/分）\n"
@@ -1048,6 +1095,7 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
             f"{'6' if lane_opp else '5'}. 下一局唯一的练习重点\n\n"
             "内容要直接、具体，严格围绕本场数据，避免空泛套话。\n"
             "请使用简洁的 Markdown 结构：用二级标题（##）分段，行动建议用项目符号（-）。不要使用代码块（```）。\n"
+            f"{structured_brief_instruction}\n"
             f"{length_instruction}"
         )
     else:
@@ -1059,6 +1107,7 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
             f"{position_line}"
             f"- Result: {result_str}\n"
             f"- Queue: {queue_label_text}\n"
+            f"- Coach Mode: {coach_mode}\n"
             f"- KDA: {analysis['kills']}/{analysis['deaths']}/{analysis['assists']} (Ratio: {analysis['kda']})\n"
             f"- Gold: {analysis['gold_earned']} total ({analysis['gold_per_min']}/min)\n"
             f"- Damage: {analysis['total_damage']} total ({analysis['damage_per_min']}/min)\n"
@@ -1084,6 +1133,7 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
             f"{'6' if lane_opp else '5'}. One concrete practice focus for the next game\n\n"
             "Keep it direct and specific to this data. Avoid generic filler.\n"
             "Output in concise Markdown: use level-2 headings (##) for sections and bullet lists (-) for action items. Do not use code fences (```).\n"
+            f"{structured_brief_instruction}\n"
             f"{length_instruction}"
         )
     return system, user
