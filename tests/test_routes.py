@@ -860,16 +860,16 @@ class TestAiAnalysisRoute:
         payload = resp.get_json()
         assert payload["analysis"] == "vision-focused analysis"
         assert payload["focus"] == "vision"
-        assert payload["persisted"] is True
+        assert payload["persisted"] is False
 
         reloaded = db.session.get(MatchAnalysis, match.id)
-        assert reloaded.llm_analysis_en == "vision-focused analysis"
-        assert reloaded.llm_analysis == "vision-focused analysis"
+        assert reloaded.llm_analysis_en is None
+        assert reloaded.llm_analysis is None
 
         resp_matches = auth_client.get("/dashboard/api/matches?offset=0&limit=10")
         assert resp_matches.status_code == 200
         data = resp_matches.get_json()
-        assert data["matches"][0]["initial_ai_analysis"] == "vision-focused analysis"
+        assert data["matches"][0]["initial_ai_analysis"] == ""
 
 
 class TestMatchesApi:
