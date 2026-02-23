@@ -23,6 +23,10 @@
                     <div class="error">{{ t(error) }}</div>
                 {% endfor %}
             </div>
+            <div class="form-check">
+                {{ form.remember() }}
+                <label for="{{ form.remember.id }}">{{ lt('Remember me on this device', '在此设备上保持登录') }}</label>
+            </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">{{ lt('Sign In', '登录') }}</button>
             </div>

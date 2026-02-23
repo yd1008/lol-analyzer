@@ -92,6 +92,33 @@ class TestLogin:
         }, follow_redirects=True)
         assert resp.status_code == 200
 
+    def test_login_with_remember_sets_remember_cookie(self, client, user):
+        resp = client.post(
+            "/auth/login",
+            data={
+                "email": "test@example.com",
+                "password": "testpass123",
+                "remember": "y",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        cookies = resp.headers.getlist("Set-Cookie")
+        assert any("remember_token=" in cookie for cookie in cookies)
+
+    def test_login_without_remember_does_not_set_remember_cookie(self, client, user):
+        resp = client.post(
+            "/auth/login",
+            data={
+                "email": "test@example.com",
+                "password": "testpass123",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        cookies = resp.headers.getlist("Set-Cookie")
+        assert not any("remember_token=" in cookie for cookie in cookies)
+
     def test_login_wrong_password(self, client, user):
         resp = client.post("/auth/login", data={
             "email": "test@example.com",
