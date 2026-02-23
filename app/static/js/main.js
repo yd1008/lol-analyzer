@@ -729,8 +729,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var positionBadge = m.player_position && POSITION_MAP[m.player_position]
             ? '<span class="position-badge">' + POSITION_MAP[m.player_position] + '</span>'
             : '';
-        var aiClass = m.has_llm_analysis ? ' has-analysis' : '';
-        var aiText = m.has_llm_analysis ? txt('regenAi', 'Regenerate AI Analysis') : txt('runAi', 'Run AI Analysis');
+        var initialAiText = normalizeAiText(m.initial_ai_analysis || '');
+        var hasInitialAi = !!initialAiText;
+        var hasAiAnalysis = !!m.has_llm_analysis || hasInitialAi;
+        var aiClass = hasAiAnalysis ? ' has-analysis' : '';
+        var aiText = hasAiAnalysis ? txt('regenAi', 'Regenerate AI Analysis') : txt('runAi', 'Run AI Analysis');
         var dateHtml = m.analyzed_at ? '<span class="match-duration">' + escapeHtml(m.analyzed_at.slice(0, 10)) + '</span>' : '';
         var tabPrefix = 'match-' + m.id + '-tab';
         var visualPrefix = 'match-' + m.id + '-visual';
@@ -751,6 +754,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<div><div class="team-comp-title">' + escapeHtml(txt('enemies', 'Enemies')) + '</div>' + renderCompIcons(m.enemy_comp, 'enemy') + '</div>' +
             '</div>' +
             renderLaneRows(m.lane_matchups);
+
+        var aiContentHtml = hasInitialAi
+            ? '<div class="match-ai-content llm-analysis llm-analysis--rich">' + renderAiMarkdownLite(initialAiText) + '</div>'
+            : '<div class="match-ai-content card-muted">' + escapeHtml(txt('aiEmpty', 'Generate AI coaching for this match from in-game metrics, rank context, and composition.')) + '</div>';
 
         return '<div class="match-box ' + winClass + '" data-match-id="' + m.id + '">' +
             '<div class="match-box-indicator"></div>' +
@@ -780,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             '</div>' +
                             '<span class="ai-analysis-chip">' + escapeHtml(txt('live', 'Live')) + '</span>' +
                         '</div>' +
-                        '<div class="match-ai-content card-muted">' + escapeHtml(txt('aiEmpty', 'Generate AI coaching for this match from in-game metrics, rank context, and composition.')) + '</div>' +
+                        aiContentHtml +
                         '<button class="ai-btn' + aiClass + '" data-match-id="' + m.id + '">' + aiText + '</button>' +
                     '</div>' +
                 '</div>' +

@@ -701,6 +701,119 @@ class TestAiAnalysisRoute:
         assert reloaded.llm_analysis_en == "legacy english cache"
 
 
+class TestMatchesApi:
+    def test_api_matches_includes_cached_ai_analysis_for_english_locale(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_matches_locale_cache_en",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="legacy english cache",
+            llm_analysis_en="english cache",
+            llm_analysis_zh="中文缓存",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp = auth_client.get("/dashboard/api/matches?offset=0&limit=10")
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert len(payload["matches"]) == 1
+        assert payload["matches"][0]["initial_ai_analysis"] == "english cache"
+        assert payload["matches"][0]["has_llm_analysis"] is True
+
+    def test_api_matches_includes_cached_ai_analysis_for_chinese_locale(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_matches_locale_cache_zh",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="legacy english cache",
+            llm_analysis_en="english cache",
+            llm_analysis_zh="中文缓存",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch("app.dashboard.routes.get_locale", return_value="zh-CN"):
+            resp = auth_client.get("/dashboard/api/matches?offset=0&limit=10")
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert len(payload["matches"]) == 1
+        assert payload["matches"][0]["initial_ai_analysis"] == "中文缓存"
+        assert payload["matches"][0]["has_llm_analysis"] is True
+
+    def test_api_matches_uses_legacy_english_cache_as_fallback(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_matches_legacy_cache",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="legacy cache only",
+            llm_analysis_en=None,
+            llm_analysis_zh=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        resp = auth_client.get("/dashboard/api/matches?offset=0&limit=10")
+        assert resp.status_code == 200
+        payload = resp.get_json()
+        assert payload["matches"][0]["initial_ai_analysis"] == "legacy cache only"
+        assert payload["matches"][0]["has_llm_analysis_en"] is True
+
+
 class TestMatchDetailRoute:
     @patch("app.dashboard.routes.champion_icon_url", return_value="")
     @patch("app.dashboard.routes.item_icon_url", return_value="")
