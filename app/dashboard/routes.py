@@ -140,7 +140,7 @@ def _build_ai_coach_plan(matches: list[MatchAnalysis]) -> dict:
     if win_rate < 50:
         focus_areas.append(lt('Prioritize cleaner mid-game decision making around objectives.', '优先提升中期围绕资源点的决策质量。'))
     if avg_kda < 2.8:
-        focus_areas.append(lt('Reduce avoidable deaths: target safer wave resets and exits.', '减少可避免死亡：优化推线后的回撤与转线时机。'))
+        focus_areas.append(lt('Reduce avoidable deaths: in extended skirmishes, disengage before overextending and keep deaths at 4 or fewer per game.', '减少可避免死亡：优化推线后的回撤与转线时机。'))
     if avg_gpm < 360:
         focus_areas.append(lt('Improve economy: maintain farm tempo between fights.', '提升经济效率：团战间隙维持补刀节奏。'))
     if avg_vision < 18:
