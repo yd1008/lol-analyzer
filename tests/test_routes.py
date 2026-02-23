@@ -144,6 +144,18 @@ class TestDashboardAccess:
         assert b"Actionable next-game goal" in resp.data
         assert b"Performance Trend Snapshot" in resp.data
 
+    def test_dashboard_includes_futuristic_hud_art_component(self, auth_client):
+        resp = auth_client.get("/dashboard/")
+        assert resp.status_code == 200
+        assert b"hud-artboard" in resp.data
+        assert b"hud-art-grid" in resp.data
+
+    def test_match_history_includes_futuristic_hud_art_component(self, auth_client):
+        resp = auth_client.get("/dashboard/matches")
+        assert resp.status_code == 200
+        assert b"hud-artboard" in resp.data
+        assert b"hud-art-orb" in resp.data
+
     def test_settings_requires_login(self, client):
         resp = client.get("/dashboard/settings")
         assert resp.status_code in (302, 401)
