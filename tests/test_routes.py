@@ -1394,6 +1394,33 @@ class TestAdminLlmInputSize:
         assert resp.status_code == 200
         assert b"too large" in resp.data.lower()
 
+    def test_test_llm_run_executes_model_and_renders_result(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
+        analysis_json = json.dumps({"champion": "Ahri", "kda": 5.2, "win": True})
+
+        with patch("app.admin.routes.get_locale", return_value="en"), patch(
+            "app.admin.routes.get_llm_analysis_detailed",
+            return_value=("LLM execution success", None),
+        ) as mock_llm:
+            resp = client.post(
+                "/admin/test-llm",
+                data={"action": "run_llm", "analysis_json": analysis_json},
+                follow_redirects=True,
+            )
+
+        assert resp.status_code == 200
+        assert b"LLM execution success" in resp.data
+        mock_llm.assert_called_once()
+        args, kwargs = mock_llm.call_args
+        assert args[0]["champion"] == "Ahri"
+        assert kwargs["language"] == "en"
+
 
 class TestAdminDiscordRoute:
     def test_test_discord_success_calls_notifier(self, client, db, app):
