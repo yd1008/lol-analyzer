@@ -6,6 +6,7 @@ import threading
 import time
 
 import requests
+from flask import has_app_context
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +27,45 @@ _ITEM_CACHE: dict[str, dict] = {}
 _RUNE_CACHE: dict[str, dict] = {}
 
 
+def _cache_get(key: str):
+    if not has_app_context():
+        return None
+    try:
+        from app.extensions import cache
+        return cache.get(key)
+    except Exception:
+        return None
+
+
+def _cache_set(key: str, value, timeout: int) -> None:
+    if not has_app_context():
+        return
+    try:
+        from app.extensions import cache
+        cache.set(key, value, timeout=timeout)
+    except Exception:
+        return
+
+
+def _cache_delete(key: str) -> None:
+    if not has_app_context():
+        return
+    try:
+        from app.extensions import cache
+        cache.delete(key)
+    except Exception:
+        return
+
+
 def _normalize(value: str) -> str:
     return re.sub(r'[^a-z0-9]+', '', (value or '').lower())
 
 
 def _fetch_latest_version() -> str:
+    shared_cached = _cache_get('champion_assets:latest_version')
+    if isinstance(shared_cached, str) and shared_cached:
+        return shared_cached
+
     now = time.time()
     with _LOCK:
         if _VERSION_CACHE['expires_at'] > now:
@@ -52,6 +87,7 @@ def _fetch_latest_version() -> str:
         if fetch_success:
             _VERSION_CACHE['value'] = version
             _VERSION_CACHE['expires_at'] = now + _VERSION_SUCCESS_TTL_SECONDS
+            _cache_set('champion_assets:latest_version', version, timeout=_VERSION_SUCCESS_TTL_SECONDS)
         else:
             # Back off quickly during outages; keep previous value if one exists.
             _VERSION_CACHE['expires_at'] = now + _VERSION_FAILURE_TTL_SECONDS
@@ -61,6 +97,10 @@ def _fetch_latest_version() -> str:
 def _get_champion_map(version: str) -> dict:
     if not version:
         return {'by_name': {}, 'by_numeric': {}}
+
+    shared_cached = _cache_get(f'champion_assets:map:{version}')
+    if isinstance(shared_cached, dict):
+        return shared_cached
 
     now = time.time()
     with _LOCK:
@@ -94,12 +134,19 @@ def _get_champion_map(version: str) -> dict:
     value = {'by_name': by_name, 'by_numeric': by_numeric}
     with _LOCK:
         _MAP_CACHE[version] = {'expires_at': now + 6 * 3600, 'value': value}
+    _cache_set(f'champion_assets:map:{version}', value, timeout=6 * 3600)
     return value
 
 
 def _get_item_set(version: str) -> set[int]:
     if not version:
         return set()
+
+    shared_cached = _cache_get(f'champion_assets:items:{version}')
+    if isinstance(shared_cached, set):
+        return shared_cached
+    if isinstance(shared_cached, list):
+        return set(shared_cached)
 
     now = time.time()
     with _LOCK:
@@ -123,12 +170,17 @@ def _get_item_set(version: str) -> set[int]:
 
     with _LOCK:
         _ITEM_CACHE[version] = {'expires_at': now + 6 * 3600, 'value': item_ids}
+    _cache_set(f'champion_assets:items:{version}', list(item_ids), timeout=6 * 3600)
     return item_ids
 
 
 def _get_rune_maps(version: str) -> dict:
     if not version:
         return {'perks': {}, 'styles': {}}
+
+    shared_cached = _cache_get(f'champion_assets:runes:{version}')
+    if isinstance(shared_cached, dict):
+        return shared_cached
 
     now = time.time()
     with _LOCK:
@@ -167,6 +219,7 @@ def _get_rune_maps(version: str) -> dict:
     value = {'perks': perk_icons, 'styles': style_icons}
     with _LOCK:
         _RUNE_CACHE[version] = {'expires_at': now + 6 * 3600, 'value': value}
+    _cache_set(f'champion_assets:runes:{version}', value, timeout=6 * 3600)
     return value
 
 
@@ -265,6 +318,7 @@ def refresh_asset_caches(force: bool = False) -> dict:
     if force:
         with _LOCK:
             _VERSION_CACHE['expires_at'] = 0.0
+        _cache_delete('champion_assets:latest_version')
 
     version = _fetch_latest_version()
     champion_count = 0

@@ -7,7 +7,7 @@ import threading
 import time
 
 import requests
-from flask import g, has_request_context, request
+from flask import g, has_app_context, has_request_context, request
 
 SUPPORTED_LOCALES = ('en', 'zh-CN')
 DEFAULT_LOCALE = 'zh-CN'
@@ -22,6 +22,26 @@ _VERSION_CACHE = {'value': '', 'expires_at': 0.0}
 _CHAMPION_NAME_CACHE: dict[tuple[str, str], dict[str, str]] = {}
 _ITEM_NAME_CACHE: dict[tuple[str, str], dict[int, str]] = {}
 _REFRESH_IN_FLIGHT: set[str] = set()
+
+
+def _cache_get(key: str):
+    if not has_app_context():
+        return None
+    try:
+        from app.extensions import cache
+        return cache.get(key)
+    except Exception:
+        return None
+
+
+def _cache_set(key: str, value, timeout: int) -> None:
+    if not has_app_context():
+        return
+    try:
+        from app.extensions import cache
+        cache.set(key, value, timeout=timeout)
+    except Exception:
+        return
 
 QUEUE_LABELS = {
     'en': {
@@ -118,6 +138,7 @@ TRANSLATIONS = {
         'flash.account_created': 'Account created! Link your Riot account to get started.',
         'flash.logged_out': 'You have been logged out.',
         'flash.access_denied': 'Access denied.',
+        'flash.too_many_attempts': 'Too many attempts. Please wait and try again.',
         'flash.ai_failed': 'AI analysis failed.',
         'validation.email_invalid': 'Please enter a valid email address.',
         'validation.password_required': 'Password is required.',
@@ -168,6 +189,7 @@ TRANSLATIONS = {
         'flash.account_created': '账号已创建！请先绑定 Riot 账号开始使用。',
         'flash.logged_out': '你已退出登录。',
         'flash.access_denied': '无权访问。',
+        'flash.too_many_attempts': '尝试次数过多，请稍后再试。',
         'flash.ai_failed': 'AI 分析失败。',
         'validation.email_invalid': '请输入有效的邮箱地址。',
         'validation.password_required': '密码不能为空。',
@@ -325,6 +347,10 @@ def _dd_locale(lang: str) -> str:
 
 
 def _fetch_latest_version() -> str:
+    shared_cached = _cache_get('i18n:dd:version')
+    if isinstance(shared_cached, str) and shared_cached:
+        return shared_cached
+
     now = time.time()
     with _LOCK:
         if _VERSION_CACHE['expires_at'] > now:
@@ -343,6 +369,7 @@ def _fetch_latest_version() -> str:
     with _LOCK:
         if version:
             _VERSION_CACHE['value'] = version
+            _cache_set('i18n:dd:version', version, timeout=ttl)
         _VERSION_CACHE['expires_at'] = now + ttl
         return _VERSION_CACHE['value']
 
@@ -352,7 +379,12 @@ def _champion_name_map(version: str, lang: str) -> dict[str, str]:
         return {}
     dd_locale = _dd_locale(lang)
     cache_key = (version, dd_locale)
+    shared_key = f'i18n:champ:{version}:{dd_locale}'
     now = time.time()
+    shared_cached = _cache_get(shared_key)
+    if isinstance(shared_cached, dict) and shared_cached:
+        return dict(shared_cached)
+
     with _LOCK:
         cached = _CHAMPION_NAME_CACHE.get(cache_key)
         if cached and cached.get('_expires_at', 0.0) > now:
@@ -381,6 +413,7 @@ def _champion_name_map(version: str, lang: str) -> dict[str, str]:
         cached_data = dict(mapping)
         cached_data['_expires_at'] = now + 6 * 3600
         _CHAMPION_NAME_CACHE[cache_key] = cached_data
+    _cache_set(shared_key, mapping, timeout=6 * 3600)
     return mapping
 
 
@@ -389,7 +422,18 @@ def _item_name_map(version: str, lang: str) -> dict[int, str]:
         return {}
     dd_locale = _dd_locale(lang)
     cache_key = (version, dd_locale)
+    shared_key = f'i18n:item:{version}:{dd_locale}'
     now = time.time()
+    shared_cached = _cache_get(shared_key)
+    if isinstance(shared_cached, dict) and shared_cached:
+        restored = {}
+        for k, v in shared_cached.items():
+            try:
+                restored[int(k)] = v
+            except (TypeError, ValueError):
+                continue
+        return restored
+
     with _LOCK:
         cached = _ITEM_NAME_CACHE.get(cache_key)
         if cached and cached.get(-1, 0) > now:
@@ -412,11 +456,17 @@ def _item_name_map(version: str, lang: str) -> dict[int, str]:
     cached[-1] = now + 6 * 3600
     with _LOCK:
         _ITEM_NAME_CACHE[cache_key] = cached
+    _cache_set(shared_key, mapping, timeout=6 * 3600)
     return mapping
 
 
 def _cached_champion_name_map(lang: str) -> dict[str, str]:
     dd_locale = _dd_locale(lang)
+    version_shared = _cache_get('i18n:dd:version')
+    if isinstance(version_shared, str) and version_shared:
+        shared_cached = _cache_get(f'i18n:champ:{version_shared}:{dd_locale}')
+        if isinstance(shared_cached, dict) and shared_cached:
+            return dict(shared_cached)
     with _LOCK:
         version = _VERSION_CACHE.get('value', '')
         if not version:
@@ -429,6 +479,17 @@ def _cached_champion_name_map(lang: str) -> dict[str, str]:
 
 def _cached_item_name_map(lang: str) -> dict[int, str]:
     dd_locale = _dd_locale(lang)
+    version_shared = _cache_get('i18n:dd:version')
+    if isinstance(version_shared, str) and version_shared:
+        shared_cached = _cache_get(f'i18n:item:{version_shared}:{dd_locale}')
+        if isinstance(shared_cached, dict) and shared_cached:
+            restored = {}
+            for k, v in shared_cached.items():
+                try:
+                    restored[int(k)] = v
+                except (TypeError, ValueError):
+                    continue
+            return restored
     with _LOCK:
         version = _VERSION_CACHE.get('value', '')
         if not version:

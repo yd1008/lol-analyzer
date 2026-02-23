@@ -20,10 +20,19 @@ def app():
         DISCORD_CLIENT_ID="123456789",
         RIOT_VERIFICATION_UUID="test-uuid-1234",
         ADMIN_EMAIL="admin@test.com",
+        LOGIN_RATE_LIMIT="1000 per minute",
+        MAX_CONTENT_LENGTH=1024 * 1024,
+        ADMIN_ANALYSIS_JSON_MAX_BYTES=64 * 1024,
         LLM_API_KEY="test-llm-key",
         LLM_API_URL="https://api.example.com/v1/chat/completions",
         LLM_MODEL="test-model",
         LLM_KNOWLEDGE_EXTERNAL=False,
+        WORKER_MAX_WORKERS=2,
+        RATE_LIMIT_REDIS_URL="",
+        RIOT_RATE_LIMIT_PER_MINUTE=100,
+        DISCORD_RATE_LIMIT_COUNT=10,
+        DISCORD_RATE_LIMIT_WINDOW_SECONDS=10,
+        CACHE_TYPE="SimpleCache",
     )
     with app.app_context():
         _db.create_all()

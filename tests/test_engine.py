@@ -238,6 +238,78 @@ class TestAnalyzeMatch:
 
         assert result["game_start_timestamp"] == 1700000000000
 
+    def test_damage_prefers_total_damage_dealt_to_champions(self):
+        watcher = MagicMock()
+        match_data = {
+            "info": {
+                "gameDuration": 1200,
+                "queueId": 420,
+                "participants": [
+                    {
+                        "puuid": "damage-puuid",
+                        "championName": "Ahri",
+                        "teamPosition": "MIDDLE",
+                        "kills": 5,
+                        "deaths": 2,
+                        "assists": 6,
+                        "goldEarned": 11000,
+                        "totalDamageDealt": 90000,
+                        "totalDamageDealtToChampions": 12000,
+                        "visionScore": 20,
+                        "totalMinionsKilled": 120,
+                        "neutralMinionsKilled": 10,
+                        "win": True,
+                        "teamId": 100,
+                    },
+                    *[
+                        {
+                            "puuid": f"ally-{i}",
+                            "championName": "Garen",
+                            "teamPosition": "TOP",
+                            "kills": 1,
+                            "deaths": 5,
+                            "assists": 2,
+                            "goldEarned": 9000,
+                            "totalDamageDealt": 70000,
+                            "totalDamageDealtToChampions": 15000,
+                            "visionScore": 10,
+                            "totalMinionsKilled": 100,
+                            "neutralMinionsKilled": 5,
+                            "win": True,
+                            "teamId": 100,
+                        }
+                        for i in range(4)
+                    ],
+                    *[
+                        {
+                            "puuid": f"enemy-{i}",
+                            "championName": "Lux",
+                            "teamPosition": "MIDDLE",
+                            "kills": 2,
+                            "deaths": 4,
+                            "assists": 3,
+                            "goldEarned": 8800,
+                            "totalDamageDealt": 68000,
+                            "totalDamageDealtToChampions": 14000,
+                            "visionScore": 8,
+                            "totalMinionsKilled": 100,
+                            "neutralMinionsKilled": 3,
+                            "win": False,
+                            "teamId": 200,
+                        }
+                        for i in range(5)
+                    ],
+                ],
+            }
+        }
+        watcher.match.by_id.return_value = match_data
+
+        result = analyze_match(watcher, "americas", "damage-puuid", "NA1_damage")
+
+        assert result is not None
+        assert result["total_damage"] == 12000
+        assert result["damage_per_min"] == 600.0
+
 
 class TestGenerateRecommendations:
     def test_low_kda_recommendation(self):

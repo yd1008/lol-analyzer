@@ -37,8 +37,8 @@ Thank you for your interest in contributing to LoL Performance Analyzer! We welc
    ```
 
 3. **Set up configuration**
-   - Copy `lol_analyzer_config.json` to your custom configuration
-   - Add your API keys
+   - Copy `.env.example` to `.env`
+   - Add your API keys and environment settings
 
 4. **Run tests**
    ```bash

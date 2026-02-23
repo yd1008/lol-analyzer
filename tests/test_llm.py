@@ -6,7 +6,7 @@ from tests.conftest import SAMPLE_ANALYSIS
 
 
 class TestGetLlmAnalysis:
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_successful_analysis(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -26,7 +26,7 @@ class TestGetLlmAnalysis:
         assert call_kwargs[1]["json"]["model"] == "test-model"
         assert len(call_kwargs[1]["json"]["messages"]) == 2
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_api_error_returns_none(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 500
@@ -38,7 +38,7 @@ class TestGetLlmAnalysis:
 
         assert result is None
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_timeout_returns_none(self, mock_post, app):
         import requests
         mock_post.side_effect = requests.Timeout("Request timed out")
@@ -48,7 +48,7 @@ class TestGetLlmAnalysis:
 
         assert result is None
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_malformed_response_returns_none(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -77,7 +77,7 @@ class TestGetLlmAnalysis:
 
         assert result is None
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_prompt_includes_match_data(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -96,7 +96,7 @@ class TestGetLlmAnalysis:
         assert "Victory" in user_message
         assert "Knowledge Context" in user_message
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_loss_result_in_prompt(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -134,7 +134,7 @@ class TestGetLlmAnalysis:
 
 
 class TestGetLlmAnalysisDetailed:
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_success_returns_text_and_no_error(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -167,7 +167,7 @@ class TestGetLlmAnalysisDetailed:
         assert result is None
         assert "LLM_API_URL" in error
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_401_returns_auth_error(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 401
@@ -181,7 +181,7 @@ class TestGetLlmAnalysisDetailed:
         assert "401" in error
         assert "Authentication" in error
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_404_returns_url_error(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 404
@@ -195,7 +195,7 @@ class TestGetLlmAnalysisDetailed:
         assert "404" in error
         assert "LLM_API_URL" in error
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_timeout_returns_error(self, mock_post, app):
         import requests
         mock_post.side_effect = requests.Timeout("timed out")
@@ -206,7 +206,7 @@ class TestGetLlmAnalysisDetailed:
         assert result is None
         assert "timed out" in error.lower()
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_uses_configured_timeout_and_max_tokens(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -228,7 +228,7 @@ class TestGetLlmAnalysisDetailed:
         assert call_kwargs[1]["timeout"] == 12
         assert call_kwargs[1]["json"]["max_tokens"] == 1234
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_response_token_target_is_soft_guidance_not_hard_cap(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -249,8 +249,8 @@ class TestGetLlmAnalysisDetailed:
         call_kwargs = mock_post.call_args
         assert call_kwargs[1]["json"]["max_tokens"] == 1200
 
-    @patch("app.analysis.llm.time.sleep", return_value=None)
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.time.sleep", return_value=None)
+    @patch("app.analysis.llm_client.requests.post")
     def test_retries_once_after_timeout(self, mock_post, _mock_sleep, app):
         import requests
         timeout_error = requests.Timeout("timed out")
@@ -272,8 +272,8 @@ class TestGetLlmAnalysisDetailed:
         assert result == "Recovered analysis"
         assert mock_post.call_count == 2
 
-    @patch("app.analysis.llm.requests.post")
-    @patch("app.analysis.llm.requests.get")
+    @patch("app.analysis.llm_client.requests.post")
+    @patch("app.analysis.llm_prompt.requests.get")
     def test_opencode_zen_deepseek_falls_back_to_glm(self, mock_get, mock_post, app):
         models_resp = MagicMock()
         models_resp.status_code = 200
@@ -304,8 +304,8 @@ class TestGetLlmAnalysisDetailed:
         call_kwargs = mock_post.call_args
         assert call_kwargs[1]["json"]["model"] == "glm-4.7-free"
 
-    @patch("app.analysis.llm.requests.post")
-    @patch("app.analysis.llm.requests.get")
+    @patch("app.analysis.llm_client.requests.post")
+    @patch("app.analysis.llm_prompt.requests.get")
     def test_opencode_zen_rejects_responses_model_on_chat_completions(self, mock_get, mock_post, app):
         models_resp = MagicMock()
         models_resp.status_code = 200
@@ -340,8 +340,8 @@ class TestGetLlmAnalysisDetailed:
         assert result is None
         assert "set llm_api_url to https://opencode.ai/zen/v1/chat/completions" in error.lower()
 
-    @patch("app.analysis.llm.requests.post")
-    @patch("app.analysis.llm.requests.get")
+    @patch("app.analysis.llm_client.requests.post")
+    @patch("app.analysis.llm_prompt.requests.get")
     def test_opencode_prompt_tokens_500_retries_without_temperature(self, mock_get, mock_post, app):
         models_resp = MagicMock()
         models_resp.status_code = 200
@@ -381,8 +381,8 @@ class TestGetLlmAnalysisDetailed:
         assert second_json["model"] == "big-pickle"
         assert "temperature" not in second_json
 
-    @patch("app.analysis.llm.requests.post")
-    @patch("app.analysis.llm.requests.get")
+    @patch("app.analysis.llm_client.requests.post")
+    @patch("app.analysis.llm_prompt.requests.get")
     def test_opencode_prompt_tokens_500_falls_back_to_default_model(self, mock_get, mock_post, app):
         models_resp = MagicMock()
         models_resp.status_code = 200
@@ -424,7 +424,7 @@ class TestGetLlmAnalysisDetailed:
         assert "temperature" not in fourth_json
         assert "max_tokens" not in fourth_json
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_prompt_includes_length_budget_instruction_when_configured(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -486,7 +486,7 @@ class TestGetLlmAnalysisDetailed:
         assert error is None
         assert result == "# Overall\n- **Good** lane control\n1. `Practice` wave timing"
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_chinese_language_prompt_scaffold(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -511,7 +511,7 @@ class TestGetLlmAnalysisDetailed:
 
 
 class TestIterLlmAnalysisStream:
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_stream_yields_chunks_and_done(self, mock_post, app):
         stream_resp = MagicMock()
         stream_resp.status_code = 200
@@ -532,7 +532,7 @@ class TestIterLlmAnalysisStream:
         assert events[-1]["type"] == "done"
         assert events[-1]["analysis"] == "Great lane control. Keep wave tempo."
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_stream_timeout_returns_structured_error(self, mock_post, app):
         import requests
         mock_post.side_effect = requests.Timeout("timed out")
@@ -544,7 +544,7 @@ class TestIterLlmAnalysisStream:
         assert events[0]["type"] == "error"
         assert "timed out" in events[0]["error"].lower()
 
-    @patch("app.analysis.llm.requests.post")
+    @patch("app.analysis.llm_client.requests.post")
     def test_stream_ignores_non_json_lines(self, mock_post, app):
         stream_resp = MagicMock()
         stream_resp.status_code = 200

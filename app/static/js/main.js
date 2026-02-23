@@ -126,7 +126,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Ignore storage failures.
             }
             setLocaleCookie(nextLocale);
-            window.location.reload();
+            persistLocalePreference(nextLocale).finally(function () {
+                window.location.reload();
+            });
+        });
+    }
+
+    function persistLocalePreference(locale) {
+        if (!csrfToken) {
+            return Promise.resolve();
+        }
+        return fetch('/dashboard/settings/locale', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({locale: locale}),
+        }).catch(function () {
+            // Locale still persists via cookie/localStorage; server sync is best effort.
         });
     }
 

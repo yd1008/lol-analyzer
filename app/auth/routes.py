@@ -1,13 +1,14 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import current_app, flash, redirect, render_template, request, url_for
 from flask_login import login_user, logout_user, current_user
 from app.auth import auth_bp
 from app.auth.forms import LoginForm, RegisterForm
 from app.models import User, UserSettings
-from app.extensions import db
+from app.extensions import db, limiter
 from app.i18n import t
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit(lambda: current_app.config.get('LOGIN_RATE_LIMIT', '5 per minute'), methods=['POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.index'))

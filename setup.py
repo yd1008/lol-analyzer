@@ -72,7 +72,7 @@ def main():
     print("\nNext steps:")
     print("1. Make sure you've added your Discord bot to your server")
     print("2. Ensure the bot has permissions to send messages in the target channel")
-    print("3. Run the analyzer with: python lol_analyzer.py")
+    print("3. Run the web app with: python run.py")
     print(f"\nNote: The bot will automatically post to channel ID: {channel_id}")
 
 if __name__ == "__main__":

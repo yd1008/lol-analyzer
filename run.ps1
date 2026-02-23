@@ -7,4 +7,4 @@ Write-Host "Press Ctrl+C to stop the analyzer" -ForegroundColor Yellow
 Set-Location -Path $PSScriptRoot
 
 # Run the analyzer
-python lol_analyzer.py
+python run.py

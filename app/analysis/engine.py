@@ -1,10 +1,11 @@
 """
-Analysis engine extracted from lol_analyzer.py.
+Analysis engine for match-level stat extraction and recommendation generation.
 All functions are stateless and parameterized for multi-user use.
 """
 
 import logging
 from riotwatcher import LolWatcher, ApiError
+from app.analysis.rate_limit import throttle_riot_api
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ QUEUE_TYPES = {
 def get_match_summary(watcher: LolWatcher, region: str, puuid: str, match_id: str) -> dict | None:
     """Fetch match detail and return lightweight summary for list view."""
     try:
+        throttle_riot_api('match_by_id_summary')
         match_detail = watcher.match.by_id(region, match_id)
 
         player_data = None
@@ -87,6 +89,7 @@ def derive_lane_context(participants: list[dict]) -> tuple[str, dict | None]:
 def analyze_match(watcher: LolWatcher, region: str, puuid: str, match_id: str) -> dict | None:
     """Analyze a single match and return insights."""
     try:
+        throttle_riot_api('match_by_id_analyze')
         match_detail = watcher.match.by_id(region, match_id)
 
         player_index = None

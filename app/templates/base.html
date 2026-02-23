@@ -62,7 +62,7 @@
                     {% if current_user.is_authenticated %}
                         <li><a href="{{ url_for('dashboard.index') }}">{{ lt('Dashboard', '仪表盘') }}</a></li>
                         <li><a href="{{ url_for('dashboard.settings') }}">{{ lt('Settings', '设置') }}</a></li>
-                        {% if current_user.email == config.get('ADMIN_EMAIL', '') %}
+                        {% if current_user.is_admin or (admin_email and current_user.email == admin_email) %}
                             <li><a href="{{ url_for('admin.index') }}">{{ lt('Admin', '管理') }}</a></li>
                         {% endif %}
                         <li><a href="{{ url_for('auth.logout') }}">{{ lt('Logout', '退出') }}</a></li>
@@ -127,3 +127,4 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+

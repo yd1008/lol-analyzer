@@ -63,8 +63,8 @@ A multi-user web platform for League of Legends performance analysis. Automatica
 ### Production Deployment
 
 ```bash
-# Uses waitress as the WSGI server
-python wsgi.py
+# Uses Gunicorn as the WSGI server
+gunicorn wsgi:app --bind 0.0.0.0:${PORT:-5000} --timeout 120
 ```
 
 ## Architecture
@@ -118,6 +118,14 @@ lol-analyzer/
 | `CHECK_INTERVAL_MINUTES` | How often to check for new matches | `5` |
 | `WEEKLY_SUMMARY_DAY` | Day of week for summary | `Monday` |
 | `WEEKLY_SUMMARY_TIME` | Time for summary (HH:MM) | `09:00` |
+| `WORKER_MAX_WORKERS` | Max worker threads for match sync job | `4` |
+| `LOGIN_RATE_LIMIT` | Auth login POST rate limit | `5 per minute` |
+| `MAX_CONTENT_LENGTH` | Max HTTP request payload bytes | `1048576` |
+| `ADMIN_ANALYSIS_JSON_MAX_BYTES` | Max bytes for admin test LLM JSON payload | `262144` |
+| `RATE_LIMIT_REDIS_URL` | Optional Redis URL for shared rate-limit state | (optional) |
+| `RIOT_RATE_LIMIT_PER_MINUTE` | Client-side Riot API throttle budget | `100` |
+| `DISCORD_RATE_LIMIT_COUNT` | Client-side Discord message burst count | `10` |
+| `DISCORD_RATE_LIMIT_WINDOW_SECONDS` | Discord burst window seconds | `10` |
 
 ## Metrics Tracked
 
