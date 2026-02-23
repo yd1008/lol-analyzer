@@ -225,6 +225,51 @@ class TestSyncRecentMatches:
         assert call_args[1] == user.id
         assert call_args[2] == "na1"
 
+    def test_sync_recent_matches_continues_when_single_match_analysis_fails(self, db, user):
+        successful_analysis = {
+            "match_id": "NA1_sync_good",
+            "champion": "Lux",
+            "win": True,
+            "kills": 7,
+            "deaths": 3,
+            "assists": 11,
+            "kda": 6.0,
+            "gold_earned": 12100,
+            "gold_per_min": 403.3,
+            "total_damage": 22800,
+            "damage_per_min": 760.0,
+            "vision_score": 24,
+            "cs_total": 182,
+            "game_duration": 30.0,
+            "recommendations": ["sync follow-up"],
+            "queue_type": "Ranked Solo",
+            "participants": [],
+            "game_start_timestamp": 1700000000000,
+        }
+
+        with patch(
+            "app.dashboard.routes.get_recent_matches",
+            return_value=["NA1_sync_bad", "NA1_sync_good"],
+        ), patch("app.dashboard.routes.get_watcher", return_value=object()), patch(
+            "app.dashboard.routes.get_routing_value",
+            return_value="americas",
+        ), patch(
+            "app.dashboard.routes.analyze_match",
+            side_effect=[RuntimeError("transient riot detail failure"), successful_analysis],
+        ) as mock_analyze, patch("app.dashboard.routes.logger.warning") as mock_warning:
+            saved = sync_recent_matches(user.id, "na1", "puuid-test")
+
+        assert saved == 1
+        assert mock_analyze.call_count == 2
+        warning_args = mock_warning.call_args[0]
+        assert "Failed to analyze match during sync" in warning_args[0]
+        assert warning_args[1] == user.id
+        assert warning_args[2] == "na1"
+        assert warning_args[3] == "NA1_sync_bad"
+
+        row = MatchAnalysis.query.filter_by(user_id=user.id, match_id="NA1_sync_good").one()
+        assert row.champion == "Lux"
+
 
 class TestAdminAccess:
     def test_admin_requires_login(self, client):

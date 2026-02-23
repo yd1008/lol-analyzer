@@ -60,7 +60,17 @@ def sync_recent_matches(user_id, region, puuid):
     saved = 0
 
     for match_id in new_ids:
-        analysis = analyze_match(watcher, routing, puuid, match_id)
+        try:
+            analysis = analyze_match(watcher, routing, puuid, match_id)
+        except Exception as exc:
+            logger.warning(
+                "Failed to analyze match during sync user=%s region=%s match_id=%s: %s",
+                user_id,
+                region,
+                match_id,
+                exc,
+            )
+            continue
         if not analysis:
             continue
 
