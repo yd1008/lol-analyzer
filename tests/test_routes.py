@@ -3,7 +3,7 @@
 import json
 from unittest.mock import patch
 
-from app.models import AdminAuditLog, MatchAnalysis, User, UserSettings
+from app.models import AdminAuditLog, DiscordConfig, MatchAnalysis, RiotAccount, User, UserSettings
 
 
 class TestLandingPage:
@@ -1239,6 +1239,69 @@ class TestSettingsPreferencesRoute:
         assert reloaded.settings.weekly_summary_day == "Monday"
         assert reloaded.settings.weekly_summary_time == "09:00"
         assert reloaded.settings.notifications_enabled is True
+
+
+class TestSettingsIntegrationsRoute:
+    def test_settings_discord_requires_login(self, client):
+        resp = client.post("/dashboard/settings/discord", data={})
+        assert resp.status_code in (302, 401)
+
+    def test_settings_discord_saves_valid_ids(self, auth_client, db, user):
+        resp = auth_client.post(
+            "/dashboard/settings/discord",
+            data={
+                "discord-channel_id": "123456789012345678",
+                "discord-guild_id": "987654321098765432",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+
+        config = DiscordConfig.query.filter_by(user_id=user.id).first()
+        assert config is not None
+        assert config.channel_id == "123456789012345678"
+        assert config.guild_id == "987654321098765432"
+
+    def test_settings_discord_invalid_channel_does_not_overwrite_existing(self, auth_client, db, user):
+        existing = DiscordConfig(
+            user_id=user.id,
+            channel_id="111111111111111111",
+            guild_id="222222222222222222",
+        )
+        db.session.add(existing)
+        db.session.commit()
+
+        resp = auth_client.post(
+            "/dashboard/settings/discord",
+            data={
+                "discord-channel_id": "not-a-snowflake",
+                "discord-guild_id": "333333333333333333",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+
+        reloaded = DiscordConfig.query.filter_by(user_id=user.id).first()
+        assert reloaded is not None
+        assert reloaded.channel_id == "111111111111111111"
+        assert reloaded.guild_id == "222222222222222222"
+
+    def test_settings_riot_invalid_tagline_does_not_create_account(self, auth_client, db, user):
+        with patch("app.dashboard.routes.resolve_puuid") as mock_resolve:
+            resp = auth_client.post(
+                "/dashboard/settings/riot",
+                data={
+                    "riot-summoner_name": "SummonerName",
+                    "riot-tagline": "#BAD",
+                    "riot-region": "na1",
+                },
+                follow_redirects=False,
+            )
+
+        assert resp.status_code == 302
+        mock_resolve.assert_not_called()
+        riot_account = RiotAccount.query.filter_by(user_id=user.id).first()
+        assert riot_account is None
 
 
 class TestLocalePersistenceRoute:
