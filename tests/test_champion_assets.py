@@ -72,6 +72,56 @@ class TestVersionCaching:
         assert calls['n'] == 1
 
 
+class TestChampionMapCaching:
+    def test_champion_map_cache_expiry_refetches_data(self, monkeypatch):
+        _reset_cache_state()
+
+        payloads = [
+            {
+                'data': {
+                    'Ahri': {'id': 'Ahri', 'key': '103', 'name': 'Ahri'},
+                }
+            },
+            {
+                'data': {
+                    'Ahri': {'id': 'Ahri', 'key': '103', 'name': 'Ahri'},
+                    'Lux': {'id': 'Lux', 'key': '99', 'name': 'Lux'},
+                }
+            },
+        ]
+        calls = {'n': 0}
+
+        class Resp:
+            status_code = 200
+
+            def __init__(self, data):
+                self._data = data
+
+            def json(self):
+                return self._data
+
+        def fake_get(*args, **kwargs):
+            calls['n'] += 1
+            idx = 0 if calls['n'] == 1 else 1
+            return Resp(payloads[idx])
+
+        monkeypatch.setattr(assets.requests, 'get', fake_get)
+
+        initial = assets._get_champion_map('26.3.1')
+        cached = assets._get_champion_map('26.3.1')
+
+        assert calls['n'] == 1
+        assert initial['by_name']['ahri'] == 'Ahri'
+        assert 'lux' not in cached['by_name']
+
+        assets._MAP_CACHE['26.3.1']['expires_at'] = 0.0
+        refreshed = assets._get_champion_map('26.3.1')
+
+        assert calls['n'] == 2
+        assert refreshed['by_name']['lux'] == 'Lux'
+        assert refreshed['by_numeric']['99'] == 'Lux'
+
+
 class TestItemAndRuneIcons:
     def test_item_icon_url_uses_item_set(self, monkeypatch):
         monkeypatch.setattr(assets, '_fetch_latest_version', lambda: '26.3.1')
