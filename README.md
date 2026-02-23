@@ -60,6 +60,14 @@ A multi-user web platform for League of Legends performance analysis. Automatica
    python worker_run.py
    ```
 
+### Local Quality Checks
+
+Run the project test suite before opening or updating PRs:
+```bash
+python -m pytest tests/
+```
+Expect a green result similar to `137 passed` (warnings are okay when listed).
+
 ### Production Deployment
 
 ```bash
