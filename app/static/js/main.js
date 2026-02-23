@@ -546,17 +546,30 @@ document.addEventListener('DOMContentLoaded', function () {
         button.textContent = txt('runAi', 'Run AI Analysis');
     }
 
+    function setAiStatus(statusEl, message, tone) {
+        if (!statusEl) return;
+        statusEl.textContent = message || '';
+        statusEl.classList.remove('is-loading', 'is-success', 'is-error');
+        if (tone === 'loading' || tone === 'success' || tone === 'error') {
+            statusEl.classList.add('is-' + tone);
+        }
+    }
+
     async function runAiAnalysisSync(options) {
         var matchId = options.matchId;
         var force = options.force;
         var focus = options.focus || 'general';
         var container = options.container;
         var button = options.button;
+        var statusEl = options.statusEl || null;
         var fallbackNotice = options.fallbackNotice || '';
 
         if (fallbackNotice) {
             renderAiError(container, fallbackNotice);
             container.classList.add('ai-stream-fallback');
+            setAiStatus(statusEl, fallbackNotice, 'loading');
+        } else {
+            setAiStatus(statusEl, txt('aiStatusLoading', 'Status: running AI analysis...'), 'loading');
         }
 
         try {
@@ -570,17 +583,23 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             var data = await resp.json();
             if (data.error && !data.analysis) {
-                renderAiError(container, data.error || txt('aiFailed', 'AI analysis failed.'));
+                var failMessage = data.error || txt('aiFailed', 'AI analysis failed.');
+                renderAiError(container, failMessage);
+                setAiStatus(statusEl, txt('aiStatusFailed', 'Status: analysis failed.') + ' ' + failMessage, 'error');
                 resetAiButton(button);
                 return;
             }
             renderAiText(container, data.analysis || '');
             if (data.stale && data.error) {
                 appendAiNote(container, txt('cachedBecauseFailed', 'Using cached analysis because regeneration failed: ') + data.error, 'card-muted');
+                setAiStatus(statusEl, txt('aiStatusCached', 'Status: fallback to cached analysis due to generation error.'), 'error');
+            } else {
+                setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
             }
             completeAiButton(button);
         } catch (err) {
             renderAiError(container, txt('aiFailed', 'AI analysis failed.'));
+            setAiStatus(statusEl, txt('aiStatusFailed', 'Status: analysis failed.'), 'error');
             resetAiButton(button);
         }
     }
@@ -601,10 +620,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var focus = options.focus || 'general';
         var container = options.container;
         var button = options.button;
+        var statusEl = options.statusEl || null;
         var streamFallbackNotice = txt('streamFallback', 'Live stream interrupted. Falling back to standard analysis...');
 
         button.disabled = true;
         button.textContent = txt('analyzing', 'Analyzing...');
+        setAiStatus(statusEl, txt('aiStatusStreaming', 'Status: streaming AI analysis...'), 'loading');
 
         var output = prepareStreamUi(container);
         var streamedText = '';
@@ -618,6 +639,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 focus: focus,
                 container: container,
                 button: button,
+                statusEl: statusEl,
                 fallbackNotice: txt('streamUnavailable', 'Live stream is unavailable in this browser. Running standard analysis...'),
             });
             return;
@@ -664,6 +686,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (event.type === 'done') {
                         gotTerminalEvent = true;
                         renderAiText(container, event.analysis || streamedText);
+                        setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
                         completeAiButton(button);
                         try {
                             await reader.cancel();
@@ -694,6 +717,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (tailEvent && tailEvent.type === 'done') {
                     gotTerminalEvent = true;
                     renderAiText(container, tailEvent.analysis || streamedText);
+                    setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
                     completeAiButton(button);
                 } else if (tailEvent && tailEvent.type === 'stale') {
                     streamFallbackNotice = txt('staleFallback', 'Live stream returned cached analysis. Retrying with standard analysis...');
@@ -716,6 +740,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 focus: focus,
                 container: container,
                 button: button,
+                statusEl: statusEl,
                 fallbackNotice: streamFallbackNotice,
             });
         }
@@ -1028,6 +1053,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var detailAiBtn = document.getElementById('detail-ai-btn');
         var detailAiContent = document.getElementById('detail-ai-content');
         var detailAiInitial = document.getElementById('detail-ai-initial');
+        var detailAiStatus = document.getElementById('detail-ai-status');
         if (detailAiBtn && detailAiContent && detailAiInitial) {
             var initialText = '';
             try {
@@ -1039,6 +1065,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderAiText(detailAiContent, initialText);
                 detailAiBtn.classList.add('has-analysis');
                 detailAiBtn.textContent = txt('regenAi', 'Regenerate AI Analysis');
+                setAiStatus(detailAiStatus, txt('aiStatusLoaded', 'Status: loaded last saved analysis.'), 'success');
             }
 
             detailAiBtn.addEventListener('click', function () {
@@ -1047,6 +1074,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     force: detailAiBtn.classList.contains('has-analysis'),
                     container: detailAiContent,
                     button: detailAiBtn,
+                    statusEl: detailAiStatus,
                     focus: getAiFocusValue(),
                 });
             });

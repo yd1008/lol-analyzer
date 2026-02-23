@@ -1406,6 +1406,9 @@ class TestMatchDetailRoute:
         resp = auth_client.get(f"/dashboard/matches/{match.id}")
         assert resp.status_code == 200
         assert b"Gold Total" in resp.data
+        assert b'id="detail-ai-status"' in resp.data
+        assert b'role="status"' in resp.data
+        assert b'aria-live="polite"' in resp.data
 
 
 class TestSettingsPreferencesRoute:

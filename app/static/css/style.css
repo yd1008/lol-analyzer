@@ -1522,6 +1522,26 @@ html[data-theme="light"] .llm-analysis--rich code {
     box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
+.ai-analysis-status {
+    margin: 2px 0 0;
+    padding-left: 2px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    min-height: 1.2em;
+}
+
+.ai-analysis-status.is-loading {
+    color: var(--flash-info-text);
+}
+
+.ai-analysis-status.is-success {
+    color: var(--flash-success-text);
+}
+
+.ai-analysis-status.is-error {
+    color: var(--flash-danger-text);
+}
+
 .match-ai-content,
 .detail-ai-scroll {
     scrollbar-gutter: stable both-edges;
@@ -2455,6 +2475,9 @@ h4,
     .metrics, .stats-grid, .match-stats-grid, .share-grid { grid-template-columns: 1fr; }
     .flash-messages { right: 12px; }
     .theme-toggle { width: 100%; justify-content: center; }
+    .ai-coach-options { flex-wrap: wrap; align-items: stretch; }
+    .ai-focus-label { width: 100%; }
+    .ai-focus-select { max-width: 100%; min-width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
