@@ -17,7 +17,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data.lower()).first()
         if user and user.check_password(form.password.data):
-            login_user(user)
+            login_user(user, remember=bool(form.remember.data))
             next_page = request.args.get('next')
             flash(t('flash.welcome_back'), 'success')
             return redirect(next_page or url_for('dashboard.index'))
