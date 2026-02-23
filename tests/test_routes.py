@@ -3,6 +3,7 @@
 import json
 from unittest.mock import patch
 
+from app.dashboard.routes import sync_recent_matches
 from app.models import AdminAuditLog, DiscordConfig, MatchAnalysis, RiotAccount, User, UserSettings
 
 
@@ -146,6 +147,76 @@ class TestDashboardAccess:
     def test_settings_requires_login(self, client):
         resp = client.get("/dashboard/settings")
         assert resp.status_code in (302, 401)
+
+
+class TestSyncRecentMatches:
+    def test_sync_recent_matches_skips_existing_and_saves_new(self, db, user):
+        existing = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_existing_match",
+            champion="Ahri",
+            win=True,
+            kills=4,
+            deaths=2,
+            assists=7,
+            kda=5.5,
+            gold_earned=11000,
+            gold_per_min=366.7,
+            total_damage=18000,
+            damage_per_min=600.0,
+            vision_score=20,
+            cs_total=170,
+            game_duration=30.0,
+            recommendations=[],
+        )
+        db.session.add(existing)
+        db.session.commit()
+
+        new_analysis = {
+            "match_id": "NA1_new_match",
+            "champion": "Lux",
+            "win": False,
+            "kills": 3,
+            "deaths": 5,
+            "assists": 9,
+            "kda": 2.4,
+            "gold_earned": 10400,
+            "gold_per_min": 346.7,
+            "total_damage": 19500,
+            "damage_per_min": 650.0,
+            "vision_score": 28,
+            "cs_total": 165,
+            "game_duration": 30.0,
+            "recommendations": ["ward river before objective"],
+            "queue_type": "Ranked Solo",
+            "participants": [],
+            "game_start_timestamp": 1700000000000,
+        }
+
+        with patch("app.dashboard.routes.get_recent_matches", return_value=["NA1_existing_match", "NA1_new_match"]), patch(
+            "app.dashboard.routes.get_watcher",
+            return_value=object(),
+        ), patch("app.dashboard.routes.get_routing_value", return_value="americas"), patch(
+            "app.dashboard.routes.analyze_match",
+            return_value=new_analysis,
+        ) as mock_analyze:
+            saved = sync_recent_matches(user.id, "na1", "puuid-test")
+
+        assert saved == 1
+        assert mock_analyze.call_count == 1
+        row = MatchAnalysis.query.filter_by(user_id=user.id, match_id="NA1_new_match").one()
+        assert row.champion == "Lux"
+        assert row.queue_type == "Ranked Solo"
+
+    def test_sync_recent_matches_handles_recent_match_fetch_error(self, db, user):
+        with patch("app.dashboard.routes.get_recent_matches", side_effect=RuntimeError("riot timeout")), patch(
+            "app.dashboard.routes.get_watcher"
+        ) as mock_watcher, patch("app.dashboard.routes.analyze_match") as mock_analyze:
+            saved = sync_recent_matches(user.id, "na1", "puuid-test")
+
+        assert saved == 0
+        mock_watcher.assert_not_called()
+        mock_analyze.assert_not_called()
 
 
 class TestAdminAccess:
