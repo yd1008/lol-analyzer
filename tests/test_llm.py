@@ -132,6 +132,55 @@ class TestGetLlmAnalysis:
         assert "Coach mode: aggressive" in system_message
         assert "Coach Mode: aggressive" in user_message
 
+    @patch("app.analysis.llm_client.requests.post")
+    def test_prompt_includes_focus_instruction_for_non_general(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis(SAMPLE_ANALYSIS, focus="vision")
+
+        call_kwargs = mock_post.call_args
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach focus: Vision & map control" in user_message
+        assert "Prioritize this dimension in the analysis and recommendations" in user_message
+
+    @patch("app.analysis.llm_client.requests.post")
+    def test_prompt_omits_focus_instruction_for_general(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis(SAMPLE_ANALYSIS, focus="general")
+
+        call_kwargs = mock_post.call_args
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach focus:" not in user_message
+
+    @patch("app.analysis.llm_client.requests.post")
+    def test_prompt_falls_back_to_general_focus_when_invalid(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis(SAMPLE_ANALYSIS, focus="not-a-focus")
+
+        call_kwargs = mock_post.call_args
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach focus:" not in user_message
+
 
 class TestGetLlmAnalysisDetailed:
     @patch("app.analysis.llm_client.requests.post")
