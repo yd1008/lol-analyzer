@@ -2,9 +2,6 @@
 
 from app.analysis import llm_prompt as _prompt
 
-_OPENCODE_ZEN_DEFAULT_CHAT_MODEL = _prompt._OPENCODE_ZEN_DEFAULT_CHAT_MODEL
-_OPENCODE_ZEN_CHAT_HINT_MODELS = _prompt._OPENCODE_ZEN_CHAT_HINT_MODELS
-
 
 def _is_opencode_zen_url(api_url: str) -> bool:
     return _prompt._is_opencode_zen_url(api_url)

@@ -365,21 +365,13 @@ class TestGetLlmAnalysisDetailed:
 
     @patch("app.analysis.llm_client.requests.post")
     @patch("app.analysis.llm_prompt.requests.get")
-    def test_opencode_zen_deepseek_falls_back_to_glm(self, mock_get, mock_post, app):
+    def test_opencode_zen_deepseek_model_requires_explicit_supported_model(self, mock_get, mock_post, app):
         models_resp = MagicMock()
         models_resp.status_code = 200
         models_resp.json.return_value = {
-            "data": [{"id": "glm-4.7-free"}, {"id": "big-pickle"}]
+            "data": [{"id": "glm-5"}, {"id": "big-pickle"}]
         }
         mock_get.return_value = models_resp
-
-        completion_resp = MagicMock()
-        completion_resp.status_code = 200
-        completion_resp.json.return_value = {
-            "choices": [{"message": {"content": "Fallback model response"}}]
-        }
-        completion_resp.text = '{"choices":[{"message":{"content":"Fallback model response"}}]}'
-        mock_post.return_value = completion_resp
 
         with app.app_context():
             original_url = app.config["LLM_API_URL"]
@@ -390,10 +382,9 @@ class TestGetLlmAnalysisDetailed:
             app.config["LLM_API_URL"] = original_url
             app.config["LLM_MODEL"] = original_model
 
-        assert error is None
-        assert result == "Fallback model response"
-        call_kwargs = mock_post.call_args
-        assert call_kwargs[1]["json"]["model"] == "glm-4.7-free"
+        assert result is None
+        assert "not compatible with /chat/completions" in error
+        mock_post.assert_not_called()
 
     @patch("app.analysis.llm_client.requests.post")
     @patch("app.analysis.llm_prompt.requests.get")
@@ -401,7 +392,7 @@ class TestGetLlmAnalysisDetailed:
         models_resp = MagicMock()
         models_resp.status_code = 200
         models_resp.json.return_value = {
-            "data": [{"id": "gpt-5.2"}, {"id": "glm-4.7-free"}]
+            "data": [{"id": "gpt-5.2"}, {"id": "glm-5"}]
         }
         mock_get.return_value = models_resp
 
@@ -437,7 +428,7 @@ class TestGetLlmAnalysisDetailed:
         models_resp = MagicMock()
         models_resp.status_code = 200
         models_resp.json.return_value = {
-            "data": [{"id": "big-pickle"}, {"id": "glm-4.7-free"}]
+            "data": [{"id": "big-pickle"}, {"id": "glm-5"}]
         }
         mock_get.return_value = models_resp
 
@@ -474,11 +465,11 @@ class TestGetLlmAnalysisDetailed:
 
     @patch("app.analysis.llm_client.requests.post")
     @patch("app.analysis.llm_prompt.requests.get")
-    def test_opencode_prompt_tokens_500_falls_back_to_default_model(self, mock_get, mock_post, app):
+    def test_opencode_prompt_tokens_500_falls_back_to_configured_model(self, mock_get, mock_post, app):
         models_resp = MagicMock()
         models_resp.status_code = 200
         models_resp.json.return_value = {
-            "data": [{"id": "big-pickle"}, {"id": "glm-4.7-free"}]
+            "data": [{"id": "big-pickle"}, {"id": "glm-5"}]
         }
         mock_get.return_value = models_resp
 
@@ -497,11 +488,14 @@ class TestGetLlmAnalysisDetailed:
         with app.app_context():
             original_url = app.config["LLM_API_URL"]
             original_model = app.config["LLM_MODEL"]
+            original_fallback_models = app.config.get("LLM_FALLBACK_MODELS", "")
             app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/chat/completions"
             app.config["LLM_MODEL"] = "big-pickle"
+            app.config["LLM_FALLBACK_MODELS"] = "glm-5"
             result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
             app.config["LLM_API_URL"] = original_url
             app.config["LLM_MODEL"] = original_model
+            app.config["LLM_FALLBACK_MODELS"] = original_fallback_models
 
         assert error is None
         assert result == "Recovered with model fallback"
@@ -511,7 +505,7 @@ class TestGetLlmAnalysisDetailed:
         assert third_json["model"] == "big-pickle"
         assert "temperature" not in third_json
         assert "max_tokens" not in third_json
-        assert fourth_json["model"] == "glm-4.7-free"
+        assert fourth_json["model"] == "glm-5"
         assert "temperature" not in fourth_json
         assert "max_tokens" not in fourth_json
 

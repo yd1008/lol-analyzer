@@ -39,8 +39,6 @@ _DDRAGON_VERSIONS_URL = 'https://ddragon.leagueoflegends.com/api/versions.json'
 _DDRAGON_CHAMPIONS_URL = 'https://ddragon.leagueoflegends.com/cdn/{patch}/data/en_US/champion.json'
 _DDRAGON_ITEMS_URL = 'https://ddragon.leagueoflegends.com/cdn/{patch}/data/en_US/item.json'
 _OPENCODE_ZEN_MODELS_URL = 'https://opencode.ai/zen/v1/models'
-_OPENCODE_ZEN_DEFAULT_CHAT_MODEL = 'glm-4.7-free'
-_OPENCODE_ZEN_CHAT_HINT_MODELS = ('glm-4.7-free', 'kimi-k2.5-free', 'big-pickle')
 _LOCAL_KNOWLEDGE_DEFAULT = Path(__file__).with_name('knowledge').joinpath('game_knowledge.json')
 
 _CACHE_LOCK = threading.Lock()
@@ -100,6 +98,16 @@ def _fetch_opencode_zen_models() -> set[str]:
     return models
 
 
+def _configured_fallback_models() -> tuple[str, ...]:
+    raw = current_app.config.get('LLM_FALLBACK_MODELS', '') or ''
+    models: list[str] = []
+    for token in str(raw).split(','):
+        model = token.strip()
+        if model and model not in models:
+            models.append(model)
+    return tuple(models)
+
+
 def _resolve_provider_model(api_url: str, model: str) -> tuple[str | None, str | None]:
     """Validate/adapt model for provider endpoint quirks."""
     model = (model or '').strip()
@@ -116,26 +124,17 @@ def _resolve_provider_model(api_url: str, model: str) -> tuple[str | None, str |
             "Set LLM_API_URL to https://opencode.ai/zen/v1/chat/completions."
         )
 
-    if model == 'deepseek-chat':
-        logger.warning(
-            "LLM_MODEL=deepseek-chat is unavailable on OpenCode Zen. Falling back to %s.",
-            _OPENCODE_ZEN_DEFAULT_CHAT_MODEL,
-        )
-        model = _OPENCODE_ZEN_DEFAULT_CHAT_MODEL
-
-    if model.startswith(('gpt-', 'claude-', 'gemini-')):
-        hint = ', '.join(_OPENCODE_ZEN_CHAT_HINT_MODELS)
+    if model == 'deepseek-chat' or model.startswith(('gpt-', 'claude-', 'gemini-')):
         return None, (
             f"Model '{model}' on OpenCode Zen is not compatible with /chat/completions. "
-            f"Use a chat-completions model such as: {hint}."
+            f"Set LLM_MODEL to a model id listed by {_OPENCODE_ZEN_MODELS_URL}."
         )
 
     available_models = _fetch_opencode_zen_models()
     if available_models and model not in available_models:
-        hint = ', '.join(_OPENCODE_ZEN_CHAT_HINT_MODELS)
         return None, (
             f"LLM model '{model}' is not available on OpenCode Zen. "
-            f"Choose a model listed by {_OPENCODE_ZEN_MODELS_URL} (for example: {hint})."
+            f"Set LLM_MODEL to a model id listed by {_OPENCODE_ZEN_MODELS_URL}."
         )
     return model, None
 
@@ -1150,8 +1149,10 @@ def _request_body_variants(api_url: str, base_body: dict) -> list[dict]:
     minimal_current_model.pop('max_tokens', None)
     add_variant(minimal_current_model)
 
-    fallback_models = [_OPENCODE_ZEN_DEFAULT_CHAT_MODEL, *_OPENCODE_ZEN_CHAT_HINT_MODELS]
+    fallback_models = _configured_fallback_models()
     for fallback_model in fallback_models:
+        if fallback_model == minimal_current_model.get('model'):
+            continue
         fallback_variant = dict(minimal_current_model)
         fallback_variant['model'] = fallback_model
         add_variant(fallback_variant)
@@ -1163,7 +1164,7 @@ def _llm_request_settings() -> tuple[dict | None, str | None]:
     """Resolve validated provider settings shared by sync and stream calls."""
     api_key = current_app.config.get('LLM_API_KEY', '')
     api_url = current_app.config.get('LLM_API_URL', '')
-    model = current_app.config.get('LLM_MODEL', 'deepseek-chat')
+    model = current_app.config.get('LLM_MODEL', '')
     timeout_seconds = max(5, int(current_app.config.get('LLM_TIMEOUT_SECONDS', 30) or 30))
     retries = max(0, int(current_app.config.get('LLM_RETRIES', 1) or 1))
     retry_backoff = max(0.0, float(current_app.config.get('LLM_RETRY_BACKOFF_SECONDS', 1.5) or 1.5))
