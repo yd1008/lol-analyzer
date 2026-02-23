@@ -328,6 +328,60 @@ class TestSyncRecentMatches:
         row = MatchAnalysis.query.filter_by(user_id=user.id, match_id="NA1_sync_good").one()
         assert row.champion == "Lux"
 
+    def test_sync_recent_matches_continues_after_duplicate_insert_error(self, db, user):
+        def _analysis(match_id, champion):
+            return {
+                "match_id": match_id,
+                "champion": champion,
+                "win": True,
+                "kills": 6,
+                "deaths": 2,
+                "assists": 8,
+                "kda": 7.0,
+                "gold_earned": 12000,
+                "gold_per_min": 400.0,
+                "total_damage": 22000,
+                "damage_per_min": 733.3,
+                "vision_score": 26,
+                "cs_total": 185,
+                "game_duration": 30.0,
+                "recommendations": ["keep pressure on side lane"],
+                "queue_type": "Ranked Solo",
+                "participants": [],
+                "game_start_timestamp": 1700000000000,
+            }
+
+        with patch(
+            "app.dashboard.routes.get_recent_matches",
+            return_value=["NA1_sync_1", "NA1_sync_2", "NA1_sync_3"],
+        ), patch("app.dashboard.routes.get_watcher", return_value=object()), patch(
+            "app.dashboard.routes.get_routing_value",
+            return_value="americas",
+        ), patch(
+            "app.dashboard.routes.analyze_match",
+            side_effect=[
+                _analysis("NA1_sync_duplicate", "Ahri"),
+                _analysis("NA1_sync_duplicate", "Ahri"),
+                _analysis("NA1_sync_fresh", "Lux"),
+            ],
+        ) as mock_analyze, patch("app.dashboard.routes.logger.info") as mock_info:
+            saved = sync_recent_matches(user.id, "na1", "puuid-test")
+
+        assert saved == 2
+        assert mock_analyze.call_count == 3
+
+        dupes = MatchAnalysis.query.filter_by(user_id=user.id, match_id="NA1_sync_duplicate").all()
+        assert len(dupes) == 1
+        fresh = MatchAnalysis.query.filter_by(user_id=user.id, match_id="NA1_sync_fresh").one()
+        assert fresh.champion == "Lux"
+
+        duplicate_log_calls = [
+            call
+            for call in mock_info.call_args_list
+            if call.args and "Skipped duplicate match insert" in str(call.args[0])
+        ]
+        assert duplicate_log_calls
+
 
 class TestAdminAccess:
     def test_admin_requires_login(self, client):
