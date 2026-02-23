@@ -1012,6 +1012,27 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
     else:
         length_instruction = "在保证覆盖全部要求的前提下尽量简洁。" if is_zh else "Keep the response concise while fully addressing each requested section."
 
+    if is_zh:
+        structured_brief_instruction = (
+            "请严格按以下顺序输出 Coaching Brief，并全部使用二级标题（##）：\n"
+            "## 总结\n"
+            "## 3个首要问题\n"
+            "## 证据\n"
+            "## 下一局任务\n"
+            "## 2个训练\n"
+            "其中“3个首要问题”和“2个训练”里的每条建议都必须写成：在[场景Y]执行[动作X]，并用[可观察标准]判断是否达成。"
+        )
+    else:
+        structured_brief_instruction = (
+            "Return a Coaching Brief in this exact section order using level-2 headings (##):\n"
+            "## Summary\n"
+            "## Top 3 Issues\n"
+            "## Evidence\n"
+            "## Next-Game Mission\n"
+            "## 2 Drills\n"
+            "For every item under 'Top 3 Issues' and '2 Drills', write it as: In [situation Y], do [action X], and measure success with [observable criterion]."
+        )
+
     champ_label = champion_name(analysis['champion'], locale=language)
     queue_label_text = queue_label(analysis.get('queue_type', 'Unknown'), locale=language)
     if is_zh:
@@ -1042,6 +1063,7 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
             f"{'6' if lane_opp else '5'}. 下一局唯一的练习重点\n\n"
             "内容要直接、具体，严格围绕本场数据，避免空泛套话。\n"
             "请使用简洁的 Markdown 结构：用二级标题（##）分段，行动建议用项目符号（-）。不要使用代码块（```）。\n"
+            f"{structured_brief_instruction}\n"
             f"{length_instruction}"
         )
     else:
@@ -1072,6 +1094,7 @@ def _build_prompt(analysis: dict, language: str = 'en', focus: str = 'general') 
             f"{'6' if lane_opp else '5'}. One concrete practice focus for the next game\n\n"
             "Keep it direct and specific to this data. Avoid generic filler.\n"
             "Output in concise Markdown: use level-2 headings (##) for sections and bullet lists (-) for action items. Do not use code fences (```).\n"
+            f"{structured_brief_instruction}\n"
             f"{length_instruction}"
         )
     return system, user
