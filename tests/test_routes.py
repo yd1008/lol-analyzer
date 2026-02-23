@@ -1,4 +1,4 @@
-"""Tests for auth and basic routes."""
+﻿"""Tests for auth and basic routes."""
 
 import json
 from unittest.mock import patch
@@ -746,7 +746,7 @@ class TestAiAnalysisRoute:
             recommendations=[],
             llm_analysis="legacy english cache",
             llm_analysis_en="english cache",
-            llm_analysis_zh="中文缓存",
+            llm_analysis_zh="ä¸­æ–‡ç¼“å­˜",
             queue_type="Ranked Solo",
             participants_json=[
                 {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
@@ -762,7 +762,7 @@ class TestAiAnalysisRoute:
         )
         assert resp_zh.status_code == 200
         payload_zh = resp_zh.get_json()
-        assert payload_zh["analysis"] == "中文缓存"
+        assert payload_zh["analysis"] == "ä¸­æ–‡ç¼“å­˜"
         assert payload_zh["cached"] is True
         assert payload_zh["language"] == "zh-CN"
 
@@ -806,7 +806,7 @@ class TestAiAnalysisRoute:
         db.session.add(match)
         db.session.commit()
 
-        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("新的中文分析", None)):
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("æ–°çš„ä¸­æ–‡åˆ†æž", None)):
             resp = auth_client.post(
                 f"/dashboard/api/matches/{match.id}/ai-analysis",
                 json={"force": True, "language": "zh-CN"},
@@ -814,10 +814,10 @@ class TestAiAnalysisRoute:
 
         assert resp.status_code == 200
         payload = resp.get_json()
-        assert payload["analysis"] == "新的中文分析"
+        assert payload["analysis"] == "æ–°çš„ä¸­æ–‡åˆ†æž"
         assert payload["language"] == "zh-CN"
         reloaded = db.session.get(MatchAnalysis, match.id)
-        assert reloaded.llm_analysis_zh == "新的中文分析"
+        assert reloaded.llm_analysis_zh == "æ–°çš„ä¸­æ–‡åˆ†æž"
         assert reloaded.llm_analysis_en == "legacy english cache"
 
     def test_ai_analysis_non_general_focus_persists_latest_analysis(self, auth_client, db, user):
@@ -872,6 +872,64 @@ class TestAiAnalysisRoute:
         assert data["matches"][0]["initial_ai_analysis"] == ""
 
 
+    def test_ai_analysis_general_cache_is_not_overwritten_by_non_general_focus(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_focus_cache_isolation",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="cached legacy english",
+            llm_analysis_en="cached english",
+            llm_analysis_zh=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch("app.dashboard.routes.get_llm_analysis_detailed", return_value=("vision-focused analysis", None)):
+            resp_focus = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis",
+                json={"force": True, "focus": "vision", "language": "en"},
+            )
+
+        assert resp_focus.status_code == 200
+        payload_focus = resp_focus.get_json()
+        assert payload_focus["analysis"] == "vision-focused analysis"
+        assert payload_focus["focus"] == "vision"
+        assert payload_focus["persisted"] is False
+
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis_en == "cached english"
+        assert reloaded.llm_analysis == "cached legacy english"
+
+        resp_general = auth_client.post(
+            f"/dashboard/api/matches/{match.id}/ai-analysis",
+            json={"focus": "general", "language": "en"},
+        )
+        assert resp_general.status_code == 200
+        payload_general = resp_general.get_json()
+        assert payload_general["analysis"] == "cached english"
+        assert payload_general["cached"] is True
+        assert payload_general["focus"] == "general"
+        assert payload_general["persisted"] is True
+
+
 class TestMatchesApi:
     def test_api_matches_includes_cached_ai_analysis_for_english_locale(self, auth_client, db, user):
         match = MatchAnalysis(
@@ -893,7 +951,7 @@ class TestMatchesApi:
             recommendations=[],
             llm_analysis="legacy english cache",
             llm_analysis_en="english cache",
-            llm_analysis_zh="中文缓存",
+            llm_analysis_zh="ä¸­æ–‡ç¼“å­˜",
             queue_type="Ranked Solo",
             participants_json=[
                 {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
@@ -930,7 +988,7 @@ class TestMatchesApi:
             recommendations=[],
             llm_analysis="legacy english cache",
             llm_analysis_en="english cache",
-            llm_analysis_zh="中文缓存",
+            llm_analysis_zh="ä¸­æ–‡ç¼“å­˜",
             queue_type="Ranked Solo",
             participants_json=[
                 {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
@@ -945,7 +1003,7 @@ class TestMatchesApi:
         assert resp.status_code == 200
         payload = resp.get_json()
         assert len(payload["matches"]) == 1
-        assert payload["matches"][0]["initial_ai_analysis"] == "中文缓存"
+        assert payload["matches"][0]["initial_ai_analysis"] == "ä¸­æ–‡ç¼“å­˜"
         assert payload["matches"][0]["has_llm_analysis"] is True
 
     def test_api_matches_uses_legacy_english_cache_as_fallback(self, auth_client, db, user):
@@ -1083,3 +1141,6 @@ class TestAdminLlmInputSize:
         )
         assert resp.status_code == 200
         assert b"too large" in resp.data.lower()
+
+
+
