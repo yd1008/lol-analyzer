@@ -3,7 +3,7 @@
 import json
 from unittest.mock import patch
 
-from app.models import AdminAuditLog, MatchAnalysis, User
+from app.models import AdminAuditLog, MatchAnalysis, User, UserSettings
 
 
 class TestLandingPage:
@@ -1042,6 +1042,81 @@ class TestMatchDetailRoute:
         resp = auth_client.get(f"/dashboard/matches/{match.id}")
         assert resp.status_code == 200
         assert b"Gold Total" in resp.data
+
+
+class TestSettingsPreferencesRoute:
+    def test_settings_preferences_requires_login(self, client):
+        resp = client.post("/dashboard/settings/preferences", data={})
+        assert resp.status_code in (302, 401)
+
+    def test_settings_preferences_updates_existing_settings(self, auth_client, db, user):
+        resp = auth_client.post(
+            "/dashboard/settings/preferences",
+            data={
+                "prefs-check_interval": "10",
+                "prefs-weekly_summary_day": "Friday",
+                "prefs-weekly_summary_time": "21:00",
+                "prefs-notifications_enabled": "y",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+
+        reloaded = db.session.get(User, user.id)
+        assert reloaded.settings is not None
+        assert reloaded.settings.check_interval == 10
+        assert reloaded.settings.weekly_summary_day == "Friday"
+        assert reloaded.settings.weekly_summary_time == "21:00"
+        assert reloaded.settings.notifications_enabled is True
+
+    def test_settings_preferences_creates_settings_when_missing(self, auth_client, db, user):
+        existing = db.session.get(UserSettings, user.settings.id)
+        db.session.delete(existing)
+        db.session.commit()
+
+        resp = auth_client.post(
+            "/dashboard/settings/preferences",
+            data={
+                "prefs-check_interval": "30",
+                "prefs-weekly_summary_day": "Sunday",
+                "prefs-weekly_summary_time": "06:00",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+
+        reloaded = db.session.get(User, user.id)
+        assert reloaded.settings is not None
+        assert reloaded.settings.check_interval == 30
+        assert reloaded.settings.weekly_summary_day == "Sunday"
+        assert reloaded.settings.weekly_summary_time == "06:00"
+        assert reloaded.settings.notifications_enabled is False
+
+    def test_settings_preferences_rejects_invalid_check_interval(self, auth_client, db, user):
+        baseline = db.session.get(User, user.id).settings
+        baseline.check_interval = 5
+        baseline.weekly_summary_day = "Monday"
+        baseline.weekly_summary_time = "09:00"
+        baseline.notifications_enabled = True
+        db.session.commit()
+
+        resp = auth_client.post(
+            "/dashboard/settings/preferences",
+            data={
+                "prefs-check_interval": "999",
+                "prefs-weekly_summary_day": "Friday",
+                "prefs-weekly_summary_time": "21:00",
+                "prefs-notifications_enabled": "",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+
+        reloaded = db.session.get(User, user.id)
+        assert reloaded.settings.check_interval == 5
+        assert reloaded.settings.weekly_summary_day == "Monday"
+        assert reloaded.settings.weekly_summary_time == "09:00"
+        assert reloaded.settings.notifications_enabled is True
 
 
 class TestLocalePersistenceRoute:
