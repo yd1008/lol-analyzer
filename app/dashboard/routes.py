@@ -535,6 +535,21 @@ def _build_llm_analysis_payload(match: MatchAnalysis, riot_account: RiotAccount 
     }
 
 
+_ALLOWED_COACH_FOCUS = {
+    'general',
+    'laning',
+    'teamfight',
+    'macro',
+    'vision',
+    'mechanics',
+}
+
+
+def _resolve_coach_focus(value: str | None) -> str:
+    focus = (value or '').strip().lower()
+    return focus if focus in _ALLOWED_COACH_FOCUS else 'general'
+
+
 def _analysis_column_for_language(language: str) -> str:
     return 'llm_analysis_zh' if language == 'zh-CN' else 'llm_analysis_en'
 
@@ -610,14 +625,16 @@ def api_ai_analysis(match_db_id):
     payload = request.get_json(silent=True)
     force = bool(payload.get('force')) if isinstance(payload, dict) else False
     language = resolve_api_language(payload.get('language') if isinstance(payload, dict) else None)
-    cached_analysis = _get_cached_analysis(match, language)
+    focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
+    persist = focus == 'general'
+    cached_analysis = _get_cached_analysis(match, language) if persist else None
 
     if cached_analysis and not force:
-        return jsonify({'analysis': cached_analysis, 'cached': True, 'language': language})
+        return jsonify({'analysis': cached_analysis, 'cached': True, 'language': language, 'focus': focus, 'persisted': True})
 
     analysis_dict = _build_llm_analysis_payload(match, riot_account)
 
-    result, error = get_llm_analysis_detailed(analysis_dict, language=language)
+    result, error = get_llm_analysis_detailed(analysis_dict, language=language, focus=focus)
     if error:
         if cached_analysis:
             return jsonify({
@@ -626,14 +643,24 @@ def api_ai_analysis(match_db_id):
                 'stale': True,
                 'error': error,
                 'language': language,
+                'focus': focus,
+                'persisted': True,
             }), 200
         status = _ai_error_status(error)
-        return jsonify({'error': error, 'language': language}), status
+        return jsonify({'error': error, 'language': language, 'focus': focus}), status
 
-    _set_cached_analysis(match, language, result)
-    db.session.commit()
+    if persist:
+        _set_cached_analysis(match, language, result)
+        db.session.commit()
 
-    return jsonify({'analysis': result, 'cached': False, 'regenerated': force, 'language': language})
+    return jsonify({
+        'analysis': result,
+        'cached': False,
+        'regenerated': force or (not persist),
+        'language': language,
+        'focus': focus,
+        'persisted': persist,
+    })
 
 
 @dashboard_bp.route('/api/matches/<int:match_db_id>/ai-analysis/stream', methods=['POST'])
@@ -645,23 +672,27 @@ def api_ai_analysis_stream(match_db_id):
     payload = request.get_json(silent=True)
     force = bool(payload.get('force')) if isinstance(payload, dict) else False
     language = resolve_api_language(payload.get('language') if isinstance(payload, dict) else None)
-    cached_analysis = _get_cached_analysis(match, language)
+    focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
+    persist = focus == 'general'
+    cached_analysis = _get_cached_analysis(match, language) if persist else None
 
     def event_stream():
         if cached_analysis and not force:
-            yield _ndjson_line({'type': 'meta', 'cached': True, 'regenerated': False, 'language': language})
+            yield _ndjson_line({'type': 'meta', 'cached': True, 'regenerated': False, 'language': language, 'focus': focus, 'persisted': True})
             yield _ndjson_line({
                 'type': 'done',
                 'analysis': cached_analysis,
                 'cached': True,
                 'regenerated': False,
                 'language': language,
+                'focus': focus,
+                'persisted': True,
             })
             return
 
-        yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force, 'language': language})
+        yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force or (not persist), 'language': language, 'focus': focus, 'persisted': persist})
         analysis_dict = _build_llm_analysis_payload(match, riot_account)
-        for event in iter_llm_analysis_stream(analysis_dict, language=language):
+        for event in iter_llm_analysis_stream(analysis_dict, language=language, focus=focus):
             event_type = event.get('type')
             if event_type == 'chunk':
                 delta = event.get('delta', '')
@@ -671,15 +702,17 @@ def api_ai_analysis_stream(match_db_id):
 
             if event_type == 'done':
                 final_text = event.get('analysis', '')
-                if final_text:
+                if final_text and persist:
                     _set_cached_analysis(match, language, final_text)
                     db.session.commit()
                 yield _ndjson_line({
                     'type': 'done',
                     'analysis': final_text,
                     'cached': False,
-                    'regenerated': force,
+                    'regenerated': force or (not persist),
                     'language': language,
+                    'focus': focus,
+                    'persisted': persist,
                 })
                 return
 
@@ -693,6 +726,8 @@ def api_ai_analysis_stream(match_db_id):
                         'stale': True,
                         'error': error,
                         'language': language,
+                        'focus': focus,
+                        'persisted': True,
                     })
                 else:
                     yield _ndjson_line({
@@ -700,6 +735,8 @@ def api_ai_analysis_stream(match_db_id):
                         'error': error,
                         'status': _ai_error_status(error),
                         'language': language,
+                        'focus': focus,
+                        'persisted': persist,
                     })
                 return
 
@@ -712,6 +749,8 @@ def api_ai_analysis_stream(match_db_id):
                 'stale': True,
                 'error': fallback_error,
                 'language': language,
+                'focus': focus,
+                'persisted': True,
             })
         else:
             yield _ndjson_line({
@@ -719,6 +758,8 @@ def api_ai_analysis_stream(match_db_id):
                 'error': fallback_error,
                 'status': 502,
                 'language': language,
+                'focus': focus,
+                'persisted': persist,
             })
 
     response = Response(stream_with_context(event_stream()), mimetype='application/x-ndjson')

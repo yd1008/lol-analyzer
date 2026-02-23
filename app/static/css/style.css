@@ -1486,6 +1486,42 @@ html[data-theme="light"] .llm-analysis--rich code {
     background: rgba(0, 0, 0, 0.06);
 }
 
+/* AI Coach Focus Selector */
+.ai-coach-options {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--accent-border-subtle);
+}
+
+.ai-focus-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.ai-focus-select {
+    flex: 1;
+    max-width: 220px;
+    padding: 6px 10px;
+    font-size: 0.875rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--accent-border-subtle);
+    background: var(--bg-panel);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.ai-focus-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
 .match-ai-content,
 .detail-ai-scroll {
     scrollbar-gutter: stable both-edges;

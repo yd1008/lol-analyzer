@@ -487,6 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function runAiAnalysisSync(options) {
         var matchId = options.matchId;
         var force = options.force;
+        var focus = options.focus || 'general';
         var container = options.container;
         var button = options.button;
         var fallbackNotice = options.fallbackNotice || '';
@@ -503,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: getCurrentLocale()}),
+                body: JSON.stringify({force: force, language: getCurrentLocale(), focus: focus}),
             });
             var data = await resp.json();
             if (data.error && !data.analysis) {
@@ -535,6 +536,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function runAiAnalysisWithStreaming(options) {
         var matchId = options.matchId;
         var force = options.force;
+        var focus = options.focus || 'general';
         var container = options.container;
         var button = options.button;
         var streamFallbackNotice = txt('streamFallback', 'Live stream interrupted. Falling back to standard analysis...');
@@ -551,6 +553,7 @@ document.addEventListener('DOMContentLoaded', function () {
             await runAiAnalysisSync({
                 matchId: matchId,
                 force: force,
+                focus: focus,
                 container: container,
                 button: button,
                 fallbackNotice: txt('streamUnavailable', 'Live stream is unavailable in this browser. Running standard analysis...'),
@@ -565,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: getCurrentLocale()}),
+                body: JSON.stringify({force: force, language: getCurrentLocale(), focus: focus}),
             });
 
             if (!response.ok) {
@@ -648,6 +651,7 @@ document.addEventListener('DOMContentLoaded', function () {
             await runAiAnalysisSync({
                 matchId: matchId,
                 force: force,
+                focus: focus,
                 container: container,
                 button: button,
                 fallbackNotice: streamFallbackNotice,
@@ -800,6 +804,11 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function getAiFocusValue() {
+        var select = document.getElementById('ai-focus-select');
+        return select ? select.value : 'general';
+    }
+
     function handleAiAnalysis(btn) {
         var matchId = btn.getAttribute('data-match-id');
         var aiPanel = btn.closest('.match-tab-panel');
@@ -811,6 +820,7 @@ document.addEventListener('DOMContentLoaded', function () {
             force: btn.classList.contains('has-analysis'),
             container: content,
             button: btn,
+            focus: getAiFocusValue(),
         });
     }
 
@@ -968,6 +978,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     force: detailAiBtn.classList.contains('has-analysis'),
                     container: detailAiContent,
                     button: detailAiBtn,
+                    focus: getAiFocusValue(),
                 });
             });
         }
