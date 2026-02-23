@@ -1,11 +1,12 @@
 """Tests for background match worker behavior."""
 
 from concurrent.futures import Future
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 from sqlalchemy.exc import IntegrityError
 
-from app.models import MatchAnalysis, RiotAccount, User, UserSettings
+from app.models import DiscordConfig, MatchAnalysis, RiotAccount, User, UserSettings, WeeklySummary
 from worker import jobs
 
 
@@ -133,3 +134,82 @@ def test_check_all_users_matches_respects_worker_max_workers(app, db):
 
     assert captured["max_workers"] == 2
     assert process_mock.call_count == 2
+
+
+def test_send_weekly_summaries_saves_summary_and_notifies_discord(app, db):
+    fixed_now = datetime(2026, 2, 23, 12, 0, tzinfo=timezone.utc)  # Monday 12:00 UTC
+
+    user = User(email="weekly-summary@test.com")
+    user.set_password("pass12345")
+    db.session.add(user)
+    db.session.flush()
+
+    db.session.add(
+        UserSettings(
+            user_id=user.id,
+            weekly_summary_day="Monday",
+            weekly_summary_time="12:00",
+            notifications_enabled=True,
+        )
+    )
+    db.session.add(
+        DiscordConfig(
+            user_id=user.id,
+            channel_id="123456789012345678",
+            guild_id="987654321098765432",
+            is_active=True,
+        )
+    )
+    db.session.add(
+        MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_weekly_1",
+            champion="Ahri",
+            win=True,
+            kills=8,
+            deaths=2,
+            assists=9,
+            kda=8.5,
+            gold_earned=13000,
+            gold_per_min=420.0,
+            total_damage=25000,
+            damage_per_min=760.0,
+            vision_score=27,
+            cs_total=195,
+            game_duration=30.0,
+            recommendations=[],
+            analyzed_at=fixed_now - timedelta(days=1),
+        )
+    )
+    db.session.commit()
+
+    summary_payload = {
+        "total_games": 1,
+        "wins": 1,
+        "avg_kda": 8.5,
+        "avg_gold_per_min": 420.0,
+        "avg_damage_per_min": 760.0,
+        "summary_text": "Weekly summary text",
+    }
+
+    with patch("worker.jobs.datetime") as mock_datetime, patch(
+        "app.analysis.engine.generate_weekly_summary",
+        return_value=summary_payload,
+    ) as mock_generate, patch("app.analysis.discord_notifier.send_message") as mock_send:
+        mock_datetime.now.return_value = fixed_now
+        jobs.send_weekly_summaries(app)
+
+    summary = WeeklySummary.query.filter_by(user_id=user.id).one()
+    assert summary.total_games == 1
+    assert summary.wins == 1
+    assert summary.avg_kda == 8.5
+    assert summary.avg_gold_per_min == 420.0
+    assert summary.avg_damage_per_min == 760.0
+    assert summary.summary_text == "Weekly summary text"
+
+    called_payload = mock_generate.call_args[0][0]
+    assert len(called_payload) == 1
+    assert called_payload[0]["win"] is True
+    assert called_payload[0]["kda"] == 8.5
+
+    mock_send.assert_called_once_with("123456789012345678", "Weekly summary text")
