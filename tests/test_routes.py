@@ -196,6 +196,33 @@ class TestAdminAccess:
         assert resp.status_code == 200
         assert AdminAuditLog.query.filter_by(action="admin_access_allowed").count() >= 1
 
+    def test_admin_index_provides_user_list_and_total_analyses(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        player = User(email="player@test.com")
+        player.set_password("playerpass")
+        db.session.add_all([admin, player])
+        db.session.flush()
+
+        db.session.add_all([
+            MatchAnalysis(user_id=player.id, match_id="NA1_admin_idx_1", champion="Ahri"),
+            MatchAnalysis(user_id=player.id, match_id="NA1_admin_idx_2", champion="Lux"),
+        ])
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
+
+        with patch("app.admin.routes.render_template", return_value="OK") as mock_render:
+            resp = client.get("/admin/")
+
+        assert resp.status_code == 200
+        assert resp.data == b"OK"
+        kwargs = mock_render.call_args.kwargs
+        assert kwargs["total_analyses"] == 2
+        assert len(kwargs["users"]) == 2
+        assert {u.email for u in kwargs["users"]} == {"admin@test.com", "player@test.com"}
+
 
 class TestAiAnalysisRoute:
     def _parse_ndjson(self, response):
