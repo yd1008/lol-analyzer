@@ -1,7 +1,8 @@
 import json
 import logging
+from uuid import uuid4
 
-from flask import render_template, redirect, url_for, flash, request, jsonify, Response, stream_with_context
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, Response, stream_with_context
 from flask_login import login_required, current_user
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
@@ -624,6 +625,37 @@ def _ai_error_status(error: str) -> int:
     return 502
 
 
+def _has_admin_access() -> bool:
+    admin_email = (current_app.config.get('ADMIN_EMAIL', '') or '').strip().lower()
+    email = (getattr(current_user, 'email', '') or '').strip().lower()
+    return bool(getattr(current_user, 'is_admin', False) or (admin_email and email == admin_email))
+
+
+def _public_ai_error(error: str, *, language: str, trace_id: str) -> str:
+    if _has_admin_access():
+        return error
+    template = lt(
+        'AI analysis is temporarily unavailable. Please try again later. Trace ID: {trace_id}',
+        'AI 分析暂时不可用，请稍后重试。追踪 ID：{trace_id}',
+        locale=language,
+    )
+    return template.format(trace_id=trace_id)
+
+
+def _trace_ai_error(error: str, *, language: str, match_id: int, focus: str, stream: bool) -> tuple[str, str]:
+    trace_id = uuid4().hex[:12]
+    logger.warning(
+        "AI analysis failed trace_id=%s stream=%s user_id=%s match_id=%s focus=%s error=%s",
+        trace_id,
+        stream,
+        getattr(current_user, 'id', None),
+        match_id,
+        focus,
+        error,
+    )
+    return _public_ai_error(error, language=language, trace_id=trace_id), trace_id
+
+
 def _ndjson_line(event: dict) -> str:
     return json.dumps(event, ensure_ascii=False) + '\n'
 
@@ -677,18 +709,26 @@ def api_ai_analysis(match_db_id):
 
     result, error = get_llm_analysis_detailed(analysis_dict, language=language, focus=focus)
     if error:
+        public_error, trace_id = _trace_ai_error(
+            error,
+            language=language,
+            match_id=match_db_id,
+            focus=focus,
+            stream=False,
+        )
         if cached_analysis:
             return jsonify({
                 'analysis': cached_analysis,
                 'cached': True,
                 'stale': True,
-                'error': error,
+                'error': public_error,
+                'trace_id': trace_id,
                 'language': language,
                 'focus': focus,
                 'persisted': True,
             }), 200
         status = _ai_error_status(error)
-        return jsonify({'error': error, 'language': language, 'focus': focus}), status
+        return jsonify({'error': public_error, 'trace_id': trace_id, 'language': language, 'focus': focus}), status
 
     if result and persist_generated_analysis:
         _set_cached_analysis(match, language, result)
@@ -761,13 +801,21 @@ def api_ai_analysis_stream(match_db_id):
 
             if event_type == 'error':
                 error = event.get('error') or t('flash.ai_failed', locale=language)
+                public_error, trace_id = _trace_ai_error(
+                    error,
+                    language=language,
+                    match_id=match_db_id,
+                    focus=focus,
+                    stream=True,
+                )
                 if cached_analysis:
                     yield _ndjson_line({
                         'type': 'stale',
                         'analysis': cached_analysis,
                         'cached': True,
                         'stale': True,
-                        'error': error,
+                        'error': public_error,
+                        'trace_id': trace_id,
                         'language': language,
                         'focus': focus,
                         'persisted': True,
@@ -775,7 +823,8 @@ def api_ai_analysis_stream(match_db_id):
                 else:
                     yield _ndjson_line({
                         'type': 'error',
-                        'error': error,
+                        'error': public_error,
+                        'trace_id': trace_id,
                         'status': _ai_error_status(error),
                         'language': language,
                         'focus': focus,
@@ -784,13 +833,21 @@ def api_ai_analysis_stream(match_db_id):
                 return
 
         fallback_error = lt('AI analysis stream ended without a final result.', 'AI 分析流结束但未返回最终结果。', locale=language)
+        public_error, trace_id = _trace_ai_error(
+            fallback_error,
+            language=language,
+            match_id=match_db_id,
+            focus=focus,
+            stream=True,
+        )
         if cached_analysis:
             yield _ndjson_line({
                 'type': 'stale',
                 'analysis': cached_analysis,
                 'cached': True,
                 'stale': True,
-                'error': fallback_error,
+                'error': public_error,
+                'trace_id': trace_id,
                 'language': language,
                 'focus': focus,
                 'persisted': True,
@@ -798,7 +855,8 @@ def api_ai_analysis_stream(match_db_id):
         else:
             yield _ndjson_line({
                 'type': 'error',
-                'error': fallback_error,
+                'error': public_error,
+                'trace_id': trace_id,
                 'status': 502,
                 'language': language,
                 'focus': focus,

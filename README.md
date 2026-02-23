@@ -117,7 +117,8 @@ lol-analyzer/
 | `RIOT_VERIFICATION_UUID` | Riot API verification UUID | (set in .env) |
 | `LLM_API_KEY` | LLM provider API key | (required for AI analysis) |
 | `LLM_API_URL` | OpenAI-compatible chat completions endpoint | (required for AI analysis) |
-| `LLM_MODEL` | Model name sent to provider | `deepseek-chat` |
+| `LLM_MODEL` | Model name sent to provider | (required for AI analysis) |
+| `LLM_FALLBACK_MODELS` | Optional comma-separated fallback model ids for retry variants | (optional) |
 | `LLM_TIMEOUT_SECONDS` | Timeout per LLM request attempt | `30` |
 | `LLM_RETRIES` | Retries for timeout/5xx failures | `1` |
 | `LLM_RETRY_BACKOFF_SECONDS` | Base exponential retry backoff | `1.5` |
