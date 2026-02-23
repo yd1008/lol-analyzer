@@ -553,7 +553,7 @@ class TestAiAnalysisRoute:
 
         resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={})
         assert resp.status_code == 200
-        events = self._parse_ndjson(resp)
+        events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
         assert events[0]["type"] == "meta"
         assert events[0]["cached"] is True
         assert events[1]["type"] == "done"
@@ -593,7 +593,7 @@ class TestAiAnalysisRoute:
                 f"/dashboard/api/matches/{match.id}/ai-analysis/stream",
                 json={"force": True, "focus": "teamfight"},
             )
-            events = self._parse_ndjson(resp)
+            events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
 
         assert resp.status_code == 200
         assert events[0]["type"] == "meta"
@@ -636,7 +636,7 @@ class TestAiAnalysisRoute:
         ]
         with patch("app.dashboard.routes.iter_llm_analysis_stream", return_value=stream_events):
             resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
-            events = self._parse_ndjson(resp)
+            events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
 
         assert resp.status_code == 200
         assert events[0]["type"] == "meta"
@@ -679,7 +679,7 @@ class TestAiAnalysisRoute:
             return_value=[{"type": "error", "error": "Request timed out after 30s"}],
         ):
             resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
-            events = self._parse_ndjson(resp)
+            events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
 
         assert resp.status_code == 200
         assert events[-1]["type"] == "stale"
@@ -720,7 +720,7 @@ class TestAiAnalysisRoute:
             return_value=[{"type": "error", "error": "not compatible with /chat/completions"}],
         ):
             resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
-            events = self._parse_ndjson(resp)
+            events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
 
         assert resp.status_code == 200
         assert events[-1]["type"] == "error"
@@ -1043,6 +1043,70 @@ class TestMatchesApi:
         assert payload["matches"][0]["has_llm_analysis_en"] is True
 
 
+
+
+    def test_ai_analysis_stream_focus_does_not_persist_general_cache(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_focus_cache",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="legacy english cache",
+            llm_analysis_en="cached english",
+            llm_analysis_zh=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.iter_llm_analysis_stream",
+            return_value=[
+                {"type": "chunk", "delta": "vision analysis part 1"},
+                {"type": "done", "analysis": "vision-focused analysis"},
+            ],
+        ):
+            resp = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis/stream",
+                json={"force": True, "focus": "vision", "language": "en"},
+            )
+            events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
+
+        assert resp.status_code == 200
+        assert events[-1]["type"] == "done"
+        assert events[-1]["analysis"] == "vision-focused analysis"
+        assert events[-1]["focus"] == "vision"
+        assert events[-1]["persisted"] is False
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis_en == "cached english"
+        assert reloaded.llm_analysis == "legacy english cache"
+
+        resp_general = auth_client.post(
+            f"/dashboard/api/matches/{match.id}/ai-analysis",
+            json={"focus": "general", "language": "en"},
+        )
+        assert resp_general.status_code == 200
+        payload_general = resp_general.get_json()
+        assert payload_general["analysis"] == "cached english"
+        assert payload_general["cached"] is True
+        assert payload_general["focus"] == "general"
+
 class TestMatchDetailRoute:
     @patch("app.dashboard.routes.champion_icon_url", return_value="")
     @patch("app.dashboard.routes.item_icon_url", return_value="")
@@ -1216,6 +1280,8 @@ class TestAdminLlmInputSize:
         )
         assert resp.status_code == 200
         assert b"too large" in resp.data.lower()
+
+
 
 
 
