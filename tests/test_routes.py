@@ -211,12 +211,19 @@ class TestSyncRecentMatches:
     def test_sync_recent_matches_handles_recent_match_fetch_error(self, db, user):
         with patch("app.dashboard.routes.get_recent_matches", side_effect=RuntimeError("riot timeout")), patch(
             "app.dashboard.routes.get_watcher"
-        ) as mock_watcher, patch("app.dashboard.routes.analyze_match") as mock_analyze:
+        ) as mock_watcher, patch("app.dashboard.routes.analyze_match") as mock_analyze, patch(
+            "app.dashboard.routes.logger.warning"
+        ) as mock_warning:
             saved = sync_recent_matches(user.id, "na1", "puuid-test")
 
         assert saved == 0
         mock_watcher.assert_not_called()
         mock_analyze.assert_not_called()
+        mock_warning.assert_called_once()
+        call_args = mock_warning.call_args[0]
+        assert "Failed to fetch recent matches" in call_args[0]
+        assert call_args[1] == user.id
+        assert call_args[2] == "na1"
 
 
 class TestAdminAccess:
