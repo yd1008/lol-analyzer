@@ -1368,6 +1368,45 @@ class TestAdminLlmInputSize:
         assert b"too large" in resp.data.lower()
 
 
+class TestAdminDiscordRoute:
+    def test_test_discord_success_calls_notifier(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
 
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
 
+        with patch("app.analysis.discord_notifier.send_message", return_value=True) as mock_send:
+            resp = client.post(
+                "/admin/test-discord",
+                data={"channel_id": "123456789012345678", "message": "hello from test"},
+                follow_redirects=False,
+            )
+
+        assert resp.status_code == 302
+        assert resp.headers["Location"].endswith("/admin/")
+        mock_send.assert_called_once_with("123456789012345678", "hello from test")
+        assert AdminAuditLog.query.filter_by(action="admin_test_discord").count() >= 1
+
+    def test_test_discord_failure_shows_error(self, client, db, app):
+        app.config["ADMIN_EMAIL"] = "admin@test.com"
+        admin = User(email="admin@test.com")
+        admin.set_password("adminpass")
+        db.session.add(admin)
+        db.session.commit()
+
+        client.post("/auth/login", data={"email": "admin@test.com", "password": "adminpass"})
+
+        with patch("app.analysis.discord_notifier.send_message", return_value=False) as mock_send:
+            resp = client.post(
+                "/admin/test-discord",
+                data={"channel_id": "123456789012345678", "message": "hello from test"},
+                follow_redirects=True,
+            )
+
+        assert resp.status_code == 200
+        assert b"Failed to send Discord message" in resp.data
+        mock_send.assert_called_once_with("123456789012345678", "hello from test")
 
