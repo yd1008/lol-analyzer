@@ -702,6 +702,7 @@ def api_ai_analysis_stream(match_db_id):
     focus = _resolve_coach_focus(payload.get('focus') if isinstance(payload, dict) else None)
     persist = focus == 'general'
     cached_analysis = _get_cached_analysis(match, language) if persist else None
+    user_id = current_user.id
 
     def event_stream():
         if cached_analysis and not force:
@@ -730,8 +731,11 @@ def api_ai_analysis_stream(match_db_id):
             if event_type == 'done':
                 final_text = event.get('analysis', '')
                 if final_text and persist:
-                    _set_cached_analysis(match, language, final_text)
-                    db.session.commit()
+                    # Re-query the match to ensure it's attached to the current session state
+                    fresh_match = MatchAnalysis.query.filter_by(id=match_db_id, user_id=user_id).first()
+                    if fresh_match:
+                        _set_cached_analysis(fresh_match, language, final_text)
+                        db.session.commit()
                 yield _ndjson_line({
                     'type': 'done',
                     'analysis': final_text,
