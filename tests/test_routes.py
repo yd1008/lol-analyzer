@@ -1058,6 +1058,53 @@ class TestAiAnalysisRoute:
         reloaded = db.session.get(MatchAnalysis, match.id)
         assert reloaded.llm_analysis == "First part. Final part."
 
+    def test_ai_analysis_stream_falls_back_to_standard_when_stream_fails_before_chunks(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_to_sync_fallback",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis=None,
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.iter_llm_analysis_stream",
+            return_value=[{"type": "error", "error": "Stream temporarily unavailable"}],
+        ), patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=("standard fallback analysis", None),
+        ):
+            resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
+            events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
+
+        assert resp.status_code == 200
+        assert events[0]["type"] == "meta"
+        assert events[-1]["type"] == "done"
+        assert events[-1]["analysis"] == "standard fallback analysis"
+        assert events[-1]["cached"] is False
+
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis == "standard fallback analysis"
+
     def test_ai_analysis_stream_emits_stale_when_stream_fails_with_cache(self, auth_client, db, user):
         match = MatchAnalysis(
             user_id=user.id,
@@ -1089,6 +1136,9 @@ class TestAiAnalysisRoute:
         with patch(
             "app.dashboard.routes.iter_llm_analysis_stream",
             return_value=[{"type": "error", "error": "Request timed out after 30s"}],
+        ), patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Request timed out after 30s"),
         ):
             resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
             events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
@@ -1133,6 +1183,9 @@ class TestAiAnalysisRoute:
         with patch(
             "app.dashboard.routes.iter_llm_analysis_stream",
             return_value=[{"type": "error", "error": "Request timed out after 30s"}],
+        ), patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Request timed out after 30s"),
         ):
             resp = auth_client.post(
                 f"/dashboard/api/matches/{match.id}/ai-analysis/stream",
@@ -1183,6 +1236,9 @@ class TestAiAnalysisRoute:
         with patch(
             "app.dashboard.routes.iter_llm_analysis_stream",
             return_value=[{"type": "error", "error": "not compatible with /chat/completions"}],
+        ), patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "not compatible with /chat/completions"),
         ):
             resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
             events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
@@ -1225,6 +1281,9 @@ class TestAiAnalysisRoute:
         with patch(
             "app.dashboard.routes.iter_llm_analysis_stream",
             return_value=[{"type": "error", "error": "Authentication failed (401). Check your API key."}],
+        ), patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=(None, "Authentication failed (401). Check your API key."),
         ), patch("app.dashboard.routes.logger.warning") as mock_warning:
             resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
             events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]

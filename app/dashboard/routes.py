@@ -782,11 +782,13 @@ def api_ai_analysis_stream(match_db_id):
 
         yield _ndjson_line({'type': 'meta', 'cached': False, 'regenerated': force or (not cache_read_enabled), 'language': language, 'focus': focus, 'persisted': persist_generated_analysis})
         analysis_dict = _build_llm_analysis_payload(match, riot_account, coach_mode=coach_mode)
+        streamed_any_chunk = False
         for event in iter_llm_analysis_stream(analysis_dict, language=language, focus=focus):
             event_type = event.get('type')
             if event_type == 'chunk':
                 delta = event.get('delta', '')
                 if delta:
+                    streamed_any_chunk = True
                     yield _ndjson_line({'type': 'chunk', 'delta': delta})
                 continue
 
@@ -807,9 +809,31 @@ def api_ai_analysis_stream(match_db_id):
                 return
 
             if event_type == 'error':
-                error = event.get('error') or t('flash.ai_failed', locale=language)
+                stream_error = event.get('error') or t('flash.ai_failed', locale=language)
+
+                # Some providers intermittently fail stream mode while non-stream mode still works.
+                # If nothing has streamed yet, transparently retry once with the standard endpoint.
+                if not streamed_any_chunk:
+                    fallback_result, fallback_error = get_llm_analysis_detailed(analysis_dict, language=language, focus=focus)
+                    if fallback_result:
+                        if persist_generated_analysis:
+                            _set_cached_analysis(match, language, fallback_result)
+                            db.session.commit()
+                        yield _ndjson_line({
+                            'type': 'done',
+                            'analysis': fallback_result,
+                            'cached': False,
+                            'regenerated': force or (not cache_read_enabled),
+                            'language': language,
+                            'focus': focus,
+                            'persisted': persist_generated_analysis,
+                        })
+                        return
+                    if fallback_error:
+                        stream_error = fallback_error
+
                 public_error, trace_id = _trace_ai_error(
-                    error,
+                    stream_error,
                     language=language,
                     match_id=match_db_id,
                     focus=focus,
@@ -832,7 +856,7 @@ def api_ai_analysis_stream(match_db_id):
                         'type': 'error',
                         'error': public_error,
                         'trace_id': trace_id,
-                        'status': _ai_error_status(error),
+                        'status': _ai_error_status(stream_error),
                         'language': language,
                         'focus': focus,
                         'persisted': persist_generated_analysis,
