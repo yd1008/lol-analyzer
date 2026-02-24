@@ -37,6 +37,8 @@ class TestLandingPage:
         resp = client.get("/")
         assert resp.status_code == 200
         assert b'class="hero-backdrop-art"' in resp.data
+        assert b'class="hero-copy hero-surface"' in resp.data
+        assert b'class="hero-panel hero-surface"' in resp.data
         assert b'class="hero-command-strip"' in resp.data
         assert b'role="group"' in resp.data
         assert b'class="hero-panel-art"' in resp.data
