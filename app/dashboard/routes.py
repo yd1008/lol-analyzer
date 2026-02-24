@@ -679,8 +679,9 @@ def api_matches():
     query = MatchAnalysis.query.filter_by(user_id=current_user.id)
 
     if queue:
-        queue_list = [q.strip() for q in queue.split(',')]
-        query = query.filter(MatchAnalysis.queue_type.in_(queue_list))
+        queue_list = [q.strip() for q in queue.split(',') if q.strip()]
+        if queue_list:
+            query = query.filter(MatchAnalysis.queue_type.in_(queue_list))
 
     total = query.count()
 
