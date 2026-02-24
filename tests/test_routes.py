@@ -41,6 +41,8 @@ class TestLandingPage:
         assert b'class="hero-panel hero-surface"' in resp.data
         assert b'class="hero-command-strip"' in resp.data
         assert b'role="group"' in resp.data
+        assert b'class="workflow-track workflow-track-future"' in resp.data
+        assert b'class="workflow-node workflow-node-future"' in resp.data
         assert b'class="hero-panel-art"' in resp.data
 
 

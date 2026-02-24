@@ -2384,6 +2384,38 @@ h4,
     color: var(--text-secondary);
 }
 
+.workflow-track-future {
+    gap: 14px;
+}
+
+.workflow-node-future {
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(4px) saturate(108%);
+}
+
+.workflow-node-future::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid var(--accent-border-subtle);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, transparent 52%);
+    pointer-events: none;
+}
+
+.workflow-node-future::after {
+    content: "";
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 10px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-border-strong) 50%, transparent 100%);
+    opacity: 0.68;
+    pointer-events: none;
+}
+
 .workflow-node,
 .feature-card,
 .step,
@@ -2680,6 +2712,7 @@ h4,
         white-space: normal;
         line-height: 1.35;
     }
+    .workflow-track-future { gap: 10px; }
     .features-grid, .steps, .metrics, .stats-grid, .match-stats-grid, .share-grid { grid-template-columns: 1fr; }
     .flash-messages { right: 12px; }
     .theme-toggle { width: 100%; justify-content: center; }
