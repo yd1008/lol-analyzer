@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var sharesId = idPrefix + '-shares';
         var laneId = idPrefix + '-lane';
         return '' +
-            '<div class="visual-toggle-bar" role="tablist" aria-label="' + escapeHtml(txt('visuals', 'Visuals')) + '">' +
+            '<div class="visual-toggle-bar" role="tablist" aria-orientation="horizontal" aria-label="' + escapeHtml(txt('visuals', 'Visuals')) + '">' +
                 '<button class="visual-toggle-btn active" id="' + compareId + '-tab" data-group="compare" role="tab" aria-selected="true" aria-controls="' + compareId + '">' + escapeHtml(txt('compare', 'Compare')) + '</button>' +
                 '<button class="visual-toggle-btn" id="' + sharesId + '-tab" data-group="shares" role="tab" aria-selected="false" aria-controls="' + sharesId + '" tabindex="-1">' + escapeHtml(txt('shares', 'Shares')) + '</button>' +
                 '<button class="visual-toggle-btn" id="' + laneId + '-tab" data-group="lane" role="tab" aria-selected="false" aria-controls="' + laneId + '" tabindex="-1">' + escapeHtml(txt('lane', 'Lane')) + '</button>' +
@@ -802,7 +802,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<span class="match-duration">' + fmtNum(m.game_duration) + 'm</span>' +
                     dateHtml +
                 '</div>' +
-                '<div class="match-tab-bar" role="tablist" aria-label="' + escapeHtml(txt('overview', 'Overview')) + '">' +
+                '<div class="match-tab-bar" role="tablist" aria-orientation="horizontal" aria-label="' + escapeHtml(txt('overview', 'Overview')) + '">' +
                     '<button class="match-tab-btn active" id="' + tabPrefix + '-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="' + tabPrefix + '-panel-overview">' + escapeHtml(txt('overview', 'Overview')) + '</button>' +
                     '<button class="match-tab-btn" id="' + tabPrefix + '-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-visuals" tabindex="-1">' + escapeHtml(txt('visuals', 'Visuals')) + '</button>' +
                     '<button class="match-tab-btn" id="' + tabPrefix + '-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-ai" tabindex="-1">' + escapeHtml(txt('aiAnalysis', 'AI Analysis')) + '</button>' +

@@ -200,6 +200,7 @@ class TestDashboardAccess:
         assert resp.status_code == 200
         assert b'id="match-filter-bar"' in resp.data
         assert b'role="tablist"' in resp.data
+        assert b'aria-orientation="horizontal"' in resp.data
         assert b'aria-label="Filter matches by queue"' in resp.data
         assert b'id="queue-filter-all"' in resp.data
         assert b'role="tab"' in resp.data
