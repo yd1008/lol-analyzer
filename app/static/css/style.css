@@ -728,6 +728,20 @@ textarea:focus-visible {
     margin-top: 16px;
 }
 
+.hero-cta-helper {
+    display: none;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+}
+
+.hero-tertiary-link {
+    color: var(--accent);
+    font-weight: 700;
+    text-underline-offset: 2px;
+}
+
 .hero-token-line {
     width: min(100%, 42rem);
     padding-right: clamp(0px, 1vw, 8px);
@@ -2742,6 +2756,14 @@ h4,
         display: grid;
         grid-template-columns: 1fr;
         gap: 10px;
+    }
+    .hero-copy .hero-cta-helper {
+        display: block;
+        width: 100%;
+        margin-top: 2px;
+        margin-bottom: 2px;
+        font-size: 0.76rem;
+        line-height: 1.4;
     }
     .hero-copy .hero-token-line {
         width: 100%;

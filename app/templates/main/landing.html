@@ -28,6 +28,15 @@
                     <a href="{{ url_for('auth.login') }}" class="btn btn-secondary hero-secondary-cta">{{ lt('Sign In', '登录') }}</a>
                 {% endif %}
             </div>
+            <p class="hero-cta-helper" data-helper-role="secondary-path">
+                {% if current_user.is_authenticated %}
+                    {{ lt('Need setup tweaks?', '需要调整设置？') }}
+                    <a href="{{ url_for('dashboard.settings') }}" class="hero-tertiary-link">{{ lt('Update settings', '更新设置') }}</a>
+                {% else %}
+                    {{ lt('Already set up?', '已经配置过？') }}
+                    <a href="{{ url_for('auth.login') }}" class="hero-tertiary-link">{{ lt('Sign in', '登录') }}</a>
+                {% endif %}
+            </p>
             <div class="signal-row hero-mobile-stack hero-token-line">
                 <span class="signal-pill hero-signal-pill">{{ lt('Automatic Match Sync', '自动同步对局') }}</span>
                 <span class="signal-pill hero-signal-pill">{{ lt('Role + Matchup Context', '分路 + 对位上下文') }}</span>
