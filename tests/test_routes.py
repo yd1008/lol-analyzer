@@ -1014,6 +1014,60 @@ class TestAiAnalysisRoute:
         assert events[1]["focus"] == "teamfight"
         assert mock_stream.call_args[1]["focus"] == "teamfight"
 
+    def test_ai_analysis_stream_retries_sync_on_initial_stream_error_for_non_general_focus(self, auth_client, db, user):
+        match = MatchAnalysis(
+            user_id=user.id,
+            match_id="NA1_stream_retry_focus",
+            champion="Ahri",
+            win=True,
+            kills=5,
+            deaths=2,
+            assists=7,
+            kda=6.0,
+            gold_earned=12000,
+            gold_per_min=400.0,
+            total_damage=20000,
+            damage_per_min=700.0,
+            vision_score=25,
+            cs_total=180,
+            game_duration=30.0,
+            recommendations=[],
+            llm_analysis="existing general cache",
+            llm_analysis_en="existing general cache",
+            queue_type="Ranked Solo",
+            participants_json=[
+                {"is_player": True, "team_id": 100, "position": "MIDDLE", "champion": "Ahri"},
+                {"is_player": False, "team_id": 200, "position": "MIDDLE", "champion": "Syndra"},
+            ],
+        )
+        db.session.add(match)
+        db.session.commit()
+
+        with patch(
+            "app.dashboard.routes.iter_llm_analysis_stream",
+            return_value=[{"type": "error", "error": "stream transport reset"}],
+        ), patch(
+            "app.dashboard.routes.get_llm_analysis_detailed",
+            return_value=("sync fallback analysis", None),
+        ) as mock_sync:
+            resp = auth_client.post(
+                f"/dashboard/api/matches/{match.id}/ai-analysis/stream",
+                json={"force": True, "focus": "vision", "coach_mode": "supportive"},
+            )
+            events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
+
+        assert resp.status_code == 200
+        assert events[0]["type"] == "meta"
+        assert events[0]["focus"] == "vision"
+        assert events[-1]["type"] == "done"
+        assert events[-1]["analysis"] == "sync fallback analysis"
+        assert events[-1]["focus"] == "vision"
+        assert events[-1]["persisted"] is False
+        assert mock_sync.call_args[1]["focus"] == "vision"
+
+        reloaded = db.session.get(MatchAnalysis, match.id)
+        assert reloaded.llm_analysis_en == "existing general cache"
+
     def test_ai_analysis_stream_emits_chunk_then_done_and_persists(self, auth_client, db, user):
         match = MatchAnalysis(
             user_id=user.id,
