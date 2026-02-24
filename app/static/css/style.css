@@ -2237,6 +2237,22 @@ h4,
     box-shadow: 0 26px 42px rgba(7, 11, 9, 0.12);
 }
 
+.hero-surface {
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(6px) saturate(112%);
+}
+
+.hero-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid var(--accent-border-subtle);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 46%);
+    pointer-events: none;
+}
+
 .hero h1 {
     font-size: clamp(2.3rem, 5vw, 4.6rem);
     line-height: 1.02;
