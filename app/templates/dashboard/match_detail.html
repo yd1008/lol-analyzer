@@ -27,7 +27,7 @@
         </div>
     </div>
 
-    <div class="detail-tabs" id="detail-tabs" role="tablist" aria-label="{{ lt('Match detail sections', '对局详情分区') }}">
+    <div class="detail-tabs" id="detail-tabs" role="tablist" aria-orientation="horizontal" aria-label="{{ lt('Match detail sections', '对局详情分区') }}">
         <button class="detail-tab-btn active" id="detail-tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="detail-panel-overview">{{ lt('Overview', '概览') }}</button>
         <button class="detail-tab-btn" id="detail-tab-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="detail-panel-visuals" tabindex="-1">{{ lt('Visuals', '图表') }}</button>
         <button class="detail-tab-btn" id="detail-tab-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="detail-panel-ai" tabindex="-1">{{ lt('AI Analysis', 'AI 分析') }}</button>
@@ -233,7 +233,7 @@
         <div class="detail-tab-panel" id="detail-panel-visuals" data-panel="visuals" role="tabpanel" aria-labelledby="detail-tab-visuals" hidden>
             <div class="card">
                 <h3>{{ lt('Performance Visuals', '表现图表') }}</h3>
-                <div class="visual-toggle-bar" id="detail-visual-toggle" role="tablist" aria-label="{{ lt('Visualization groups', '图表分组') }}">
+                <div class="visual-toggle-bar" id="detail-visual-toggle" role="tablist" aria-orientation="horizontal" aria-label="{{ lt('Visualization groups', '图表分组') }}">
                     <button class="visual-toggle-btn active" id="detail-visual-tab-compare" data-group="compare" role="tab" aria-selected="true" aria-controls="detail-visual-group-compare">{{ lt('Compare', '对比') }}</button>
                     <button class="visual-toggle-btn" id="detail-visual-tab-shares" data-group="shares" role="tab" aria-selected="false" aria-controls="detail-visual-group-shares" tabindex="-1">{{ lt('Shares', '占比') }}</button>
                     <button class="visual-toggle-btn" id="detail-visual-tab-lane" data-group="lane" role="tab" aria-selected="false" aria-controls="detail-visual-group-lane" tabindex="-1">{{ lt('Lane', '对线') }}</button>

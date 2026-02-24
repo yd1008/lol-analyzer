@@ -1060,6 +1060,37 @@ document.addEventListener('DOMContentLoaded', function () {
         initializeFromServer();
     }
 
+    function bindTablistArrowKeys(container, buttonSelector, activateByKey) {
+        if (!container) return;
+        container.addEventListener('keydown', function (e) {
+            var current = e.target.closest(buttonSelector);
+            if (!current || !container.contains(current)) return;
+            var buttons = Array.prototype.slice.call(container.querySelectorAll(buttonSelector));
+            if (!buttons.length) return;
+
+            var idx = buttons.indexOf(current);
+            if (idx < 0) return;
+
+            var nextIdx = idx;
+            if (e.key === 'ArrowRight') {
+                nextIdx = (idx + 1) % buttons.length;
+            } else if (e.key === 'ArrowLeft') {
+                nextIdx = (idx - 1 + buttons.length) % buttons.length;
+            } else if (e.key === 'Home') {
+                nextIdx = 0;
+            } else if (e.key === 'End') {
+                nextIdx = buttons.length - 1;
+            } else {
+                return;
+            }
+
+            e.preventDefault();
+            var nextBtn = buttons[nextIdx];
+            activateByKey(nextBtn);
+            nextBtn.focus();
+        });
+    }
+
     var detailTabs = document.getElementById('detail-tabs');
     var detailPanels = document.querySelectorAll('.detail-tab-panel');
     var detailVisualToggle = document.getElementById('detail-visual-toggle');
@@ -1091,6 +1122,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 activateDetailVisual(btn.getAttribute('data-group'));
             });
         }
+
+        bindTablistArrowKeys(detailTabs, '.detail-tab-btn', function (btn) {
+            activateDetailTab(btn.getAttribute('data-tab'));
+        });
+        bindTablistArrowKeys(detailVisualToggle, '.visual-toggle-btn', function (btn) {
+            activateDetailVisual(btn.getAttribute('data-group'));
+        });
 
         activateDetailTab('overview');
         activateDetailVisual('compare');
