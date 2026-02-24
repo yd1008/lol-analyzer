@@ -2384,12 +2384,66 @@ h4,
     color: var(--text-secondary);
 }
 
+.workflow-track-future {
+    gap: 14px;
+}
+
+.workflow-node-future {
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(4px) saturate(108%);
+}
+
+.workflow-node-future::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid var(--accent-border-subtle);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, transparent 52%);
+    pointer-events: none;
+}
+
+.workflow-node-future::after {
+    content: "";
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 10px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-border-strong) 50%, transparent 100%);
+    opacity: 0.68;
+    pointer-events: none;
+}
+
 .workflow-node,
 .feature-card,
 .step,
 .metric {
     border-color: var(--surface-outline);
     background: linear-gradient(170deg, var(--surface-soft-overlay) 0%, var(--bg-card) 80%);
+}
+
+.feature-card-future,
+.step-future {
+    position: relative;
+    overflow: hidden;
+    border-color: var(--accent-border-subtle);
+    background: linear-gradient(162deg, var(--surface-soft-overlay) 0%, var(--bg-card) 82%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.feature-card-future::before,
+.step-future::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 14px;
+    right: 14px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-border-strong) 50%, transparent 100%);
+    opacity: 0.64;
+    pointer-events: none;
 }
 
 .dashboard {
@@ -2668,10 +2722,18 @@ h4,
     }
     .hero-command-strip { grid-template-columns: 1fr; }
     .hero-copy .cta-buttons .btn { width: 100%; }
+    .hero-copy .hero-primary-cta,
     .hero-copy .cta-buttons .btn-primary {
         padding: 12px 16px;
         font-size: 0.9rem;
     }
+
+    .hero-copy .hero-secondary-cta,
+    .hero-copy .cta-buttons .btn-secondary {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
+    .hero-copy .hero-signal-pill,
     .hero-copy .signal-pill {
         width: 100%;
         justify-content: flex-start;
@@ -2680,12 +2742,55 @@ h4,
         white-space: normal;
         line-height: 1.35;
     }
+    .workflow-track-future { gap: 10px; }
     .features-grid, .steps, .metrics, .stats-grid, .match-stats-grid, .share-grid { grid-template-columns: 1fr; }
     .flash-messages { right: 12px; }
     .theme-toggle { width: 100%; justify-content: center; }
     .ai-coach-options { flex-wrap: wrap; align-items: stretch; }
     .ai-focus-label { width: 100%; }
     .ai-focus-select { max-width: 100%; min-width: 100%; }
+}
+
+@media (max-width: 375px) {
+    .hero-copy .hero-mobile-stack {
+        gap: 8px;
+    }
+
+    .hero-copy .cta-buttons {
+        gap: 8px;
+    }
+
+    .hero-copy .hero-primary-cta,
+    .hero-copy .cta-buttons .btn-primary {
+        font-size: 0.86rem;
+        padding: 10px 12px;
+    }
+
+    .hero-copy .hero-secondary-cta,
+    .hero-copy .cta-buttons .btn-secondary {
+        font-size: 0.8rem;
+        padding: 9px 12px;
+    }
+
+    .hero-copy .hero-signal-pill,
+    .hero-copy .signal-pill {
+        font-size: 0.66rem;
+        padding: 6px 8px;
+        letter-spacing: 0.03em;
+        overflow-wrap: anywhere;
+    }
+
+    .workflow-track-future,
+    .features-grid,
+    .steps {
+        gap: 8px;
+    }
+
+    .workflow-node,
+    .feature-card,
+    .step {
+        padding: 14px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
