@@ -116,3 +116,13 @@ def test_js_i18n_payload_includes_localized_ai_status_labels():
     assert labels_en["aiStatusStreaming"] == "Status: streaming AI analysis..."
     assert labels_en["aiStatusFailed"] == "Status: analysis failed."
     assert labels_en["aiStatusCached"] == "Status: fallback to cached analysis due to generation error."
+
+
+def test_js_i18n_payload_localizes_stream_fallback_labels_for_zh():
+    labels_zh = js_i18n_payload("zh-CN")["labels"]
+    assert labels_zh["streamFallback"].startswith("AI教练分析实时流中断")
+    assert labels_zh["streamUnavailable"].startswith("当前浏览器不支持 AI 教练实时流")
+    assert labels_zh["staleFallback"].startswith("AI 教练实时流返回了缓存分析")
+    assert "Live stream" not in labels_zh["streamFallback"]
+    assert "Live stream" not in labels_zh["streamUnavailable"]
+    assert "Live stream" not in labels_zh["staleFallback"]
