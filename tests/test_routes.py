@@ -33,8 +33,8 @@ class TestLandingPage:
         assert b'class="btn btn-secondary hero-secondary-cta"' in resp.data
         assert b'class="signal-row hero-mobile-stack"' in resp.data
         assert b'class="signal-pill hero-signal-pill"' in resp.data
-        assert b'class="features-grid feature-min-grid"' in resp.data
-        assert b'class="steps"' in resp.data
+        assert b'class="features-grid feature-min-grid feature-rhythm-grid"' in resp.data
+        assert b'class="steps steps-rhythm-grid"' in resp.data
 
     def test_landing_includes_custom_futuristic_art_components(self, client):
         resp = client.get("/")
@@ -45,7 +45,7 @@ class TestLandingPage:
         assert b'class="hero-command-strip"' in resp.data
         assert b'class="hero-command-pill"' in resp.data
         assert b'role="group"' in resp.data
-        assert b'class="workflow-track workflow-track-future"' in resp.data
+        assert b'class="workflow-track workflow-track-future workflow-rhythm-grid"' in resp.data
         assert b'class="workflow-node workflow-node-future"' in resp.data
         assert b'class="feature-card feature-card-future"' in resp.data
         assert b'class="step step-future"' in resp.data

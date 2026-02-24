@@ -2686,12 +2686,16 @@ h4,
 
 @media (max-width: 1200px) {
     .container { width: min(1080px, calc(100% - 40px)); }
-    .features-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feature-rhythm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 980px) {
-    .hero-shell, .workflow-track, .setup-check-grid, .admin-lookup-grid, .steps, .quick-guide-grid, .coach-plan-grid { grid-template-columns: 1fr; }
-    .features-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hero-shell, .setup-check-grid, .admin-lookup-grid, .quick-guide-grid, .coach-plan-grid { grid-template-columns: 1fr; }
+    .workflow-rhythm-grid,
+    .feature-rhythm-grid,
+    .steps-rhythm-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .team-composition-dual, .composition-split { grid-template-columns: 1fr; }
     .match-box { grid-template-columns: 6px minmax(0, 1fr); }
@@ -2745,7 +2749,15 @@ h4,
         line-height: 1.35;
     }
     .workflow-track-future { gap: 10px; }
-    .features-grid, .steps, .metrics, .stats-grid, .match-stats-grid, .share-grid { grid-template-columns: 1fr; }
+    .workflow-rhythm-grid,
+    .feature-rhythm-grid,
+    .steps-rhythm-grid,
+    .metrics,
+    .stats-grid,
+    .match-stats-grid,
+    .share-grid {
+        grid-template-columns: 1fr;
+    }
     .flash-messages { right: 12px; }
     .theme-toggle { width: 100%; justify-content: center; }
     .ai-coach-options { flex-wrap: wrap; align-items: stretch; }
