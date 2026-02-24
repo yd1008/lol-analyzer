@@ -33,6 +33,13 @@ class TestLandingPage:
         assert b'class="features-grid feature-min-grid"' in resp.data
         assert b'class="steps"' in resp.data
 
+    def test_landing_includes_custom_futuristic_art_components(self, client):
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert b'class="hero-backdrop-art"' in resp.data
+        assert b'class="hero-command-strip"' in resp.data
+        assert b'class="hero-panel-art"' in resp.data
+
 
 class TestRegister:
     def test_register_page_loads(self, client):
