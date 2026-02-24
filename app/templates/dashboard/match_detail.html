@@ -146,17 +146,18 @@
             <div class="card">
                 <h3>{{ lt('Full Match Summary', '完整对局总结') }}</h3>
                 <div class="match-summary-table-wrap">
-                    <table class="match-summary-table">
+                    <table class="match-summary-table" aria-describedby="match-summary-caption">
+                        <caption id="match-summary-caption" class="visually-hidden">{{ lt('Detailed scoreboard with side, champion, runes, KDA, damage, wards, CS, and items for all players.', '包含阵营、英雄、符文、KDA、伤害、视野、补刀与装备的完整计分板。') }}</caption>
                         <thead>
                             <tr>
-                                <th>{{ lt('Side', '阵营') }}</th>
-                                <th>{{ lt('Champion', '英雄') }}</th>
-                                <th>{{ lt('Runes', '符文') }}</th>
-                                <th>KDA</th>
-                                <th>{{ lt('Damage', '伤害') }}</th>
-                                <th>{{ lt('Wards', '视野') }}</th>
-                                <th>CS</th>
-                                <th>{{ lt('Items', '装备') }}</th>
+                                <th scope="col">{{ lt('Side', '阵营') }}</th>
+                                <th scope="col">{{ lt('Champion', '英雄') }}</th>
+                                <th scope="col">{{ lt('Runes', '符文') }}</th>
+                                <th scope="col">KDA</th>
+                                <th scope="col">{{ lt('Damage', '伤害') }}</th>
+                                <th scope="col">{{ lt('Wards', '视野') }}</th>
+                                <th scope="col">CS</th>
+                                <th scope="col">{{ lt('Items', '装备') }}</th>
                             </tr>
                         </thead>
                         <tbody>
