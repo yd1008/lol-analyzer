@@ -21,17 +21,17 @@
             </div>
             <div class="cta-buttons hero-mobile-stack">
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">{{ lt('Open Dashboard', '打开仪表盘') }}</a>
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary hero-primary-cta">{{ lt('Open Dashboard', '打开仪表盘') }}</a>
                     <a href="{{ url_for('dashboard.settings') }}" class="btn btn-secondary">{{ lt('Update Settings', '更新设置') }}</a>
                 {% else %}
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">{{ lt('Start Free', '免费开始') }}</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary hero-primary-cta">{{ lt('Start Free', '免费开始') }}</a>
                     <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">{{ lt('Sign In', '登录') }}</a>
                 {% endif %}
             </div>
             <div class="signal-row hero-mobile-stack">
-                <span class="signal-pill">{{ lt('Automatic Match Sync', '自动同步对局') }}</span>
-                <span class="signal-pill">{{ lt('Role + Matchup Context', '分路 + 对位上下文') }}</span>
-                <span class="signal-pill">{{ lt('One-Action Coaching', '单点可执行建议') }}</span>
+                <span class="signal-pill hero-signal-pill">{{ lt('Automatic Match Sync', '自动同步对局') }}</span>
+                <span class="signal-pill hero-signal-pill">{{ lt('Role + Matchup Context', '分路 + 对位上下文') }}</span>
+                <span class="signal-pill hero-signal-pill">{{ lt('One-Action Coaching', '单点可执行建议') }}</span>
             </div>
         </div>
         <aside class="hero-panel hero-surface">

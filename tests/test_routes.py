@@ -29,7 +29,9 @@ class TestLandingPage:
         resp = client.get("/")
         assert resp.status_code == 200
         assert b'class="cta-buttons hero-mobile-stack"' in resp.data
+        assert b'class="btn btn-primary hero-primary-cta"' in resp.data
         assert b'class="signal-row hero-mobile-stack"' in resp.data
+        assert b'class="signal-pill hero-signal-pill"' in resp.data
         assert b'class="features-grid feature-min-grid"' in resp.data
         assert b'class="steps"' in resp.data
 

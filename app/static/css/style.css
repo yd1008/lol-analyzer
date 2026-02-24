@@ -2722,10 +2722,12 @@ h4,
     }
     .hero-command-strip { grid-template-columns: 1fr; }
     .hero-copy .cta-buttons .btn { width: 100%; }
+    .hero-copy .hero-primary-cta,
     .hero-copy .cta-buttons .btn-primary {
         padding: 12px 16px;
         font-size: 0.9rem;
     }
+    .hero-copy .hero-signal-pill,
     .hero-copy .signal-pill {
         width: 100%;
         justify-content: flex-start;
@@ -2744,6 +2746,28 @@ h4,
 }
 
 @media (max-width: 375px) {
+    .hero-copy .hero-mobile-stack {
+        gap: 8px;
+    }
+
+    .hero-copy .cta-buttons {
+        gap: 8px;
+    }
+
+    .hero-copy .hero-primary-cta,
+    .hero-copy .cta-buttons .btn-primary {
+        font-size: 0.86rem;
+        padding: 10px 12px;
+    }
+
+    .hero-copy .hero-signal-pill,
+    .hero-copy .signal-pill {
+        font-size: 0.66rem;
+        padding: 6px 8px;
+        letter-spacing: 0.03em;
+        overflow-wrap: anywhere;
+    }
+
     .workflow-track-future,
     .features-grid,
     .steps {
