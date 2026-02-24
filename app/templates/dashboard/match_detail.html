@@ -164,7 +164,7 @@
                             {% for row in match_view.scoreboard_rows %}
                             <tr class="{{ 'ally' if row.side == 'ALLY' else 'enemy' }}">
                                 <td>{{ lt('ALLY', '我方') if row.side == 'ALLY' else lt('ENEMY', '敌方') }}</td>
-                                <td>
+                                <th scope="row" class="summary-row-header">
                                     <div class="summary-champion-cell">
                                         {% if row.champion_icon %}
                                         <img class="champion-icon champion-icon-sm" src="{{ row.champion_icon }}" alt="{{ row.champion_label or row.champion }}">
@@ -176,7 +176,7 @@
                                             <div class="summary-sub">{{ row.summoner_name }}</div>
                                         </div>
                                     </div>
-                                </td>
+                                </th>
                                 <td>
                                     <div class="summary-runes">
                                         {% if row.runes.primary %}
