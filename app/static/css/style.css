@@ -1842,6 +1842,14 @@ html[data-theme="light"] .llm-analysis--rich code {
     font-weight: 600;
 }
 
+.match-summary-table tbody th[scope="row"] {
+    color: var(--text-secondary);
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.77rem;
+    font-weight: 500;
+}
+
 .summary-champion-cell {
     display: flex;
     align-items: center;
