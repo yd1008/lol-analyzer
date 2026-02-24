@@ -728,6 +728,20 @@ textarea:focus-visible {
     margin-top: 16px;
 }
 
+.hero-token-line {
+    width: min(100%, 42rem);
+    padding-right: clamp(0px, 1vw, 8px);
+}
+
+.hero-token-line > * {
+    min-width: 0;
+}
+
+.hero-token-line .signal-pill,
+.hero-token-line .hero-signal-pill {
+    overflow-wrap: anywhere;
+}
+
 .signal-pill {
     border: 1px solid var(--accent-border);
     background: var(--signal-soft);
@@ -2728,6 +2742,10 @@ h4,
         display: grid;
         grid-template-columns: 1fr;
         gap: 10px;
+    }
+    .hero-copy .hero-token-line {
+        width: 100%;
+        padding-right: 0;
     }
     .hero-command-strip { grid-template-columns: 1fr; }
     .hero-copy .cta-buttons .btn { width: 100%; }
