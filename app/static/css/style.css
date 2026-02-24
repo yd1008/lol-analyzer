@@ -2114,6 +2114,17 @@ html[data-theme="light"] .llm-analysis--rich code {
     padding: 32px;
 }
 
+.empty-state p {
+    margin: 0;
+}
+
+.empty-state-hint {
+    margin-top: 8px !important;
+    margin-bottom: 14px !important;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
 /* Refactor pass: stronger hierarchy, clearer surfaces, and artifact-style component rhythm */
 :root {
     --display-font: 'Sora', 'Manrope', 'Segoe UI', sans-serif;

@@ -835,7 +835,12 @@ document.addEventListener('DOMContentLoaded', function () {
             matchList.innerHTML = '';
         }
         if (!matches.length && !append) {
-            matchList.innerHTML = '<div class="empty-state"><p>' + escapeHtml(txt('noMatches', 'No matches found for this filter.')) + '</p></div>';
+            matchList.innerHTML = '' +
+                '<div class="empty-state">' +
+                    '<p>' + escapeHtml(txt('noMatches', 'No matches found for this filter.')) + '</p>' +
+                    '<p class="empty-state-hint">' + escapeHtml(txt('noMatchesHelp', 'Connect your Riot account in settings and sync recent matches to populate this queue.')) + '</p>' +
+                    '<a href="/dashboard/settings" class="btn btn-secondary btn-sm empty-state-cta">' + escapeHtml(txt('goSettings', 'Go to Settings')) + '</a>' +
+                '</div>';
             return;
         }
         matches.forEach(function (m) {

@@ -126,3 +126,13 @@ def test_js_i18n_payload_localizes_stream_fallback_labels_for_zh():
     assert "Live stream" not in labels_zh["streamFallback"]
     assert "Live stream" not in labels_zh["streamUnavailable"]
     assert "Live stream" not in labels_zh["staleFallback"]
+
+
+def test_js_i18n_payload_includes_empty_state_cta_labels():
+    labels_en = js_i18n_payload("en")["labels"]
+    assert labels_en["noMatchesHelp"].startswith("Connect your Riot account in settings")
+    assert labels_en["goSettings"] == "Go to Settings"
+
+    labels_zh = js_i18n_payload("zh-CN")["labels"]
+    assert labels_zh["noMatchesHelp"].startswith("请先在设置中绑定 Riot 账号")
+    assert labels_zh["goSettings"] == "前往设置"
