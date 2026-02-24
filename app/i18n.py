@@ -587,6 +587,7 @@ def js_i18n_payload(locale: str | None = None) -> dict:
             'analyzing': lt('Analyzing...', '分析中...', locale=lang),
             'noMatches': lt('No matches found for this filter.', '该筛选条件下暂无对局数据。', locale=lang),
             'showingMatches': lt('Showing {displayed} of {total} matches', '显示 {displayed} / {total} 场对局', locale=lang),
+            'filterTabWithCount': lt('{queue}: {count} matches', '{queue}：{count} 场', locale=lang),
             'noMatchesHelp': lt('Connect your Riot account in settings and sync recent matches to populate this queue.', '请先在设置中绑定 Riot 账号并同步最近对局，以填充该队列。', locale=lang),
             'goSettings': lt('Go to Settings', '前往设置', locale=lang),
             'noLaneOpponent': lt('No direct lane opponent data in this match.', '该对局缺少直接对位数据。', locale=lang),

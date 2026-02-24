@@ -872,17 +872,39 @@ document.addEventListener('DOMContentLoaded', function () {
         return Math.floor(count);
     }
 
+    function setFilterButtonAriaCount(button, count) {
+        if (!button) return;
+        var queueLabel = button.getAttribute('data-label-base') || button.textContent || '';
+        queueLabel = queueLabel.trim();
+        var template = txt('filterTabWithCount', '{queue}: {count} matches');
+        button.setAttribute(
+            'aria-label',
+            template
+                .replace('{queue}', queueLabel)
+                .replace('{count}', String(count))
+        );
+    }
+
     function setFilterBadgeCount(button, total) {
         if (!button) return;
         var badge = button.querySelector('.filter-count-badge');
         if (!badge) return;
-        badge.textContent = String(normalizeBadgeCount(total));
+        var count = normalizeBadgeCount(total);
+        badge.textContent = String(count);
+        setFilterButtonAriaCount(button, count);
     }
 
     function updateActiveFilterBadge(total) {
         if (!filterBar) return;
         var active = filterBar.querySelector('.filter-btn[aria-selected="true"]') || filterBar.querySelector('.filter-btn.active');
         setFilterBadgeCount(active, total);
+    }
+
+    function initializeFilterBadgeState() {
+        if (!filterBar) return;
+        filterBar.querySelectorAll('.filter-btn').forEach(function (button) {
+            setFilterBadgeCount(button, 0);
+        });
     }
 
     function updateLoadMoreVisibility(total, hasMore) {
@@ -1018,6 +1040,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (matchList) {
+        initializeFilterBadgeState();
+
         if (loadMoreBtn) {
             loadMoreBtn.addEventListener('click', loadMore);
         }

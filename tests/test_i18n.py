@@ -136,3 +136,11 @@ def test_js_i18n_payload_includes_empty_state_cta_labels():
     labels_zh = js_i18n_payload("zh-CN")["labels"]
     assert labels_zh["noMatchesHelp"].startswith("请先在设置中绑定 Riot 账号")
     assert labels_zh["goSettings"] == "前往设置"
+
+
+def test_js_i18n_payload_includes_filter_tab_count_template():
+    labels_en = js_i18n_payload("en")["labels"]
+    assert labels_en["filterTabWithCount"] == "{queue}: {count} matches"
+
+    labels_zh = js_i18n_payload("zh-CN")["labels"]
+    assert labels_zh["filterTabWithCount"] == "{queue}：{count} 场"

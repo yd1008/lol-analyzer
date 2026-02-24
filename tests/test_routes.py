@@ -226,6 +226,7 @@ class TestDashboardAccess:
         assert b'id="match-filter-summary"' in resp.data
         assert b'role="status" aria-live="polite" aria-atomic="true"' in resp.data
         assert b'class="filter-count-badge" aria-hidden="true"' in resp.data
+        assert b'data-label-base="All"' in resp.data
         assert b'role="tab"' in resp.data
         assert b'data-queue="" role="tab" aria-selected="true" aria-controls="match-list" tabindex="0"' in resp.data
         assert b'data-queue="Ranked Solo" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1"' in resp.data
