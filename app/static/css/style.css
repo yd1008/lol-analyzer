@@ -984,7 +984,14 @@ textarea:focus-visible {
 }
 
 .match-filter-bar {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+}
+
+.match-filter-summary {
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
 }
 
 .detail-tabs,

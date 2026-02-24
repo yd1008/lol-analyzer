@@ -217,6 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var loadMoreBtn = document.getElementById('load-more-btn');
     var loadMoreContainer = document.getElementById('load-more-container');
     var filterBar = document.getElementById('match-filter-bar');
+    var filterSummary = document.getElementById('match-filter-summary');
     var initialMatches = Array.isArray(window.__initialMatches) ? window.__initialMatches : [];
     var currentOffset = 0;
     var currentQueue = '';
@@ -842,6 +843,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function setMatchFilterSummary(displayed, total) {
+        if (!filterSummary) return;
+        var displayedCount = Number(displayed);
+        var totalCount = Number(total);
+        if (!Number.isFinite(displayedCount) || displayedCount < 0) {
+            displayedCount = 0;
+        }
+        if (!Number.isFinite(totalCount) || totalCount < displayedCount) {
+            totalCount = displayedCount;
+        }
+        var template = txt('showingMatches', 'Showing {displayed} of {total} matches');
+        filterSummary.textContent = template
+            .replace('{displayed}', String(displayedCount))
+            .replace('{total}', String(totalCount));
+    }
+
     function updateLoadMoreVisibility(total, hasMore) {
         if (!loadMoreContainer || !loadMoreBtn) return;
         if (typeof hasMore === 'boolean') {
@@ -868,6 +885,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 initializeAriaTabs(matchList);
                 currentOffset += data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
+                setMatchFilterSummary(currentOffset, data.total);
             })
             .catch(function () {
                 loadMoreBtn.disabled = false;
@@ -896,6 +914,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 initializeAriaTabs(matchList);
                 currentOffset = data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
+                setMatchFilterSummary(currentOffset, data.total);
             })
             .catch(function () {
                 if (loadMoreBtn) {
@@ -964,7 +983,9 @@ document.addEventListener('DOMContentLoaded', function () {
         renderMatches(initialMatches, false);
         initializeAriaTabs(matchList);
         currentOffset = initialMatches.length;
-        updateLoadMoreVisibility(window.__totalGames || 0, undefined);
+        var initialTotal = Number(window.__totalGames || 0);
+        updateLoadMoreVisibility(initialTotal, undefined);
+        setMatchFilterSummary(currentOffset, initialTotal);
     }
 
     if (matchList) {

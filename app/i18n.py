@@ -586,6 +586,7 @@ def js_i18n_payload(locale: str | None = None) -> dict:
             'regenAi': lt('Regenerate AI Analysis', '重新生成 AI 分析', locale=lang),
             'analyzing': lt('Analyzing...', '分析中...', locale=lang),
             'noMatches': lt('No matches found for this filter.', '该筛选条件下暂无对局数据。', locale=lang),
+            'showingMatches': lt('Showing {displayed} of {total} matches', '显示 {displayed} / {total} 场对局', locale=lang),
             'noLaneOpponent': lt('No direct lane opponent data in this match.', '该对局缺少直接对位数据。', locale=lang),
             'streamFallback': lt('Live stream interrupted. Falling back to standard analysis...', 'AI教练分析实时流中断，正在切换为标准分析...', locale=lang),
             'streamUnavailable': lt('Live stream is unavailable in this browser. Running standard analysis...', '当前浏览器不支持 AI 教练实时流，正在执行标准分析...', locale=lang),
