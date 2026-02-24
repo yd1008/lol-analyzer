@@ -2727,6 +2727,12 @@ h4,
         padding: 12px 16px;
         font-size: 0.9rem;
     }
+
+    .hero-copy .hero-secondary-cta,
+    .hero-copy .cta-buttons .btn-secondary {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
     .hero-copy .hero-signal-pill,
     .hero-copy .signal-pill {
         width: 100%;
@@ -2758,6 +2764,12 @@ h4,
     .hero-copy .cta-buttons .btn-primary {
         font-size: 0.86rem;
         padding: 10px 12px;
+    }
+
+    .hero-copy .hero-secondary-cta,
+    .hero-copy .cta-buttons .btn-secondary {
+        font-size: 0.8rem;
+        padding: 9px 12px;
     }
 
     .hero-copy .hero-signal-pill,
