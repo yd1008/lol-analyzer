@@ -43,6 +43,8 @@ class TestLandingPage:
         assert b'role="group"' in resp.data
         assert b'class="workflow-track workflow-track-future"' in resp.data
         assert b'class="workflow-node workflow-node-future"' in resp.data
+        assert b'class="feature-card feature-card-future"' in resp.data
+        assert b'class="step step-future"' in resp.data
         assert b'class="hero-panel-art"' in resp.data
 
 

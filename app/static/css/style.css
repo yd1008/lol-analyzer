@@ -2424,6 +2424,28 @@ h4,
     background: linear-gradient(170deg, var(--surface-soft-overlay) 0%, var(--bg-card) 80%);
 }
 
+.feature-card-future,
+.step-future {
+    position: relative;
+    overflow: hidden;
+    border-color: var(--accent-border-subtle);
+    background: linear-gradient(162deg, var(--surface-soft-overlay) 0%, var(--bg-card) 82%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.feature-card-future::before,
+.step-future::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 14px;
+    right: 14px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-border-strong) 50%, transparent 100%);
+    opacity: 0.64;
+    pointer-events: none;
+}
+
 .dashboard {
     padding-top: 108px;
 }
@@ -2719,6 +2741,20 @@ h4,
     .ai-coach-options { flex-wrap: wrap; align-items: stretch; }
     .ai-focus-label { width: 100%; }
     .ai-focus-select { max-width: 100%; min-width: 100%; }
+}
+
+@media (max-width: 375px) {
+    .workflow-track-future,
+    .features-grid,
+    .steps {
+        gap: 8px;
+    }
+
+    .workflow-node,
+    .feature-card,
+    .step {
+        padding: 14px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
