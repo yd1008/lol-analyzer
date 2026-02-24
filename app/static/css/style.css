@@ -2322,7 +2322,7 @@ h4,
     gap: 8px;
 }
 
-.hero-command-strip span {
+.hero-command-strip .hero-command-pill {
     border: 1px solid var(--surface-outline);
     border-radius: 10px;
     background: linear-gradient(145deg, var(--surface-soft-overlay) 0%, var(--bg-card) 100%);
@@ -2333,6 +2333,8 @@ h4,
     font-weight: 700;
     padding: 8px 10px;
     text-align: center;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .hero-panel-art {
@@ -2778,6 +2780,18 @@ h4,
         padding: 6px 8px;
         letter-spacing: 0.03em;
         overflow-wrap: anywhere;
+    }
+
+    .hero-command-strip {
+        gap: 6px;
+    }
+
+    .hero-command-strip .hero-command-pill {
+        font-size: 0.62rem;
+        padding: 7px 8px;
+        letter-spacing: 0.03em;
+        text-transform: none;
+        line-height: 1.3;
     }
 
     .workflow-track-future,
