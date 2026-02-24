@@ -42,7 +42,7 @@ class TestLandingPage:
         assert b'class="hero-backdrop-art"' in resp.data
         assert b'class="hero-copy hero-surface"' in resp.data
         assert b'class="hero-panel hero-surface"' in resp.data
-        assert b'class="hero-command-strip"' in resp.data
+        assert b'class="hero-command-strip hero-command-grid"' in resp.data
         assert b'class="hero-command-pill"' in resp.data
         assert b'role="group"' in resp.data
         assert b'class="workflow-track workflow-track-future workflow-rhythm-grid"' in resp.data
