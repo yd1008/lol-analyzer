@@ -869,7 +869,7 @@ class TestAiAnalysisRoute:
         with patch(
             "app.dashboard.routes.get_llm_analysis_detailed",
             return_value=(None, "Authentication failed (401). Check your API key."),
-        ):
+        ), patch("app.dashboard.routes.logger.warning") as mock_warning:
             resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis", json={"force": True})
 
         assert resp.status_code == 401
@@ -877,6 +877,15 @@ class TestAiAnalysisRoute:
         assert payload["trace_id"]
         assert "trace id" in payload["error"].lower()
         assert "authentication failed" not in payload["error"].lower()
+
+        warning_args = mock_warning.call_args[0]
+        assert "AI analysis failed trace_id=%s stream=%s user_id=%s match_id=%s focus=%s error=%s" in warning_args[0]
+        assert warning_args[1] == payload["trace_id"]
+        assert warning_args[2] is False
+        assert warning_args[3] == user.id
+        assert warning_args[4] == match.id
+        assert warning_args[5] == "general"
+        assert "authentication failed" in warning_args[6].lower()
 
     def test_ai_analysis_configuration_error_is_visible_to_admin(self, client, db, app):
         app.config["ADMIN_EMAIL"] = "admin@test.com"
@@ -1216,7 +1225,7 @@ class TestAiAnalysisRoute:
         with patch(
             "app.dashboard.routes.iter_llm_analysis_stream",
             return_value=[{"type": "error", "error": "Authentication failed (401). Check your API key."}],
-        ):
+        ), patch("app.dashboard.routes.logger.warning") as mock_warning:
             resp = auth_client.post(f"/dashboard/api/matches/{match.id}/ai-analysis/stream", json={"force": True})
             events = [json.loads(line) for line in resp.data.decode().splitlines() if line.strip()]
 
@@ -1226,6 +1235,15 @@ class TestAiAnalysisRoute:
         assert events[-1]["trace_id"]
         assert "trace id" in events[-1]["error"].lower()
         assert "authentication failed" not in events[-1]["error"].lower()
+
+        warning_args = mock_warning.call_args[0]
+        assert "AI analysis failed trace_id=%s stream=%s user_id=%s match_id=%s focus=%s error=%s" in warning_args[0]
+        assert warning_args[1] == events[-1]["trace_id"]
+        assert warning_args[2] is True
+        assert warning_args[3] == user.id
+        assert warning_args[4] == match.id
+        assert warning_args[5] == "general"
+        assert "authentication failed" in warning_args[6].lower()
 
     def test_ai_analysis_reads_language_specific_cache(self, auth_client, db, user):
         match = MatchAnalysis(
