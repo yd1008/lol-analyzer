@@ -2600,6 +2600,36 @@ h4,
     letter-spacing: 0.06em;
 }
 
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-count-badge {
+    min-width: 1.6em;
+    padding: 2px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--surface-outline);
+    background: var(--bg-chip);
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    line-height: 1;
+    font-weight: 700;
+}
+
+.filter-btn[aria-selected="true"] .filter-count-badge,
+.filter-btn.active .filter-count-badge {
+    background: color-mix(in srgb, var(--btn-active-bg) 16%, var(--bg-chip) 84%);
+    color: var(--btn-active-text);
+    border-color: color-mix(in srgb, var(--btn-active-bg) 35%, var(--surface-outline) 65%);
+}
+
+.filter-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--btn-active-bg) 50%, transparent);
+}
+
 .filter-btn.active,
 .match-tab-btn.active,
 .detail-tab-btn.active,

@@ -864,6 +864,27 @@ document.addEventListener('DOMContentLoaded', function () {
             .replace('{total}', String(totalCount));
     }
 
+    function normalizeBadgeCount(total) {
+        var count = Number(total);
+        if (!Number.isFinite(count) || count < 0) {
+            return 0;
+        }
+        return Math.floor(count);
+    }
+
+    function setFilterBadgeCount(button, total) {
+        if (!button) return;
+        var badge = button.querySelector('.filter-count-badge');
+        if (!badge) return;
+        badge.textContent = String(normalizeBadgeCount(total));
+    }
+
+    function updateActiveFilterBadge(total) {
+        if (!filterBar) return;
+        var active = filterBar.querySelector('.filter-btn[aria-selected="true"]') || filterBar.querySelector('.filter-btn.active');
+        setFilterBadgeCount(active, total);
+    }
+
     function updateLoadMoreVisibility(total, hasMore) {
         if (!loadMoreContainer || !loadMoreBtn) return;
         if (typeof hasMore === 'boolean') {
@@ -891,6 +912,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 currentOffset += data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
                 setMatchFilterSummary(currentOffset, data.total);
+                updateActiveFilterBadge(data.total);
             })
             .catch(function () {
                 loadMoreBtn.disabled = false;
@@ -898,7 +920,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function filterByQueue(queue) {
+    function filterByQueue(queue, sourceBtn) {
         currentQueue = queue;
         currentOffset = 0;
         if (loadMoreContainer) {
@@ -920,6 +942,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 currentOffset = data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
                 setMatchFilterSummary(currentOffset, data.total);
+                setFilterBadgeCount(sourceBtn, data.total);
             })
             .catch(function () {
                 if (loadMoreBtn) {
@@ -991,6 +1014,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var initialTotal = Number(window.__totalGames || 0);
         updateLoadMoreVisibility(initialTotal, undefined);
         setMatchFilterSummary(currentOffset, initialTotal);
+        setFilterBadgeCount(document.getElementById('queue-filter-all'), initialTotal);
     }
 
     if (matchList) {
@@ -1016,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var btn = e.target.closest('.filter-btn');
                 if (!btn) return;
                 setActiveQueueFilter(btn, false);
-                filterByQueue(btn.getAttribute('data-queue'));
+                filterByQueue(btn.getAttribute('data-queue'), btn);
             });
 
             filterBar.addEventListener('keydown', function (e) {
@@ -1042,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 var next = buttons[nextIndex];
                 setActiveQueueFilter(next, true);
-                filterByQueue(next.getAttribute('data-queue'));
+                filterByQueue(next.getAttribute('data-queue'), next);
             });
         }
 

@@ -136,10 +136,10 @@
         </div>
 
         <div class="match-filter-bar" id="match-filter-bar" role="tablist" aria-orientation="horizontal" aria-label="{{ lt('Filter matches by queue', '按队列筛选对局') }}">
-            <button type="button" class="filter-btn active" id="queue-filter-all" data-queue="" role="tab" aria-selected="true" aria-controls="match-list" tabindex="0">{{ lt('All', '全部') }}</button>
-            <button type="button" class="filter-btn" id="queue-filter-ranked-solo" data-queue="Ranked Solo" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1">{{ queue_label('Ranked Solo') }}</button>
-            <button type="button" class="filter-btn" id="queue-filter-ranked-flex" data-queue="Ranked Flex" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1">{{ queue_label('Ranked Flex') }}</button>
-            <button type="button" class="filter-btn" id="queue-filter-normal" data-queue="Normal Draft,Normal Blind" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1">{{ lt('Normal', '匹配') }}</button>
+            <button type="button" class="filter-btn active" id="queue-filter-all" data-queue="" role="tab" aria-selected="true" aria-controls="match-list" tabindex="0">{{ lt('All', '全部') }}<span class="filter-count-badge" aria-hidden="true">0</span></button>
+            <button type="button" class="filter-btn" id="queue-filter-ranked-solo" data-queue="Ranked Solo" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1">{{ queue_label('Ranked Solo') }}<span class="filter-count-badge" aria-hidden="true">0</span></button>
+            <button type="button" class="filter-btn" id="queue-filter-ranked-flex" data-queue="Ranked Flex" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1">{{ queue_label('Ranked Flex') }}<span class="filter-count-badge" aria-hidden="true">0</span></button>
+            <button type="button" class="filter-btn" id="queue-filter-normal" data-queue="Normal Draft,Normal Blind" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1">{{ lt('Normal', '匹配') }}<span class="filter-count-badge" aria-hidden="true">0</span></button>
         </div>
         <p class="match-filter-summary" id="match-filter-summary" role="status" aria-live="polite" aria-atomic="true"></p>
 
