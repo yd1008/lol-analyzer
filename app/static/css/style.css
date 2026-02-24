@@ -731,6 +731,7 @@ textarea:focus-visible {
 .hero-cta-helper {
     display: none;
     margin-top: 8px;
+    max-width: 34ch;
     font-size: 0.78rem;
     color: var(--text-secondary);
     letter-spacing: 0.01em;
@@ -2767,6 +2768,7 @@ h4,
     .hero-copy .hero-cta-helper {
         display: block;
         width: 100%;
+        max-width: min(100%, 30ch);
         margin-top: 2px;
         margin-bottom: 2px;
         font-size: 0.76rem;
