@@ -1808,6 +1808,17 @@ class TestMatchesApi:
         assert {m["match_id"] for m in payload_multi["matches"]} == {"NA1_queue_ranked_solo", "NA1_queue_normal"}
         assert payload_multi["has_more"] is False
 
+        resp_messy = auth_client.get("/dashboard/api/matches?offset=0&limit=10&queue=Ranked Solo,%20,Normal Draft,,")
+        assert resp_messy.status_code == 200
+        payload_messy = resp_messy.get_json()
+        assert payload_messy["total"] == 2
+        assert {m["match_id"] for m in payload_messy["matches"]} == {"NA1_queue_ranked_solo", "NA1_queue_normal"}
+
+        resp_empty_tokens = auth_client.get("/dashboard/api/matches?offset=0&limit=10&queue=,%20,,")
+        assert resp_empty_tokens.status_code == 200
+        payload_empty_tokens = resp_empty_tokens.get_json()
+        assert payload_empty_tokens["total"] == 3
+
 
     def test_ai_analysis_stream_focus_does_not_persist_general_cache(self, auth_client, db, user):
         match = MatchAnalysis(
