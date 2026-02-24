@@ -562,6 +562,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function setAiBusy(container, busy) {
+        if (!container || !container.setAttribute) return;
+        container.setAttribute('aria-busy', busy ? 'true' : 'false');
+    }
+
     async function runAiAnalysisSync(options) {
         var matchId = options.matchId;
         var force = options.force;
@@ -570,6 +575,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var button = options.button;
         var statusEl = options.statusEl || null;
         var fallbackNotice = options.fallbackNotice || '';
+
+        setAiBusy(container, true);
 
         if (fallbackNotice) {
             renderAiError(container, fallbackNotice);
@@ -608,6 +615,8 @@ document.addEventListener('DOMContentLoaded', function () {
             renderAiError(container, txt('aiFailed', 'AI analysis failed.'));
             setAiStatus(statusEl, txt('aiStatusFailed', 'Status: analysis failed.'), 'error');
             resetAiButton(button);
+        } finally {
+            setAiBusy(container, false);
         }
     }
 
@@ -630,6 +639,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var statusEl = options.statusEl || null;
         var streamFallbackNotice = txt('streamFallback', 'Live stream interrupted. Falling back to standard analysis...');
 
+        setAiBusy(container, true);
         button.disabled = true;
         button.textContent = txt('analyzing', 'Analyzing...');
         setAiStatus(statusEl, txt('aiStatusStreaming', 'Status: streaming AI analysis...'), 'loading');
@@ -649,6 +659,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 statusEl: statusEl,
                 fallbackNotice: txt('streamUnavailable', 'Live stream is unavailable in this browser. Running standard analysis...'),
             });
+            setAiBusy(container, false);
             return;
         }
 
@@ -750,6 +761,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 statusEl: statusEl,
                 fallbackNotice: streamFallbackNotice,
             });
+        } finally {
+            setAiBusy(container, false);
         }
     }
 

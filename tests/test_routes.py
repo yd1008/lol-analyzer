@@ -1932,6 +1932,7 @@ class TestMatchDetailRoute:
         assert b'class="match-summary-table" aria-describedby="match-summary-caption"' in resp.data
         assert b'id="match-summary-caption" class="visually-hidden"' in resp.data
         assert b'<th scope="col">KDA</th>' in resp.data
+        assert b'id="detail-ai-content" class="detail-ai-scroll" role="log" aria-live="polite" aria-atomic="false" aria-busy="false"' in resp.data
         assert b'id="detail-ai-status"' in resp.data
         assert b'role="status"' in resp.data
         assert b'aria-live="polite"' in resp.data

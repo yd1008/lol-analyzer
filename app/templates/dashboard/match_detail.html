@@ -316,7 +316,7 @@
                         </div>
                         <span class="ai-analysis-chip">{{ lt('Live', '实时') }}</span>
                     </div>
-                    <div id="detail-ai-content" class="detail-ai-scroll">
+                    <div id="detail-ai-content" class="detail-ai-scroll" role="log" aria-live="polite" aria-atomic="false" aria-busy="false">
                         <p class="card-muted">{{ lt('Run AI analysis to generate matchup-specific coaching.', '运行 AI 分析以生成针对该对局的建议。') }}</p>
                     </div>
                     <p id="detail-ai-status" class="ai-analysis-status" role="status" aria-live="polite">{{ lt('Status: ready to analyze.', '状态：可开始分析。') }}</p>
