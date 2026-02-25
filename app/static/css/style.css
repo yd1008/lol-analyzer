@@ -2800,7 +2800,24 @@ h4,
 
 @media (max-width: 560px) {
     .cta-buttons, .match-filter-bar, .match-tab-bar, .detail-tabs, .visual-toggle-bar, .footer-links { width: 100%; }
-    .cta-buttons .btn, .match-filter-bar .filter-btn, .match-tab-bar .match-tab-btn, .detail-tabs .detail-tab-btn, .visual-toggle-bar .visual-toggle-btn { flex: 1; }
+    .cta-buttons .btn, .match-tab-bar .match-tab-btn, .detail-tabs .detail-tab-btn, .visual-toggle-bar .visual-toggle-btn { flex: 1; }
+
+    .match-filter-bar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .match-filter-bar .filter-btn {
+        min-width: 0;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .match-filter-bar .filter-count-badge {
+        flex-shrink: 0;
+    }
+
     .hero-copy .hero-mobile-stack {
         display: grid;
         grid-template-columns: 1fr;
@@ -2892,6 +2909,10 @@ h4,
 }
 
 @media (max-width: 375px) {
+    .match-filter-bar {
+        grid-template-columns: 1fr;
+    }
+
     .hero-copy .hero-mobile-stack {
         gap: 8px;
     }
