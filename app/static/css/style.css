@@ -2858,6 +2858,37 @@ h4,
     .ai-coach-options { flex-wrap: wrap; align-items: stretch; }
     .ai-focus-label { width: 100%; }
     .ai-focus-select { max-width: 100%; min-width: 100%; }
+
+    .match-box-main,
+    .match-box-header,
+    .match-box-header > * {
+        min-width: 0;
+    }
+
+    .match-box-actions {
+        justify-content: stretch;
+    }
+
+    .match-box-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .match-champion {
+        max-width: min(46vw, 17ch);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .match-queue,
+    .match-duration,
+    .position-badge {
+        max-width: min(44vw, 15ch);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 }
 
 @media (max-width: 375px) {
@@ -2899,6 +2930,16 @@ h4,
         letter-spacing: 0.03em;
         text-transform: none;
         line-height: 1.3;
+    }
+
+    .match-champion {
+        max-width: min(40vw, 13ch);
+    }
+
+    .match-queue,
+    .match-duration,
+    .position-badge {
+        max-width: min(38vw, 11ch);
     }
 
     .workflow-track-future,
