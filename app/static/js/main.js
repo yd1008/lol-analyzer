@@ -217,6 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var loadMoreBtn = document.getElementById('load-more-btn');
     var loadMoreContainer = document.getElementById('load-more-container');
     var filterBar = document.getElementById('match-filter-bar');
+    var filterSummary = document.getElementById('match-filter-summary');
     var initialMatches = Array.isArray(window.__initialMatches) ? window.__initialMatches : [];
     var currentOffset = 0;
     var currentQueue = '';
@@ -834,11 +835,75 @@ document.addEventListener('DOMContentLoaded', function () {
             matchList.innerHTML = '';
         }
         if (!matches.length && !append) {
-            matchList.innerHTML = '<div class="empty-state"><p>' + escapeHtml(txt('noMatches', 'No matches found for this filter.')) + '</p></div>';
+            matchList.innerHTML = '' +
+                '<div class="empty-state">' +
+                    '<p>' + escapeHtml(txt('noMatches', 'No matches found for this filter.')) + '</p>' +
+                    '<p class="empty-state-hint">' + escapeHtml(txt('noMatchesHelp', 'Connect your Riot account in settings and sync recent matches to populate this queue.')) + '</p>' +
+                    '<a href="/dashboard/settings" class="btn btn-secondary btn-sm empty-state-cta">' + escapeHtml(txt('goSettings', 'Go to Settings')) + '</a>' +
+                '</div>';
             return;
         }
         matches.forEach(function (m) {
             matchList.insertAdjacentHTML('beforeend', renderMatchBox(m));
+        });
+    }
+
+    function setMatchFilterSummary(displayed, total) {
+        if (!filterSummary) return;
+        var displayedCount = Number(displayed);
+        var totalCount = Number(total);
+        if (!Number.isFinite(displayedCount) || displayedCount < 0) {
+            displayedCount = 0;
+        }
+        if (!Number.isFinite(totalCount) || totalCount < displayedCount) {
+            totalCount = displayedCount;
+        }
+        var template = txt('showingMatches', 'Showing {displayed} of {total} matches');
+        filterSummary.textContent = template
+            .replace('{displayed}', String(displayedCount))
+            .replace('{total}', String(totalCount));
+    }
+
+    function normalizeBadgeCount(total) {
+        var count = Number(total);
+        if (!Number.isFinite(count) || count < 0) {
+            return 0;
+        }
+        return Math.floor(count);
+    }
+
+    function setFilterButtonAriaCount(button, count) {
+        if (!button) return;
+        var queueLabel = button.getAttribute('data-label-base') || button.textContent || '';
+        queueLabel = queueLabel.trim();
+        var template = txt('filterTabWithCount', '{queue}: {count} matches');
+        button.setAttribute(
+            'aria-label',
+            template
+                .replace('{queue}', queueLabel)
+                .replace('{count}', String(count))
+        );
+    }
+
+    function setFilterBadgeCount(button, total) {
+        if (!button) return;
+        var badge = button.querySelector('.filter-count-badge');
+        if (!badge) return;
+        var count = normalizeBadgeCount(total);
+        badge.textContent = String(count);
+        setFilterButtonAriaCount(button, count);
+    }
+
+    function updateActiveFilterBadge(total) {
+        if (!filterBar) return;
+        var active = filterBar.querySelector('.filter-btn[aria-selected="true"]') || filterBar.querySelector('.filter-btn.active');
+        setFilterBadgeCount(active, total);
+    }
+
+    function initializeFilterBadgeState() {
+        if (!filterBar) return;
+        filterBar.querySelectorAll('.filter-btn').forEach(function (button) {
+            setFilterBadgeCount(button, 0);
         });
     }
 
@@ -868,6 +933,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 initializeAriaTabs(matchList);
                 currentOffset += data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
+                setMatchFilterSummary(currentOffset, data.total);
+                updateActiveFilterBadge(data.total);
             })
             .catch(function () {
                 loadMoreBtn.disabled = false;
@@ -875,7 +942,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function filterByQueue(queue) {
+    function filterByQueue(queue, sourceBtn) {
         currentQueue = queue;
         currentOffset = 0;
         if (loadMoreContainer) {
@@ -896,6 +963,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 initializeAriaTabs(matchList);
                 currentOffset = data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
+                setMatchFilterSummary(currentOffset, data.total);
+                setFilterBadgeCount(sourceBtn, data.total);
             })
             .catch(function () {
                 if (loadMoreBtn) {
@@ -964,10 +1033,15 @@ document.addEventListener('DOMContentLoaded', function () {
         renderMatches(initialMatches, false);
         initializeAriaTabs(matchList);
         currentOffset = initialMatches.length;
-        updateLoadMoreVisibility(window.__totalGames || 0, undefined);
+        var initialTotal = Number(window.__totalGames || 0);
+        updateLoadMoreVisibility(initialTotal, undefined);
+        setMatchFilterSummary(currentOffset, initialTotal);
+        setFilterBadgeCount(document.getElementById('queue-filter-all'), initialTotal);
     }
 
     if (matchList) {
+        initializeFilterBadgeState();
+
         if (loadMoreBtn) {
             loadMoreBtn.addEventListener('click', loadMore);
         }
@@ -990,7 +1064,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var btn = e.target.closest('.filter-btn');
                 if (!btn) return;
                 setActiveQueueFilter(btn, false);
-                filterByQueue(btn.getAttribute('data-queue'));
+                filterByQueue(btn.getAttribute('data-queue'), btn);
             });
 
             filterBar.addEventListener('keydown', function (e) {
@@ -1016,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 var next = buttons[nextIndex];
                 setActiveQueueFilter(next, true);
-                filterByQueue(next.getAttribute('data-queue'));
+                filterByQueue(next.getAttribute('data-queue'), next);
             });
         }
 

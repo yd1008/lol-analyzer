@@ -29,12 +29,14 @@ class TestLandingPage:
         resp = client.get("/")
         assert resp.status_code == 200
         assert b'class="cta-buttons hero-mobile-stack"' in resp.data
-        assert b'class="btn btn-primary hero-primary-cta"' in resp.data
+        assert b'class="btn btn-primary hero-primary-cta" aria-describedby="landing-cta-support"' in resp.data
         assert b'class="btn btn-secondary hero-secondary-cta"' in resp.data
-        assert b'class="signal-row hero-mobile-stack"' in resp.data
+        assert b'class="hero-cta-helper" id="landing-cta-support" data-helper-role="secondary-path"' in resp.data
+        assert b'class="hero-tertiary-link"' in resp.data
+        assert b'class="signal-row hero-mobile-stack hero-token-line"' in resp.data
         assert b'class="signal-pill hero-signal-pill"' in resp.data
-        assert b'class="features-grid feature-min-grid"' in resp.data
-        assert b'class="steps"' in resp.data
+        assert b'class="features-grid feature-min-grid feature-rhythm-grid"' in resp.data
+        assert b'class="steps steps-rhythm-grid"' in resp.data
 
     def test_landing_includes_custom_futuristic_art_components(self, client):
         resp = client.get("/")
@@ -42,9 +44,10 @@ class TestLandingPage:
         assert b'class="hero-backdrop-art"' in resp.data
         assert b'class="hero-copy hero-surface"' in resp.data
         assert b'class="hero-panel hero-surface"' in resp.data
-        assert b'class="hero-command-strip"' in resp.data
+        assert b'class="hero-command-strip hero-command-grid"' in resp.data
+        assert b'class="hero-command-pill"' in resp.data
         assert b'role="group"' in resp.data
-        assert b'class="workflow-track workflow-track-future"' in resp.data
+        assert b'class="workflow-track workflow-track-future workflow-rhythm-grid"' in resp.data
         assert b'class="workflow-node workflow-node-future"' in resp.data
         assert b'class="feature-card feature-card-future"' in resp.data
         assert b'class="step step-future"' in resp.data
@@ -220,6 +223,10 @@ class TestDashboardAccess:
         assert b'aria-orientation="horizontal"' in resp.data
         assert b'aria-label="Filter matches by queue"' in resp.data
         assert b'id="queue-filter-all"' in resp.data
+        assert b'id="match-filter-summary"' in resp.data
+        assert b'role="status" aria-live="polite" aria-atomic="true"' in resp.data
+        assert b'class="filter-count-badge" aria-hidden="true"' in resp.data
+        assert b'data-label-base="All"' in resp.data
         assert b'role="tab"' in resp.data
         assert b'data-queue="" role="tab" aria-selected="true" aria-controls="match-list" tabindex="0"' in resp.data
         assert b'data-queue="Ranked Solo" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1"' in resp.data

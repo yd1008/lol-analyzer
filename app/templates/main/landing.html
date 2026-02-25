@@ -14,21 +14,30 @@
             <div class="hero-badge">{{ lt('Built For Deliberate Improvement', '为有意识提升而生') }}</div>
             <h1>{{ lt('Review every match with ', '用') }}<em>{{ lt('clarity', '清晰') }}</em>{{ lt(', not noise', '而非噪音复盘每场对局') }}</h1>
             <p>{{ lt('Track what happened, why it happened, and what to change next queue. LaneScope turns each game into a concise coaching workflow.', '追踪发生了什么、为什么会发生，以及下一局要改什么。LaneScope 将每场对局整理成简洁可执行的复盘流程。') }}</p>
-            <div class="hero-command-strip" role="group" aria-label="{{ lt('Live analysis highlights', '实时分析亮点') }}">
-                <span>{{ lt('Live AI stream', '实时 AI 流式') }}</span>
-                <span>{{ lt('Role + lane context', '分路 + 对线语境') }}</span>
-                <span>{{ lt('One clear action', '一个明确行动') }}</span>
+            <div class="hero-command-strip hero-command-grid" role="group" aria-label="{{ lt('Live analysis highlights', '实时分析亮点') }}">
+                <span class="hero-command-pill">{{ lt('Live AI stream', '实时 AI 流式') }}</span>
+                <span class="hero-command-pill">{{ lt('Role + lane context', '分路 + 对线语境') }}</span>
+                <span class="hero-command-pill">{{ lt('One clear action', '一个明确行动') }}</span>
             </div>
             <div class="cta-buttons hero-mobile-stack">
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary hero-primary-cta">{{ lt('Open Dashboard', '打开仪表盘') }}</a>
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary hero-primary-cta" aria-describedby="landing-cta-support">{{ lt('Open Dashboard', '打开仪表盘') }}</a>
                     <a href="{{ url_for('dashboard.settings') }}" class="btn btn-secondary hero-secondary-cta">{{ lt('Update Settings', '更新设置') }}</a>
                 {% else %}
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary hero-primary-cta">{{ lt('Start Free', '免费开始') }}</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary hero-primary-cta" aria-describedby="landing-cta-support">{{ lt('Start Free', '免费开始') }}</a>
                     <a href="{{ url_for('auth.login') }}" class="btn btn-secondary hero-secondary-cta">{{ lt('Sign In', '登录') }}</a>
                 {% endif %}
             </div>
-            <div class="signal-row hero-mobile-stack">
+            <p class="hero-cta-helper" id="landing-cta-support" data-helper-role="secondary-path">
+                {% if current_user.is_authenticated %}
+                    {{ lt('Need setup tweaks?', '需要调整设置？') }}
+                    <a href="{{ url_for('dashboard.settings') }}" class="hero-tertiary-link">{{ lt('Update settings', '更新设置') }}</a>
+                {% else %}
+                    {{ lt('Already set up?', '已经配置过？') }}
+                    <a href="{{ url_for('auth.login') }}" class="hero-tertiary-link">{{ lt('Sign in', '登录') }}</a>
+                {% endif %}
+            </p>
+            <div class="signal-row hero-mobile-stack hero-token-line">
                 <span class="signal-pill hero-signal-pill">{{ lt('Automatic Match Sync', '自动同步对局') }}</span>
                 <span class="signal-pill hero-signal-pill">{{ lt('Role + Matchup Context', '分路 + 对位上下文') }}</span>
                 <span class="signal-pill hero-signal-pill">{{ lt('One-Action Coaching', '单点可执行建议') }}</span>
@@ -69,7 +78,7 @@
 
 <section class="workflow-strip" id="workflow">
     <div class="container">
-        <div class="workflow-track workflow-track-future">
+        <div class="workflow-track workflow-track-future workflow-rhythm-grid">
             <div class="workflow-node workflow-node-future">
                 <div class="workflow-kicker">{{ lt('Connect', '连接') }}</div>
                 <h3>{{ lt('One-Time Setup', '一次性配置') }}</h3>
@@ -95,7 +104,7 @@
             <div class="section-label">{{ lt('Features', '功能') }}</div>
             <h2 class="section-title">{{ lt('Built for fast decisions, not noise', '为快速决策而生，不为噪音') }}</h2>
         </div>
-        <div class="features-grid feature-min-grid">
+        <div class="features-grid feature-min-grid feature-rhythm-grid">
             <div class="feature-card feature-card-future">
                 <div class="feature-icon">01</div>
                 <h3>{{ lt('Automatic Match Import', '自动导入对局') }}</h3>
@@ -126,7 +135,7 @@
             <div class="section-label">{{ lt('First Look', '先看这里') }}</div>
             <h2 class="section-title">{{ lt('What you get at a glance', '你将一眼看到的内容') }}</h2>
         </div>
-        <div class="steps">
+        <div class="steps steps-rhythm-grid">
             <div class="step step-future">
                 <div class="step-number">01</div>
                 <h3>{{ lt('Current Form', '当前状态') }}</h3>

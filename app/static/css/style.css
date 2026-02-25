@@ -728,6 +728,35 @@ textarea:focus-visible {
     margin-top: 16px;
 }
 
+.hero-cta-helper {
+    display: none;
+    margin-top: 8px;
+    max-width: 34ch;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+}
+
+.hero-tertiary-link {
+    color: var(--accent);
+    font-weight: 700;
+    text-underline-offset: 2px;
+}
+
+.hero-token-line {
+    width: min(100%, 42rem);
+    padding-right: clamp(0px, 1vw, 8px);
+}
+
+.hero-token-line > * {
+    min-width: 0;
+}
+
+.hero-token-line .signal-pill,
+.hero-token-line .hero-signal-pill {
+    overflow-wrap: anywhere;
+}
+
 .signal-pill {
     border: 1px solid var(--accent-border);
     background: var(--signal-soft);
@@ -956,7 +985,14 @@ textarea:focus-visible {
 }
 
 .match-filter-bar {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+}
+
+.match-filter-summary {
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
 }
 
 .detail-tabs,
@@ -2078,6 +2114,17 @@ html[data-theme="light"] .llm-analysis--rich code {
     padding: 32px;
 }
 
+.empty-state p {
+    margin: 0;
+}
+
+.empty-state-hint {
+    margin-top: 8px !important;
+    margin-bottom: 14px !important;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
 /* Refactor pass: stronger hierarchy, clearer surfaces, and artifact-style component rhythm */
 :root {
     --display-font: 'Sora', 'Manrope', 'Segoe UI', sans-serif;
@@ -2318,11 +2365,11 @@ h4,
 .hero-command-strip {
     margin: 14px 0 16px;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
 }
 
-.hero-command-strip span {
+.hero-command-strip .hero-command-pill {
     border: 1px solid var(--surface-outline);
     border-radius: 10px;
     background: linear-gradient(145deg, var(--surface-soft-overlay) 0%, var(--bg-card) 100%);
@@ -2332,7 +2379,12 @@ h4,
     text-transform: uppercase;
     font-weight: 700;
     padding: 8px 10px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .hero-panel-art {
@@ -2548,6 +2600,36 @@ h4,
     letter-spacing: 0.06em;
 }
 
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-count-badge {
+    min-width: 1.6em;
+    padding: 2px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--surface-outline);
+    background: var(--bg-chip);
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    line-height: 1;
+    font-weight: 700;
+}
+
+.filter-btn[aria-selected="true"] .filter-count-badge,
+.filter-btn.active .filter-count-badge {
+    background: color-mix(in srgb, var(--btn-active-bg) 16%, var(--bg-chip) 84%);
+    color: var(--btn-active-text);
+    border-color: color-mix(in srgb, var(--btn-active-bg) 35%, var(--surface-outline) 65%);
+}
+
+.filter-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--btn-active-bg) 50%, transparent);
+}
+
 .filter-btn.active,
 .match-tab-btn.active,
 .detail-tab-btn.active,
@@ -2684,12 +2766,16 @@ h4,
 
 @media (max-width: 1200px) {
     .container { width: min(1080px, calc(100% - 40px)); }
-    .features-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feature-rhythm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 980px) {
-    .hero-shell, .workflow-track, .setup-check-grid, .admin-lookup-grid, .steps, .quick-guide-grid, .coach-plan-grid { grid-template-columns: 1fr; }
-    .features-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hero-shell, .setup-check-grid, .admin-lookup-grid, .quick-guide-grid, .coach-plan-grid { grid-template-columns: 1fr; }
+    .workflow-rhythm-grid,
+    .feature-rhythm-grid,
+    .steps-rhythm-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .team-composition-dual, .composition-split { grid-template-columns: 1fr; }
     .match-box { grid-template-columns: 6px minmax(0, 1fr); }
@@ -2720,6 +2806,19 @@ h4,
         grid-template-columns: 1fr;
         gap: 10px;
     }
+    .hero-copy .hero-cta-helper {
+        display: block;
+        width: 100%;
+        max-width: min(100%, 30ch);
+        margin-top: 2px;
+        margin-bottom: 2px;
+        font-size: 0.76rem;
+        line-height: 1.4;
+    }
+    .hero-copy .hero-token-line {
+        width: 100%;
+        padding-right: 0;
+    }
     .hero-command-strip { grid-template-columns: 1fr; }
     .hero-copy .cta-buttons .btn { width: 100%; }
     .hero-copy .hero-primary-cta,
@@ -2743,7 +2842,17 @@ h4,
         line-height: 1.35;
     }
     .workflow-track-future { gap: 10px; }
-    .features-grid, .steps, .metrics, .stats-grid, .match-stats-grid, .share-grid { grid-template-columns: 1fr; }
+    .workflow-rhythm-grid,
+    .feature-rhythm-grid,
+    .steps-rhythm-grid,
+    .features-grid,
+    .steps,
+    .metrics,
+    .stats-grid,
+    .match-stats-grid,
+    .share-grid {
+        grid-template-columns: 1fr;
+    }
     .flash-messages { right: 12px; }
     .theme-toggle { width: 100%; justify-content: center; }
     .ai-coach-options { flex-wrap: wrap; align-items: stretch; }
@@ -2778,6 +2887,18 @@ h4,
         padding: 6px 8px;
         letter-spacing: 0.03em;
         overflow-wrap: anywhere;
+    }
+
+    .hero-command-strip {
+        gap: 6px;
+    }
+
+    .hero-command-strip .hero-command-pill {
+        font-size: 0.62rem;
+        padding: 7px 8px;
+        letter-spacing: 0.03em;
+        text-transform: none;
+        line-height: 1.3;
     }
 
     .workflow-track-future,
