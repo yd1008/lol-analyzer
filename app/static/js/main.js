@@ -557,10 +557,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function setAiStatus(statusEl, message, tone) {
         if (!statusEl) return;
         statusEl.textContent = message || '';
-        statusEl.classList.remove('is-loading', 'is-success', 'is-error');
-        if (tone === 'loading' || tone === 'success' || tone === 'error') {
+        statusEl.classList.remove('is-idle', 'is-queued', 'is-loading', 'is-running', 'is-success', 'is-error');
+        if (tone === 'loading' || tone === 'success' || tone === 'error' || tone === 'idle' || tone === 'running' || tone === 'queued') {
             statusEl.classList.add('is-' + tone);
         }
+    }
+
+    function setAiCopyControls(content, copyBtn) {
+        if (!copyBtn) return;
+        var hasContent = !!(content && (content.textContent || '').trim());
+        copyBtn.disabled = !hasContent;
     }
 
     async function runAiAnalysisSync(options) {
@@ -570,14 +576,15 @@ document.addEventListener('DOMContentLoaded', function () {
         var container = options.container;
         var button = options.button;
         var statusEl = options.statusEl || null;
+        var copyBtn = options.copyBtn || null;
         var fallbackNotice = options.fallbackNotice || '';
 
         if (fallbackNotice) {
             renderAiError(container, fallbackNotice);
             container.classList.add('ai-stream-fallback');
-            setAiStatus(statusEl, fallbackNotice, 'loading');
+            setAiStatus(statusEl, fallbackNotice, 'queued');
         } else {
-            setAiStatus(statusEl, txt('aiStatusLoading', 'Status: running AI analysis...'), 'loading');
+            setAiStatus(statusEl, txt('aiStatusLoading', 'Status: running AI analysis...'), 'running');
         }
 
         try {
@@ -605,10 +612,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
             }
             completeAiButton(button);
+            setAiCopyControls(container, copyBtn);
+            return;
         } catch (err) {
             renderAiError(container, txt('aiFailed', 'AI analysis failed.'));
             setAiStatus(statusEl, txt('aiStatusFailed', 'Status: analysis failed.'), 'error');
             resetAiButton(button);
+            setAiCopyControls(container, copyBtn);
         }
     }
 
@@ -629,11 +639,13 @@ document.addEventListener('DOMContentLoaded', function () {
         var container = options.container;
         var button = options.button;
         var statusEl = options.statusEl || null;
+        var copyBtn = options.copyBtn || null;
         var streamFallbackNotice = txt('streamFallback', 'Live stream interrupted. Falling back to standard analysis...');
 
         button.disabled = true;
         button.textContent = txt('analyzing', 'Analyzing...');
-        setAiStatus(statusEl, txt('aiStatusStreaming', 'Status: streaming AI analysis...'), 'loading');
+        setAiStatus(statusEl, txt('aiStatusStreaming', 'Status: streaming AI analysis...'), 'running');
+        setAiCopyControls(container, copyBtn);
 
         var output = prepareStreamUi(container);
         var streamedText = '';
@@ -648,6 +660,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 container: container,
                 button: button,
                 statusEl: statusEl,
+                copyBtn: copyBtn,
                 fallbackNotice: txt('streamUnavailable', 'Live stream is unavailable in this browser. Running standard analysis...'),
             });
             return;
@@ -696,6 +709,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         renderAiText(container, event.analysis || streamedText);
                         setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
                         completeAiButton(button);
+                        setAiCopyControls(container, copyBtn);
                         try {
                             await reader.cancel();
                         } catch (err) {
@@ -727,6 +741,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     renderAiText(container, tailEvent.analysis || streamedText);
                     setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
                     completeAiButton(button);
+                    setAiCopyControls(container, copyBtn);
                 } else if (tailEvent && tailEvent.type === 'stale') {
                     streamFallbackNotice = txt('staleFallback', 'Live stream returned cached analysis. Retrying with standard analysis...');
                     if (tailEvent.error) {
@@ -749,6 +764,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 container: container,
                 button: button,
                 statusEl: statusEl,
+                copyBtn: copyBtn,
                 fallbackNotice: streamFallbackNotice,
             });
         }
@@ -757,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderMatchBox(m) {
         var winClass = m.win ? 'match-win' : 'match-loss';
         var resultText = m.win ? txt('victory', 'Victory') : txt('defeat', 'Defeat');
-        var queueHtml = m.queue_type ? '<span class="match-queue">' + escapeHtml(m.queue_type_label || m.queue_type) + '</span>' : '';
+        var queueHtml = m.queue_type ? '<span class="match-queue match-meta-item">' + escapeHtml(m.queue_type_label || m.queue_type) + '</span>' : '';
         var positionBadge = m.player_position && POSITION_MAP[m.player_position]
             ? '<span class="position-badge">' + POSITION_MAP[m.player_position] + '</span>'
             : '';
@@ -766,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var hasAiAnalysis = !!m.has_llm_analysis || hasInitialAi;
         var aiClass = hasAiAnalysis ? ' has-analysis' : '';
         var aiText = hasAiAnalysis ? txt('regenAi', 'Regenerate AI Analysis') : txt('runAi', 'Run AI Analysis');
-        var dateHtml = m.analyzed_at ? '<span class="match-duration">' + escapeHtml(m.analyzed_at.slice(0, 10)) + '</span>' : '';
+        var dateHtml = m.analyzed_at ? '<span class="match-duration match-meta-item">' + escapeHtml(m.analyzed_at.slice(0, 10)) + '</span>' : '';
         var tabPrefix = 'match-' + m.id + '-tab';
         var visualPrefix = 'match-' + m.id + '-visual';
 
@@ -795,13 +811,17 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="match-box-indicator"></div>' +
             '<div class="match-box-main">' +
                 '<div class="match-box-header">' +
-                    championIconHtml({champion: m.champion, champion_label: m.champion_label, champion_icon: m.champion_icon}, '') +
-                    '<span class="match-champion">' + escapeHtml(m.champion_label || m.champion) + '</span>' +
-                    positionBadge +
-                    '<span class="match-result-tag">' + resultText + '</span>' +
-                    queueHtml +
-                    '<span class="match-duration">' + fmtNum(m.game_duration) + 'm</span>' +
-                    dateHtml +
+                    '<div class="match-item-title">' +
+                        championIconHtml({champion: m.champion, champion_label: m.champion_label, champion_icon: m.champion_icon}, '') +
+                        '<span class="match-champion" title="' + escapeHtml(m.champion_label || m.champion) + '">' + escapeHtml(m.champion_label || m.champion) + '</span>' +
+                        positionBadge +
+                    '</div>' +
+                    '<div class="match-meta">' +
+                        '<span class="match-result-tag">' + resultText + '</span>' +
+                        queueHtml +
+                        '<span class="match-duration">' + fmtNum(m.game_duration) + 'm</span>' +
+                        dateHtml +
+                    '</div>' +
                 '</div>' +
                 '<div class="match-tab-bar" role="tablist" aria-orientation="horizontal" aria-label="' + escapeHtml(txt('overview', 'Overview')) + '">' +
                     '<button class="match-tab-btn active" id="' + tabPrefix + '-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="' + tabPrefix + '-panel-overview">' + escapeHtml(txt('overview', 'Overview')) + '</button>' +
@@ -1211,6 +1231,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var detailAiContent = document.getElementById('detail-ai-content');
         var detailAiInitial = document.getElementById('detail-ai-initial');
         var detailAiStatus = document.getElementById('detail-ai-status');
+        var detailAiCopy = document.getElementById('detail-ai-copy');
         if (detailAiBtn && detailAiContent && detailAiInitial) {
             var initialText = '';
             try {
@@ -1223,7 +1244,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 detailAiBtn.classList.add('has-analysis');
                 detailAiBtn.textContent = txt('regenAi', 'Regenerate AI Analysis');
                 setAiStatus(detailAiStatus, txt('aiStatusLoaded', 'Status: loaded last saved analysis.'), 'success');
+            } else if (detailAiStatus) {
+                setAiStatus(detailAiStatus, txt('aiStatusIdle', 'Status: ready to analyze.'), 'idle');
             }
+
+            setAiCopyControls(detailAiContent, detailAiCopy);
 
             detailAiBtn.addEventListener('click', function () {
                 runAiAnalysisWithStreaming({
@@ -1232,7 +1257,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     container: detailAiContent,
                     button: detailAiBtn,
                     statusEl: detailAiStatus,
+                    copyBtn: detailAiCopy,
                     focus: getAiFocusValue(),
+                });
+            });
+        }
+
+        if (detailAiCopy) {
+            detailAiCopy.addEventListener('click', function () {
+                var text = (detailAiContent && detailAiContent.textContent || '').trim();
+                if (!text || !navigator.clipboard) {
+                    return;
+                }
+                navigator.clipboard.writeText(text).then(function () {
+                    setAiStatus(detailAiStatus, txt('aiStatusCopied', 'Status: analysis copied to clipboard.'), 'success');
+                    setTimeout(function () {
+                        setAiStatus(detailAiStatus, txt('aiStatusIdle', 'Status: ready to analyze.'), 'idle');
+                    }, 1200);
+                }).catch(function () {
+                    setAiStatus(detailAiStatus, txt('aiStatusCopyFailed', 'Status: unable to copy analysis right now.'), 'error');
                 });
             });
         }

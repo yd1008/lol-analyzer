@@ -986,6 +986,8 @@ textarea:focus-visible {
 
 .match-filter-bar {
     margin-bottom: 8px;
+    overflow-x: auto;
+    max-width: 100%;
 }
 
 .match-filter-summary {
@@ -2818,6 +2820,16 @@ h4,
     .hero-copy .hero-token-line {
         width: 100%;
         padding-right: 0;
+    }
+
+    .match-champion {
+        max-width: min(40vw, 13ch);
+    }
+
+    .match-queue,
+    .match-duration,
+    .position-badge {
+        max-width: min(38vw, 11ch);
     }
     .hero-command-strip { grid-template-columns: 1fr; }
     .hero-copy .cta-buttons .btn { width: 100%; }

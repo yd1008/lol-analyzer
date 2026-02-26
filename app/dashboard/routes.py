@@ -813,25 +813,24 @@ def api_ai_analysis_stream(match_db_id):
                 stream_error = event.get('error') or t('flash.ai_failed', locale=language)
 
                 # Some providers intermittently fail stream mode while non-stream mode still works.
-                # If nothing has streamed yet, transparently retry once with the standard endpoint.
-                if not streamed_any_chunk:
-                    fallback_result, fallback_error = get_llm_analysis_detailed(analysis_dict, language=language, focus=focus)
-                    if fallback_result:
-                        if persist_generated_analysis:
-                            _set_cached_analysis(match, language, fallback_result)
-                            db.session.commit()
-                        yield _ndjson_line({
-                            'type': 'done',
-                            'analysis': fallback_result,
-                            'cached': False,
-                            'regenerated': force or (not cache_read_enabled),
-                            'language': language,
-                            'focus': focus,
-                            'persisted': persist_generated_analysis,
-                        })
-                        return
-                    if fallback_error:
-                        stream_error = fallback_error
+                # If stream is interrupted, retry once with the standard endpoint.
+                fallback_result, fallback_error = get_llm_analysis_detailed(analysis_dict, language=language, focus=focus)
+                if fallback_result:
+                    if persist_generated_analysis:
+                        _set_cached_analysis(match, language, fallback_result)
+                        db.session.commit()
+                    yield _ndjson_line({
+                        'type': 'done',
+                        'analysis': fallback_result,
+                        'cached': False,
+                        'regenerated': force or (not cache_read_enabled),
+                        'language': language,
+                        'focus': focus,
+                        'persisted': persist_generated_analysis,
+                    })
+                    return
+                if fallback_error:
+                    stream_error = fallback_error
 
                 public_error, trace_id = _trace_ai_error(
                     stream_error,
