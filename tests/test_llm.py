@@ -510,6 +510,43 @@ class TestGetLlmAnalysisDetailed:
         assert "max_tokens" not in fourth_json
 
     @patch("app.analysis.llm_client.requests.post")
+    @patch("app.analysis.llm_prompt.requests.get")
+    def test_opencode_prompt_tokens_500_without_configured_fallback_stays_on_current_model(self, mock_get, mock_post, app):
+        models_resp = MagicMock()
+        models_resp.status_code = 200
+        models_resp.json.return_value = {
+            "data": [{"id": "big-pickle"}]
+        }
+        mock_get.return_value = models_resp
+
+        crash_resp = MagicMock()
+        crash_resp.status_code = 500
+        crash_resp.text = '{"type":"error","error":{"message":"Cannot read properties of undefined (reading \"prompt_tokens\")"}}'
+        mock_post.side_effect = [crash_resp, crash_resp, crash_resp, crash_resp]
+
+        with app.app_context():
+            original_url = app.config["LLM_API_URL"]
+            original_model = app.config["LLM_MODEL"]
+            original_fallback_models = app.config.get("LLM_FALLBACK_MODELS", "")
+            original_retries = app.config["LLM_RETRIES"]
+            app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/chat/completions"
+            app.config["LLM_MODEL"] = "big-pickle"
+            app.config["LLM_FALLBACK_MODELS"] = ""
+            app.config["LLM_RETRIES"] = 0
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_API_URL"] = original_url
+            app.config["LLM_MODEL"] = original_model
+            app.config["LLM_FALLBACK_MODELS"] = original_fallback_models
+            app.config["LLM_RETRIES"] = original_retries
+
+        assert result is None
+        assert error is not None
+        assert "LLM API returned status 500" in error
+        assert mock_post.call_count == 4
+        for call in mock_post.call_args_list:
+            assert call[1]["json"]["model"] == "big-pickle"
+
+    @patch("app.analysis.llm_client.requests.post")
     def test_prompt_includes_length_budget_instruction_when_configured(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
