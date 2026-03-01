@@ -4,7 +4,7 @@ import time
 from unittest.mock import patch
 
 import app.i18n as i18n
-from app.i18n import champion_name, item_name, queue_label, rank_tier_label
+from app.i18n import champion_name, item_name, js_i18n_payload, queue_label, rank_tier_label
 
 
 def test_locale_defaults_to_zh_without_cookie(app, db):
@@ -102,3 +102,45 @@ def test_zh_name_lookups_use_cached_mapping_without_refresh():
             i18n._CHAMPION_NAME_CACHE.update(old_champ)
             i18n._ITEM_NAME_CACHE.clear()
             i18n._ITEM_NAME_CACHE.update(old_item)
+
+
+def test_js_i18n_payload_includes_localized_ai_status_labels():
+    payload_zh = js_i18n_payload("zh-CN")
+    labels_zh = payload_zh["labels"]
+    assert labels_zh["aiStatusStreaming"] == "状态：AI 实时流分析中..."
+    assert labels_zh["aiStatusFailed"] == "状态：分析失败。"
+    assert labels_zh["aiStatusCached"] == "状态：生成失败，已回退到缓存分析。"
+
+    payload_en = js_i18n_payload("en")
+    labels_en = payload_en["labels"]
+    assert labels_en["aiStatusStreaming"] == "Status: streaming AI analysis..."
+    assert labels_en["aiStatusFailed"] == "Status: analysis failed."
+    assert labels_en["aiStatusCached"] == "Status: fallback to cached analysis due to generation error."
+
+
+def test_js_i18n_payload_localizes_stream_fallback_labels_for_zh():
+    labels_zh = js_i18n_payload("zh-CN")["labels"]
+    assert labels_zh["streamFallback"].startswith("AI教练分析实时流中断")
+    assert labels_zh["streamUnavailable"].startswith("当前浏览器不支持 AI 教练实时流")
+    assert labels_zh["staleFallback"].startswith("AI 教练实时流返回了缓存分析")
+    assert "Live stream" not in labels_zh["streamFallback"]
+    assert "Live stream" not in labels_zh["streamUnavailable"]
+    assert "Live stream" not in labels_zh["staleFallback"]
+
+
+def test_js_i18n_payload_includes_empty_state_cta_labels():
+    labels_en = js_i18n_payload("en")["labels"]
+    assert labels_en["noMatchesHelp"].startswith("Connect your Riot account in settings")
+    assert labels_en["goSettings"] == "Go to Settings"
+
+    labels_zh = js_i18n_payload("zh-CN")["labels"]
+    assert labels_zh["noMatchesHelp"].startswith("请先在设置中绑定 Riot 账号")
+    assert labels_zh["goSettings"] == "前往设置"
+
+
+def test_js_i18n_payload_includes_filter_tab_count_template():
+    labels_en = js_i18n_payload("en")["labels"]
+    assert labels_en["filterTabWithCount"] == "{queue}: {count} matches"
+
+    labels_zh = js_i18n_payload("zh-CN")["labels"]
+    assert labels_zh["filterTabWithCount"] == "{queue}：{count} 场"

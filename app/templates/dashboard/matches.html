@@ -12,6 +12,12 @@
         <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary btn-sm">{{ lt('Back to Dashboard', '返回仪表盘') }}</a>
     </div>
 
+    <div class="hud-artboard" aria-hidden="true">
+        <div class="hud-art-grid"></div>
+        <div class="hud-art-orb"></div>
+        <div class="hud-art-scan"></div>
+    </div>
+
     <div class="card page-usage">
         <h3>{{ lt('Use This View Fast', '快速使用此视图') }}</h3>
         <div class="quick-guide-grid">

@@ -32,7 +32,7 @@ MANIFEST
 
 # Installer logs
 pip-log.txt
-pip-delete-this.txt!
+pip-delete-this.txt
 
 # Unit test / coverage reports
 htmlcov/
@@ -144,3 +144,27 @@ instance/
 *.swo
 *~
 .DS_Store
+
+# Local automation / OpenClaw workspace artifacts (never commit)
+memory/
+.openclaw/
+.clawhub/
+_ci_logs/
+_pr_worktrees/
+lol-analyzer-work/
+
+# Temp review/diff outputs
+temp_pr*_diff.txt
+tmp_pr*_review*.txt
+tmp_*.txt
+pr_*.json
+
+# Local agent identity/docs files (workspace-only)
+AGENTS.md
+BOOTSTRAP.md
+IDENTITY.md
+MEMORY.md
+SOUL.md
+TOOLS.md
+USER.md
+hello_world.py

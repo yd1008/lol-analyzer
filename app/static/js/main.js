@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var I18N = window.__i18n || {};
     var LABELS = I18N.labels || {};
     var METRICS = I18N.metrics || {};
+    var COACH_MODE_STORAGE_KEY = 'lanescope-coach-mode';
+    var coachModeSelect = document.getElementById('coach-mode-select');
 
     function txt(key, fallback) {
         if (LABELS && Object.prototype.hasOwnProperty.call(LABELS, key)) {
@@ -153,8 +155,51 @@ document.addEventListener('DOMContentLoaded', function () {
         setLocaleCookie(persistedLocale);
     }
 
+    function getCoachMode() {
+        var mode = 'balanced';
+        try {
+            mode = localStorage.getItem(COACH_MODE_STORAGE_KEY) || mode;
+        } catch (err) {
+            // ignore storage failures
+        }
+        if (coachModeSelect && coachModeSelect.value) {
+            mode = coachModeSelect.value;
+        }
+        if (['balanced', 'aggressive', 'supportive'].indexOf(mode) === -1) {
+            mode = 'balanced';
+        }
+        return mode;
+    }
+
+    function initializeCoachMode() {
+        if (!coachModeSelect) return;
+        var saved = 'balanced';
+        try {
+            saved = localStorage.getItem(COACH_MODE_STORAGE_KEY) || 'balanced';
+        } catch (err) {
+            saved = 'balanced';
+        }
+        if (['balanced', 'aggressive', 'supportive'].indexOf(saved) === -1) {
+            saved = 'balanced';
+        }
+        coachModeSelect.value = saved;
+        coachModeSelect.addEventListener('change', function () {
+            var next = coachModeSelect.value || 'balanced';
+            if (['balanced', 'aggressive', 'supportive'].indexOf(next) === -1) {
+                next = 'balanced';
+                coachModeSelect.value = next;
+            }
+            try {
+                localStorage.setItem(COACH_MODE_STORAGE_KEY, next);
+            } catch (err) {
+                // ignore storage failures
+            }
+        });
+    }
+
     initializeLocaleToggle();
     initializeThemeToggle();
+    initializeCoachMode();
 
     var flashes = document.querySelectorAll('.flash');
     flashes.forEach(function (flash) {
@@ -172,10 +217,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var loadMoreBtn = document.getElementById('load-more-btn');
     var loadMoreContainer = document.getElementById('load-more-container');
     var filterBar = document.getElementById('match-filter-bar');
+    var filterSummary = document.getElementById('match-filter-summary');
     var initialMatches = Array.isArray(window.__initialMatches) ? window.__initialMatches : [];
     var currentOffset = 0;
     var currentQueue = '';
-
     var POSITION_MAP = I18N.laneShort || {TOP: 'TOP', JUNGLE: 'JGL', MIDDLE: 'MID', BOTTOM: 'BOT', UTILITY: 'SUP'};
     var VISUAL_METRICS = [
         {key: 'gold_per_min', label: metricTxt('gold_per_min', 'Gold/min')},
@@ -340,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var sharesId = idPrefix + '-shares';
         var laneId = idPrefix + '-lane';
         return '' +
-            '<div class="visual-toggle-bar" role="tablist" aria-label="' + escapeHtml(txt('visuals', 'Visuals')) + '">' +
+            '<div class="visual-toggle-bar" role="tablist" aria-orientation="horizontal" aria-label="' + escapeHtml(txt('visuals', 'Visuals')) + '">' +
                 '<button class="visual-toggle-btn active" id="' + compareId + '-tab" data-group="compare" role="tab" aria-selected="true" aria-controls="' + compareId + '">' + escapeHtml(txt('compare', 'Compare')) + '</button>' +
                 '<button class="visual-toggle-btn" id="' + sharesId + '-tab" data-group="shares" role="tab" aria-selected="false" aria-controls="' + sharesId + '" tabindex="-1">' + escapeHtml(txt('shares', 'Shares')) + '</button>' +
                 '<button class="visual-toggle-btn" id="' + laneId + '-tab" data-group="lane" role="tab" aria-selected="false" aria-controls="' + laneId + '" tabindex="-1">' + escapeHtml(txt('lane', 'Lane')) + '</button>' +
@@ -352,21 +397,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function normalizeAiText(text) {
         var normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        normalized = normalized.replace(/^\s{0,3}#{1,6}\s*/gm, '');
-        normalized = normalized.replace(/^\s*>\s?/gm, '');
-        normalized = normalized.replace(/^\s*[-*+]\s+/gm, '');
-        normalized = normalized.replace(/^\s*\d+[.)]\s+/gm, '');
-        normalized = normalized.replace(/\*\*(.*?)\*\*/g, '$1');
-        normalized = normalized.replace(/__(.*?)__/g, '$1');
-        normalized = normalized.replace(/`([^`]+)`/g, '$1');
-        normalized = normalized.replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1');
         normalized = normalized.replace(/\n{3,}/g, '\n\n');
         return normalized.trim();
     }
 
     function clearAiContainerState(container) {
         container.classList.remove('card-muted');
-        container.classList.remove('ai-stream-host', 'is-loading', 'is-streaming', 'ai-stream-fallback', 'llm-analysis');
+        container.classList.remove('ai-stream-host', 'is-loading', 'is-streaming', 'ai-stream-fallback', 'llm-analysis', 'llm-analysis--rich');
         container.setAttribute('aria-busy', 'false');
         container.setAttribute('aria-live', 'polite');
     }
@@ -383,16 +420,93 @@ document.addEventListener('DOMContentLoaded', function () {
         container.innerHTML = '<p class="card-muted">' + escapeHtml(text || txt('aiFailed', 'AI analysis failed.')) + '</p>';
     }
 
+    function aiInlineHtml(raw) {
+        var safe = escapeHtml(String(raw || ''));
+        // Inline code
+        safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Bold + italic (minimal)
+        safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        safe = safe.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+        safe = safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        safe = safe.replace(/_([^_]+)_/g, '<em>$1</em>');
+        return safe;
+    }
+
+    function renderAiMarkdownLite(text) {
+        var lines = normalizeAiText(text).split('\n');
+        var html = '';
+        var inUl = false;
+        var inOl = false;
+
+        function closeLists() {
+            if (inUl) { html += '</ul>'; inUl = false; }
+            if (inOl) { html += '</ol>'; inOl = false; }
+        }
+
+        function openUl() {
+            if (!inUl) { closeLists(); html += '<ul class="ai-list">'; inUl = true; }
+        }
+
+        function openOl() {
+            if (!inOl) { closeLists(); html += '<ol class="ai-list ai-list-ol">'; inOl = true; }
+        }
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            var trimmed = line.trim();
+
+            if (!trimmed) {
+                closeLists();
+                continue;
+            }
+
+            var heading = trimmed.match(/^(#{1,6})\s+(.*)$/);
+            if (heading) {
+                closeLists();
+                var level = Math.min(4, Math.max(2, heading[1].length));
+                html += '<h' + level + ' class="ai-h">' + aiInlineHtml(heading[2]) + '</h' + level + '>';
+                continue;
+            }
+
+            var bullet = trimmed.match(/^[-*+]\s+(.*)$/);
+            if (bullet) {
+                openUl();
+                html += '<li>' + aiInlineHtml(bullet[1]) + '</li>';
+                continue;
+            }
+
+            var numbered = trimmed.match(/^\d+[.)]\s+(.*)$/);
+            if (numbered) {
+                openOl();
+                html += '<li>' + aiInlineHtml(numbered[1]) + '</li>';
+                continue;
+            }
+
+            closeLists();
+            html += '<p class="ai-p">' + aiInlineHtml(trimmed) + '</p>';
+        }
+
+        closeLists();
+        return html || '<p class="card-muted">' + escapeHtml(txt('runAi', 'Run AI Analysis')) + '</p>';
+    }
+
     function renderAiText(container, text) {
         clearAiContainerState(container);
-        container.classList.add('llm-analysis');
-        container.textContent = normalizeAiText(text);
+        container.classList.add('llm-analysis', 'llm-analysis--rich');
+        container.innerHTML = renderAiMarkdownLite(text);
     }
 
     function buildStatusMarkup() {
-        return STREAM_STATUS_MESSAGES.map(function (message) {
-            return '<span>' + escapeHtml(message) + '</span>';
-        }).join('');
+        var messages = STREAM_STATUS_MESSAGES.slice();
+        if (!messages.length) {
+            messages = ['Analyzing'];
+        }
+        if (messages.length > 1) {
+            messages.push(messages[0]);
+        }
+        return '<div class="ai-stream-status-track">' + messages.map(function (message) {
+            return '<span class="ai-stream-status-line">' + escapeHtml(message) + '</span>';
+        }).join('') + '</div>';
     }
 
     function prepareStreamUi(container) {
@@ -440,16 +554,37 @@ document.addEventListener('DOMContentLoaded', function () {
         button.textContent = txt('runAi', 'Run AI Analysis');
     }
 
+    function setAiStatus(statusEl, message, tone) {
+        if (!statusEl) return;
+        statusEl.textContent = message || '';
+        statusEl.classList.remove('is-idle', 'is-queued', 'is-loading', 'is-running', 'is-success', 'is-error');
+        if (tone === 'loading' || tone === 'success' || tone === 'error' || tone === 'idle' || tone === 'running' || tone === 'queued') {
+            statusEl.classList.add('is-' + tone);
+        }
+    }
+
+    function setAiCopyControls(content, copyBtn) {
+        if (!copyBtn) return;
+        var hasContent = !!(content && (content.textContent || '').trim());
+        copyBtn.disabled = !hasContent;
+    }
+
     async function runAiAnalysisSync(options) {
         var matchId = options.matchId;
         var force = options.force;
+        var focus = options.focus || 'general';
         var container = options.container;
         var button = options.button;
+        var statusEl = options.statusEl || null;
+        var copyBtn = options.copyBtn || null;
         var fallbackNotice = options.fallbackNotice || '';
 
         if (fallbackNotice) {
             renderAiError(container, fallbackNotice);
             container.classList.add('ai-stream-fallback');
+            setAiStatus(statusEl, fallbackNotice, 'queued');
+        } else {
+            setAiStatus(statusEl, txt('aiStatusLoading', 'Status: running AI analysis...'), 'running');
         }
 
         try {
@@ -459,22 +594,31 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: getCurrentLocale()}),
+                body: JSON.stringify({force: force, language: getCurrentLocale(), focus: focus, coach_mode: getCoachMode()}),
             });
             var data = await resp.json();
             if (data.error && !data.analysis) {
-                renderAiError(container, data.error || txt('aiFailed', 'AI analysis failed.'));
+                var failMessage = data.error || txt('aiFailed', 'AI analysis failed.');
+                renderAiError(container, failMessage);
+                setAiStatus(statusEl, txt('aiStatusFailed', 'Status: analysis failed.') + ' ' + failMessage, 'error');
                 resetAiButton(button);
                 return;
             }
             renderAiText(container, data.analysis || '');
             if (data.stale && data.error) {
                 appendAiNote(container, txt('cachedBecauseFailed', 'Using cached analysis because regeneration failed: ') + data.error, 'card-muted');
+                setAiStatus(statusEl, txt('aiStatusCached', 'Status: fallback to cached analysis due to generation error.'), 'error');
+            } else {
+                setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
             }
             completeAiButton(button);
+            setAiCopyControls(container, copyBtn);
+            return;
         } catch (err) {
             renderAiError(container, txt('aiFailed', 'AI analysis failed.'));
+            setAiStatus(statusEl, txt('aiStatusFailed', 'Status: analysis failed.'), 'error');
             resetAiButton(button);
+            setAiCopyControls(container, copyBtn);
         }
     }
 
@@ -491,12 +635,17 @@ document.addEventListener('DOMContentLoaded', function () {
     async function runAiAnalysisWithStreaming(options) {
         var matchId = options.matchId;
         var force = options.force;
+        var focus = options.focus || 'general';
         var container = options.container;
         var button = options.button;
+        var statusEl = options.statusEl || null;
+        var copyBtn = options.copyBtn || null;
         var streamFallbackNotice = txt('streamFallback', 'Live stream interrupted. Falling back to standard analysis...');
 
         button.disabled = true;
         button.textContent = txt('analyzing', 'Analyzing...');
+        setAiStatus(statusEl, txt('aiStatusStreaming', 'Status: streaming AI analysis...'), 'running');
+        setAiCopyControls(container, copyBtn);
 
         var output = prepareStreamUi(container);
         var streamedText = '';
@@ -507,8 +656,11 @@ document.addEventListener('DOMContentLoaded', function () {
             await runAiAnalysisSync({
                 matchId: matchId,
                 force: force,
+                focus: focus,
                 container: container,
                 button: button,
+                statusEl: statusEl,
+                copyBtn: copyBtn,
                 fallbackNotice: txt('streamUnavailable', 'Live stream is unavailable in this browser. Running standard analysis...'),
             });
             return;
@@ -521,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({force: force, language: getCurrentLocale()}),
+                body: JSON.stringify({force: force, language: getCurrentLocale(), focus: focus, coach_mode: getCoachMode()}),
             });
 
             if (!response.ok) {
@@ -555,7 +707,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (event.type === 'done') {
                         gotTerminalEvent = true;
                         renderAiText(container, event.analysis || streamedText);
+                        setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
                         completeAiButton(button);
+                        setAiCopyControls(container, copyBtn);
                         try {
                             await reader.cancel();
                         } catch (err) {
@@ -585,7 +739,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (tailEvent && tailEvent.type === 'done') {
                     gotTerminalEvent = true;
                     renderAiText(container, tailEvent.analysis || streamedText);
+                    setAiStatus(statusEl, txt('aiStatusSuccess', 'Status: analysis updated.'), 'success');
                     completeAiButton(button);
+                    setAiCopyControls(container, copyBtn);
                 } else if (tailEvent && tailEvent.type === 'stale') {
                     streamFallbackNotice = txt('staleFallback', 'Live stream returned cached analysis. Retrying with standard analysis...');
                     if (tailEvent.error) {
@@ -604,8 +760,11 @@ document.addEventListener('DOMContentLoaded', function () {
             await runAiAnalysisSync({
                 matchId: matchId,
                 force: force,
+                focus: focus,
                 container: container,
                 button: button,
+                statusEl: statusEl,
+                copyBtn: copyBtn,
                 fallbackNotice: streamFallbackNotice,
             });
         }
@@ -614,13 +773,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderMatchBox(m) {
         var winClass = m.win ? 'match-win' : 'match-loss';
         var resultText = m.win ? txt('victory', 'Victory') : txt('defeat', 'Defeat');
-        var queueHtml = m.queue_type ? '<span class="match-queue">' + escapeHtml(m.queue_type_label || m.queue_type) + '</span>' : '';
+        var queueHtml = m.queue_type ? '<span class="match-queue match-meta-item">' + escapeHtml(m.queue_type_label || m.queue_type) + '</span>' : '';
         var positionBadge = m.player_position && POSITION_MAP[m.player_position]
             ? '<span class="position-badge">' + POSITION_MAP[m.player_position] + '</span>'
             : '';
-        var aiClass = m.has_llm_analysis ? ' has-analysis' : '';
-        var aiText = m.has_llm_analysis ? txt('regenAi', 'Regenerate AI Analysis') : txt('runAi', 'Run AI Analysis');
-        var dateHtml = m.analyzed_at ? '<span class="match-duration">' + escapeHtml(m.analyzed_at.slice(0, 10)) + '</span>' : '';
+        var initialAiText = normalizeAiText(m.initial_ai_analysis || '');
+        var hasInitialAi = !!initialAiText;
+        var hasAiAnalysis = !!m.has_llm_analysis || hasInitialAi;
+        var aiClass = hasAiAnalysis ? ' has-analysis' : '';
+        var aiText = hasAiAnalysis ? txt('regenAi', 'Regenerate AI Analysis') : txt('runAi', 'Run AI Analysis');
+        var dateHtml = m.analyzed_at ? '<span class="match-duration match-meta-item">' + escapeHtml(m.analyzed_at.slice(0, 10)) + '</span>' : '';
         var tabPrefix = 'match-' + m.id + '-tab';
         var visualPrefix = 'match-' + m.id + '-visual';
 
@@ -641,19 +803,27 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>' +
             renderLaneRows(m.lane_matchups);
 
+        var aiContentHtml = hasInitialAi
+            ? '<div class="match-ai-content llm-analysis llm-analysis--rich">' + renderAiMarkdownLite(initialAiText) + '</div>'
+            : '<div class="match-ai-content card-muted">' + escapeHtml(txt('aiEmpty', 'Generate AI coaching for this match from in-game metrics, rank context, and composition.')) + '</div>';
+
         return '<div class="match-box ' + winClass + '" data-match-id="' + m.id + '">' +
             '<div class="match-box-indicator"></div>' +
             '<div class="match-box-main">' +
                 '<div class="match-box-header">' +
-                    championIconHtml({champion: m.champion, champion_label: m.champion_label, champion_icon: m.champion_icon}, '') +
-                    '<span class="match-champion">' + escapeHtml(m.champion_label || m.champion) + '</span>' +
-                    positionBadge +
-                    '<span class="match-result-tag">' + resultText + '</span>' +
-                    queueHtml +
-                    '<span class="match-duration">' + fmtNum(m.game_duration) + 'm</span>' +
-                    dateHtml +
+                    '<div class="match-item-title">' +
+                        championIconHtml({champion: m.champion, champion_label: m.champion_label, champion_icon: m.champion_icon}, '') +
+                        '<span class="match-champion" title="' + escapeHtml(m.champion_label || m.champion) + '">' + escapeHtml(m.champion_label || m.champion) + '</span>' +
+                        positionBadge +
+                    '</div>' +
+                    '<div class="match-meta">' +
+                        '<span class="match-result-tag">' + resultText + '</span>' +
+                        queueHtml +
+                        '<span class="match-duration">' + fmtNum(m.game_duration) + 'm</span>' +
+                        dateHtml +
+                    '</div>' +
                 '</div>' +
-                '<div class="match-tab-bar" role="tablist" aria-label="' + escapeHtml(txt('overview', 'Overview')) + '">' +
+                '<div class="match-tab-bar" role="tablist" aria-orientation="horizontal" aria-label="' + escapeHtml(txt('overview', 'Overview')) + '">' +
                     '<button class="match-tab-btn active" id="' + tabPrefix + '-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="' + tabPrefix + '-panel-overview">' + escapeHtml(txt('overview', 'Overview')) + '</button>' +
                     '<button class="match-tab-btn" id="' + tabPrefix + '-visuals" data-tab="visuals" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-visuals" tabindex="-1">' + escapeHtml(txt('visuals', 'Visuals')) + '</button>' +
                     '<button class="match-tab-btn" id="' + tabPrefix + '-ai" data-tab="ai" role="tab" aria-selected="false" aria-controls="' + tabPrefix + '-panel-ai" tabindex="-1">' + escapeHtml(txt('aiAnalysis', 'AI Analysis')) + '</button>' +
@@ -669,7 +839,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             '</div>' +
                             '<span class="ai-analysis-chip">' + escapeHtml(txt('live', 'Live')) + '</span>' +
                         '</div>' +
-                        '<div class="match-ai-content card-muted">' + escapeHtml(txt('aiEmpty', 'Generate AI coaching for this match from in-game metrics, rank context, and composition.')) + '</div>' +
+                        aiContentHtml +
                         '<button class="ai-btn' + aiClass + '" data-match-id="' + m.id + '">' + aiText + '</button>' +
                     '</div>' +
                 '</div>' +
@@ -685,11 +855,75 @@ document.addEventListener('DOMContentLoaded', function () {
             matchList.innerHTML = '';
         }
         if (!matches.length && !append) {
-            matchList.innerHTML = '<div class="empty-state"><p>' + escapeHtml(txt('noMatches', 'No matches found for this filter.')) + '</p></div>';
+            matchList.innerHTML = '' +
+                '<div class="empty-state">' +
+                    '<p>' + escapeHtml(txt('noMatches', 'No matches found for this filter.')) + '</p>' +
+                    '<p class="empty-state-hint">' + escapeHtml(txt('noMatchesHelp', 'Connect your Riot account in settings and sync recent matches to populate this queue.')) + '</p>' +
+                    '<a href="/dashboard/settings" class="btn btn-secondary btn-sm empty-state-cta">' + escapeHtml(txt('goSettings', 'Go to Settings')) + '</a>' +
+                '</div>';
             return;
         }
         matches.forEach(function (m) {
             matchList.insertAdjacentHTML('beforeend', renderMatchBox(m));
+        });
+    }
+
+    function setMatchFilterSummary(displayed, total) {
+        if (!filterSummary) return;
+        var displayedCount = Number(displayed);
+        var totalCount = Number(total);
+        if (!Number.isFinite(displayedCount) || displayedCount < 0) {
+            displayedCount = 0;
+        }
+        if (!Number.isFinite(totalCount) || totalCount < displayedCount) {
+            totalCount = displayedCount;
+        }
+        var template = txt('showingMatches', 'Showing {displayed} of {total} matches');
+        filterSummary.textContent = template
+            .replace('{displayed}', String(displayedCount))
+            .replace('{total}', String(totalCount));
+    }
+
+    function normalizeBadgeCount(total) {
+        var count = Number(total);
+        if (!Number.isFinite(count) || count < 0) {
+            return 0;
+        }
+        return Math.floor(count);
+    }
+
+    function setFilterButtonAriaCount(button, count) {
+        if (!button) return;
+        var queueLabel = button.getAttribute('data-label-base') || button.textContent || '';
+        queueLabel = queueLabel.trim();
+        var template = txt('filterTabWithCount', '{queue}: {count} matches');
+        button.setAttribute(
+            'aria-label',
+            template
+                .replace('{queue}', queueLabel)
+                .replace('{count}', String(count))
+        );
+    }
+
+    function setFilterBadgeCount(button, total) {
+        if (!button) return;
+        var badge = button.querySelector('.filter-count-badge');
+        if (!badge) return;
+        var count = normalizeBadgeCount(total);
+        badge.textContent = String(count);
+        setFilterButtonAriaCount(button, count);
+    }
+
+    function updateActiveFilterBadge(total) {
+        if (!filterBar) return;
+        var active = filterBar.querySelector('.filter-btn[aria-selected="true"]') || filterBar.querySelector('.filter-btn.active');
+        setFilterBadgeCount(active, total);
+    }
+
+    function initializeFilterBadgeState() {
+        if (!filterBar) return;
+        filterBar.querySelectorAll('.filter-btn').forEach(function (button) {
+            setFilterBadgeCount(button, 0);
         });
     }
 
@@ -719,6 +953,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 initializeAriaTabs(matchList);
                 currentOffset += data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
+                setMatchFilterSummary(currentOffset, data.total);
+                updateActiveFilterBadge(data.total);
             })
             .catch(function () {
                 loadMoreBtn.disabled = false;
@@ -726,7 +962,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function filterByQueue(queue) {
+    function filterByQueue(queue, sourceBtn) {
         currentQueue = queue;
         currentOffset = 0;
         if (loadMoreContainer) {
@@ -747,6 +983,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 initializeAriaTabs(matchList);
                 currentOffset = data.matches.length;
                 updateLoadMoreVisibility(data.total, data.has_more);
+                setMatchFilterSummary(currentOffset, data.total);
+                setFilterBadgeCount(sourceBtn, data.total);
             })
             .catch(function () {
                 if (loadMoreBtn) {
@@ -754,6 +992,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     loadMoreBtn.textContent = txt('loadMore', 'Load More');
                 }
             });
+    }
+
+    function getAiFocusValue() {
+        var select = document.getElementById('ai-focus-select');
+        return select ? select.value : 'general';
     }
 
     function handleAiAnalysis(btn) {
@@ -767,6 +1010,7 @@ document.addEventListener('DOMContentLoaded', function () {
             force: btn.classList.contains('has-analysis'),
             container: content,
             button: btn,
+            focus: getAiFocusValue(),
         });
     }
 
@@ -809,21 +1053,64 @@ document.addEventListener('DOMContentLoaded', function () {
         renderMatches(initialMatches, false);
         initializeAriaTabs(matchList);
         currentOffset = initialMatches.length;
-        updateLoadMoreVisibility(window.__totalGames || 0, undefined);
+        var initialTotal = Number(window.__totalGames || 0);
+        updateLoadMoreVisibility(initialTotal, undefined);
+        setMatchFilterSummary(currentOffset, initialTotal);
+        setFilterBadgeCount(document.getElementById('queue-filter-all'), initialTotal);
     }
 
     if (matchList) {
+        initializeFilterBadgeState();
+
         if (loadMoreBtn) {
             loadMoreBtn.addEventListener('click', loadMore);
         }
 
         if (filterBar) {
+            function setActiveQueueFilter(btn, focus) {
+                if (!btn) return;
+                filterBar.querySelectorAll('.filter-btn').forEach(function (b) {
+                    var isActive = b === btn;
+                    b.classList.toggle('active', isActive);
+                    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    b.tabIndex = isActive ? 0 : -1;
+                });
+                if (focus) {
+                    btn.focus();
+                }
+            }
+
             filterBar.addEventListener('click', function (e) {
                 var btn = e.target.closest('.filter-btn');
                 if (!btn) return;
-                filterBar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
-                btn.classList.add('active');
-                filterByQueue(btn.getAttribute('data-queue'));
+                setActiveQueueFilter(btn, false);
+                filterByQueue(btn.getAttribute('data-queue'), btn);
+            });
+
+            filterBar.addEventListener('keydown', function (e) {
+                var current = e.target.closest('.filter-btn');
+                if (!current) return;
+                var buttons = Array.prototype.slice.call(filterBar.querySelectorAll('.filter-btn'));
+                var currentIndex = buttons.indexOf(current);
+                if (currentIndex < 0) return;
+
+                var nextIndex = currentIndex;
+                if (e.key === 'ArrowRight') {
+                    nextIndex = (currentIndex + 1) % buttons.length;
+                } else if (e.key === 'ArrowLeft') {
+                    nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                } else if (e.key === 'Home') {
+                    nextIndex = 0;
+                } else if (e.key === 'End') {
+                    nextIndex = buttons.length - 1;
+                } else {
+                    return;
+                }
+
+                e.preventDefault();
+                var next = buttons[nextIndex];
+                setActiveQueueFilter(next, true);
+                filterByQueue(next.getAttribute('data-queue'), next);
             });
         }
 
@@ -867,6 +1154,37 @@ document.addEventListener('DOMContentLoaded', function () {
         initializeFromServer();
     }
 
+    function bindTablistArrowKeys(container, buttonSelector, activateByKey) {
+        if (!container) return;
+        container.addEventListener('keydown', function (e) {
+            var current = e.target.closest(buttonSelector);
+            if (!current || !container.contains(current)) return;
+            var buttons = Array.prototype.slice.call(container.querySelectorAll(buttonSelector));
+            if (!buttons.length) return;
+
+            var idx = buttons.indexOf(current);
+            if (idx < 0) return;
+
+            var nextIdx = idx;
+            if (e.key === 'ArrowRight') {
+                nextIdx = (idx + 1) % buttons.length;
+            } else if (e.key === 'ArrowLeft') {
+                nextIdx = (idx - 1 + buttons.length) % buttons.length;
+            } else if (e.key === 'Home') {
+                nextIdx = 0;
+            } else if (e.key === 'End') {
+                nextIdx = buttons.length - 1;
+            } else {
+                return;
+            }
+
+            e.preventDefault();
+            var nextBtn = buttons[nextIdx];
+            activateByKey(nextBtn);
+            nextBtn.focus();
+        });
+    }
+
     var detailTabs = document.getElementById('detail-tabs');
     var detailPanels = document.querySelectorAll('.detail-tab-panel');
     var detailVisualToggle = document.getElementById('detail-visual-toggle');
@@ -899,12 +1217,21 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        bindTablistArrowKeys(detailTabs, '.detail-tab-btn', function (btn) {
+            activateDetailTab(btn.getAttribute('data-tab'));
+        });
+        bindTablistArrowKeys(detailVisualToggle, '.visual-toggle-btn', function (btn) {
+            activateDetailVisual(btn.getAttribute('data-group'));
+        });
+
         activateDetailTab('overview');
         activateDetailVisual('compare');
 
         var detailAiBtn = document.getElementById('detail-ai-btn');
         var detailAiContent = document.getElementById('detail-ai-content');
         var detailAiInitial = document.getElementById('detail-ai-initial');
+        var detailAiStatus = document.getElementById('detail-ai-status');
+        var detailAiCopy = document.getElementById('detail-ai-copy');
         if (detailAiBtn && detailAiContent && detailAiInitial) {
             var initialText = '';
             try {
@@ -916,7 +1243,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderAiText(detailAiContent, initialText);
                 detailAiBtn.classList.add('has-analysis');
                 detailAiBtn.textContent = txt('regenAi', 'Regenerate AI Analysis');
+                setAiStatus(detailAiStatus, txt('aiStatusLoaded', 'Status: loaded last saved analysis.'), 'success');
+            } else if (detailAiStatus) {
+                setAiStatus(detailAiStatus, txt('aiStatusIdle', 'Status: ready to analyze.'), 'idle');
             }
+
+            setAiCopyControls(detailAiContent, detailAiCopy);
 
             detailAiBtn.addEventListener('click', function () {
                 runAiAnalysisWithStreaming({
@@ -924,6 +1256,26 @@ document.addEventListener('DOMContentLoaded', function () {
                     force: detailAiBtn.classList.contains('has-analysis'),
                     container: detailAiContent,
                     button: detailAiBtn,
+                    statusEl: detailAiStatus,
+                    copyBtn: detailAiCopy,
+                    focus: getAiFocusValue(),
+                });
+            });
+        }
+
+        if (detailAiCopy) {
+            detailAiCopy.addEventListener('click', function () {
+                var text = (detailAiContent && detailAiContent.textContent || '').trim();
+                if (!text || !navigator.clipboard) {
+                    return;
+                }
+                navigator.clipboard.writeText(text).then(function () {
+                    setAiStatus(detailAiStatus, txt('aiStatusCopied', 'Status: analysis copied to clipboard.'), 'success');
+                    setTimeout(function () {
+                        setAiStatus(detailAiStatus, txt('aiStatusIdle', 'Status: ready to analyze.'), 'idle');
+                    }, 1200);
+                }).catch(function () {
+                    setAiStatus(detailAiStatus, txt('aiStatusCopyFailed', 'Status: unable to copy analysis right now.'), 'error');
                 });
             });
         }

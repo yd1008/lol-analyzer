@@ -114,6 +114,73 @@ class TestGetLlmAnalysis:
         assert "Defeat" in user_message
         assert "Current Data Dragon patch" in user_message
 
+    @patch("app.analysis.llm.requests.post")
+    def test_prompt_includes_coach_mode_instruction(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis({**SAMPLE_ANALYSIS, "coach_mode": "aggressive"})
+
+        call_kwargs = mock_post.call_args
+        system_message = call_kwargs[1]["json"]["messages"][0]["content"]
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach mode: aggressive" in system_message
+        assert "Coach Mode: aggressive" in user_message
+
+    @patch("app.analysis.llm_client.requests.post")
+    def test_prompt_includes_focus_instruction_for_non_general(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis(SAMPLE_ANALYSIS, focus="vision")
+
+        call_kwargs = mock_post.call_args
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach focus: Vision & map control" in user_message
+        assert "Prioritize this dimension in the analysis and recommendations" in user_message
+
+    @patch("app.analysis.llm_client.requests.post")
+    def test_prompt_omits_focus_instruction_for_general(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis(SAMPLE_ANALYSIS, focus="general")
+
+        call_kwargs = mock_post.call_args
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach focus:" not in user_message
+
+    @patch("app.analysis.llm_client.requests.post")
+    def test_prompt_falls_back_to_general_focus_when_invalid(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Analysis"}}]
+        }
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            get_llm_analysis(SAMPLE_ANALYSIS, focus="not-a-focus")
+
+        call_kwargs = mock_post.call_args
+        user_message = call_kwargs[1]["json"]["messages"][1]["content"]
+        assert "Coach focus:" not in user_message
+
 
 class TestGetLlmAnalysisDetailed:
     @patch("app.analysis.llm_client.requests.post")
@@ -254,23 +321,57 @@ class TestGetLlmAnalysisDetailed:
         assert result == "Recovered analysis"
         assert mock_post.call_count == 2
 
+    @patch("app.analysis.llm_client.time.sleep", return_value=None)
+    @patch("app.analysis.llm_client.requests.post")
+    def test_timeout_retries_use_exponential_backoff(self, mock_post, mock_sleep, app):
+        import requests
+
+        mock_post.side_effect = [
+            requests.Timeout("timed out #1"),
+            requests.Timeout("timed out #2"),
+            requests.Timeout("timed out #3"),
+        ]
+
+        with app.app_context():
+            app.config["LLM_TIMEOUT_SECONDS"] = 5
+            app.config["LLM_RETRIES"] = 2
+            app.config["LLM_RETRY_BACKOFF_SECONDS"] = 1.5
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert result is None
+        assert "attempt 3/3" in error
+        assert mock_post.call_count == 3
+        assert mock_sleep.call_count == 2
+        assert mock_sleep.call_args_list[0].args[0] == 1.5
+        assert mock_sleep.call_args_list[1].args[0] == 3.0
+
+    @patch("app.analysis.llm_client.time.sleep", return_value=None)
+    @patch("app.analysis.llm_client.requests.post")
+    def test_non_retryable_http_error_skips_backoff_retries(self, mock_post, mock_sleep, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 404
+        mock_resp.text = "Not Found"
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            app.config["LLM_RETRIES"] = 3
+            app.config["LLM_RETRY_BACKOFF_SECONDS"] = 2.0
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert result is None
+        assert "404" in error
+        assert mock_post.call_count == 1
+        mock_sleep.assert_not_called()
+
     @patch("app.analysis.llm_client.requests.post")
     @patch("app.analysis.llm_prompt.requests.get")
-    def test_opencode_zen_deepseek_falls_back_to_glm(self, mock_get, mock_post, app):
+    def test_opencode_zen_deepseek_model_requires_explicit_supported_model(self, mock_get, mock_post, app):
         models_resp = MagicMock()
         models_resp.status_code = 200
         models_resp.json.return_value = {
-            "data": [{"id": "glm-4.7-free"}, {"id": "big-pickle"}]
+            "data": [{"id": "glm-5"}, {"id": "big-pickle"}]
         }
         mock_get.return_value = models_resp
-
-        completion_resp = MagicMock()
-        completion_resp.status_code = 200
-        completion_resp.json.return_value = {
-            "choices": [{"message": {"content": "Fallback model response"}}]
-        }
-        completion_resp.text = '{"choices":[{"message":{"content":"Fallback model response"}}]}'
-        mock_post.return_value = completion_resp
 
         with app.app_context():
             original_url = app.config["LLM_API_URL"]
@@ -281,10 +382,9 @@ class TestGetLlmAnalysisDetailed:
             app.config["LLM_API_URL"] = original_url
             app.config["LLM_MODEL"] = original_model
 
-        assert error is None
-        assert result == "Fallback model response"
-        call_kwargs = mock_post.call_args
-        assert call_kwargs[1]["json"]["model"] == "glm-4.7-free"
+        assert result is None
+        assert "not compatible with /chat/completions" in error
+        mock_post.assert_not_called()
 
     @patch("app.analysis.llm_client.requests.post")
     @patch("app.analysis.llm_prompt.requests.get")
@@ -292,7 +392,7 @@ class TestGetLlmAnalysisDetailed:
         models_resp = MagicMock()
         models_resp.status_code = 200
         models_resp.json.return_value = {
-            "data": [{"id": "gpt-5.2"}, {"id": "glm-4.7-free"}]
+            "data": [{"id": "gpt-5.2"}, {"id": "glm-5"}]
         }
         mock_get.return_value = models_resp
 
@@ -328,7 +428,7 @@ class TestGetLlmAnalysisDetailed:
         models_resp = MagicMock()
         models_resp.status_code = 200
         models_resp.json.return_value = {
-            "data": [{"id": "big-pickle"}, {"id": "glm-4.7-free"}]
+            "data": [{"id": "big-pickle"}, {"id": "glm-5"}]
         }
         mock_get.return_value = models_resp
 
@@ -365,11 +465,11 @@ class TestGetLlmAnalysisDetailed:
 
     @patch("app.analysis.llm_client.requests.post")
     @patch("app.analysis.llm_prompt.requests.get")
-    def test_opencode_prompt_tokens_500_falls_back_to_default_model(self, mock_get, mock_post, app):
+    def test_opencode_prompt_tokens_500_falls_back_to_configured_model(self, mock_get, mock_post, app):
         models_resp = MagicMock()
         models_resp.status_code = 200
         models_resp.json.return_value = {
-            "data": [{"id": "big-pickle"}, {"id": "glm-4.7-free"}]
+            "data": [{"id": "big-pickle"}, {"id": "glm-5"}]
         }
         mock_get.return_value = models_resp
 
@@ -388,11 +488,14 @@ class TestGetLlmAnalysisDetailed:
         with app.app_context():
             original_url = app.config["LLM_API_URL"]
             original_model = app.config["LLM_MODEL"]
+            original_fallback_models = app.config.get("LLM_FALLBACK_MODELS", "")
             app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/chat/completions"
             app.config["LLM_MODEL"] = "big-pickle"
+            app.config["LLM_FALLBACK_MODELS"] = "glm-5"
             result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
             app.config["LLM_API_URL"] = original_url
             app.config["LLM_MODEL"] = original_model
+            app.config["LLM_FALLBACK_MODELS"] = original_fallback_models
 
         assert error is None
         assert result == "Recovered with model fallback"
@@ -402,9 +505,46 @@ class TestGetLlmAnalysisDetailed:
         assert third_json["model"] == "big-pickle"
         assert "temperature" not in third_json
         assert "max_tokens" not in third_json
-        assert fourth_json["model"] == "glm-4.7-free"
+        assert fourth_json["model"] == "glm-5"
         assert "temperature" not in fourth_json
         assert "max_tokens" not in fourth_json
+
+    @patch("app.analysis.llm_client.requests.post")
+    @patch("app.analysis.llm_prompt.requests.get")
+    def test_opencode_prompt_tokens_500_without_configured_fallback_stays_on_current_model(self, mock_get, mock_post, app):
+        models_resp = MagicMock()
+        models_resp.status_code = 200
+        models_resp.json.return_value = {
+            "data": [{"id": "big-pickle"}]
+        }
+        mock_get.return_value = models_resp
+
+        crash_resp = MagicMock()
+        crash_resp.status_code = 500
+        crash_resp.text = '{"type":"error","error":{"message":"Cannot read properties of undefined (reading \"prompt_tokens\")"}}'
+        mock_post.side_effect = [crash_resp, crash_resp, crash_resp, crash_resp]
+
+        with app.app_context():
+            original_url = app.config["LLM_API_URL"]
+            original_model = app.config["LLM_MODEL"]
+            original_fallback_models = app.config.get("LLM_FALLBACK_MODELS", "")
+            original_retries = app.config["LLM_RETRIES"]
+            app.config["LLM_API_URL"] = "https://opencode.ai/zen/v1/chat/completions"
+            app.config["LLM_MODEL"] = "big-pickle"
+            app.config["LLM_FALLBACK_MODELS"] = ""
+            app.config["LLM_RETRIES"] = 0
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+            app.config["LLM_API_URL"] = original_url
+            app.config["LLM_MODEL"] = original_model
+            app.config["LLM_FALLBACK_MODELS"] = original_fallback_models
+            app.config["LLM_RETRIES"] = original_retries
+
+        assert result is None
+        assert error is not None
+        assert "LLM API returned status 500" in error
+        assert mock_post.call_count == 4
+        for call in mock_post.call_args_list:
+            assert call[1]["json"]["model"] == "big-pickle"
 
     @patch("app.analysis.llm_client.requests.post")
     def test_prompt_includes_length_budget_instruction_when_configured(self, mock_post, app):
@@ -425,9 +565,46 @@ class TestGetLlmAnalysisDetailed:
         assert result == "Detailed analysis"
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
         assert "Target length: about 280 tokens" in user_prompt
-        assert "Output plain text only" in user_prompt
+        assert "Use concise Markdown" in user_prompt
+        assert "## Summary" in user_prompt
+        assert "## 2 Drills" in user_prompt
 
-    @patch("app.analysis.llm_client.requests.post")
+    @patch("app.analysis.llm.requests.post")
+    def test_prompt_enforces_structured_coaching_brief_schema(self, mock_post, app):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "choices": [{"message": {"content": "Detailed analysis"}}]
+        }
+        mock_resp.text = '{"choices":[{"message":{"content":"Detailed analysis"}}]}'
+        mock_post.return_value = mock_resp
+
+        with app.app_context():
+            result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
+
+        assert error is None
+        assert result == "Detailed analysis"
+        user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
+        assert "## Summary" in user_prompt
+        assert "## Top 3 Issues" in user_prompt
+        assert "## Evidence" in user_prompt
+        assert "## Next-Game Mission" in user_prompt
+        assert "## 2 Drills" in user_prompt
+        assert "In [situation Y], do [action X], and measure success with [observable criterion]." in user_prompt
+        assert "## Match Snapshot" not in user_prompt
+        assert "## Why This Game Happened" not in user_prompt
+        assert "## Action Plan (Next 3 Games)" not in user_prompt
+        ordered_sections = [
+            "## Summary",
+            "## Top 3 Issues",
+            "## Evidence",
+            "## Next-Game Mission",
+            "## 2 Drills",
+        ]
+        indices = [user_prompt.index(section) for section in ordered_sections]
+        assert indices == sorted(indices)
+
+    @patch("app.analysis.llm.requests.post")
     def test_response_text_is_normalized_from_markdownish_content(self, mock_post, app):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -441,7 +618,7 @@ class TestGetLlmAnalysisDetailed:
             result, error = get_llm_analysis_detailed(SAMPLE_ANALYSIS)
 
         assert error is None
-        assert result == "Overall\nGood lane control\nPractice wave timing"
+        assert result == "# Overall\n- **Good** lane control\n1. `Practice` wave timing"
 
     @patch("app.analysis.llm_client.requests.post")
     def test_chinese_language_prompt_scaffold(self, mock_post, app):
@@ -460,7 +637,15 @@ class TestGetLlmAnalysisDetailed:
         assert result == "中文分析"
         user_prompt = mock_post.call_args[1]["json"]["messages"][1]["content"]
         assert "对局数据" in user_prompt
-        assert "仅输出纯文本" in user_prompt
+        assert "Markdown" in user_prompt
+        assert "## 总结" in user_prompt
+        assert "## 3个首要问题" in user_prompt
+        assert "## 证据" in user_prompt
+        assert "## 下一局任务" in user_prompt
+        assert "## 2个训练" in user_prompt
+        assert "## 对局快照" not in user_prompt
+        assert "## 对局成因" not in user_prompt
+        assert "## 三局行动计划" not in user_prompt
 
 
 class TestIterLlmAnalysisStream:
@@ -513,5 +698,4 @@ class TestIterLlmAnalysisStream:
             events = list(iter_llm_analysis_stream(SAMPLE_ANALYSIS))
 
         assert [e["type"] for e in events] == ["chunk", "chunk", "done"]
-        assert events[-1]["analysis"] == "Header\nTip text"
-
+        assert events[-1]["analysis"] == "# Header\n- **Tip** text"

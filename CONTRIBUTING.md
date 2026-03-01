@@ -45,6 +45,20 @@ Thank you for your interest in contributing to LoL Performance Analyzer! We welc
    python -m pytest
    ```
 
+5. **Local CI checks (recommended)**
+   ```bash
+   python -m pytest tests/
+   ```
+   - Keep PRs small and rerun checks locally before opening or updating a PR.
+
+   Expected output (example):
+   ```
+   ============================= test session starts =============================
+   collected XX items
+   ...
+   ====================== 137 passed
+   ```
+
 ## Code Style
 
 - Follow PEP 8 guidelines

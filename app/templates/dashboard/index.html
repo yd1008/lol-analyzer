@@ -14,6 +14,12 @@
         {% endif %}
     </div>
 
+    <div class="hud-artboard" aria-hidden="true">
+        <div class="hud-art-grid"></div>
+        <div class="hud-art-orb"></div>
+        <div class="hud-art-scan"></div>
+    </div>
+
     <div class="card quick-guide">
         <h3>{{ lt('Use This Dashboard in 3 Steps', '3 步用好这个仪表盘') }}</h3>
         <div class="quick-guide-grid">
@@ -52,6 +58,74 @@
         </div>
     </div>
 
+    <div class="card coach-mode-card">
+        <div class="section-head">
+            <div>
+                <div class="section-label">{{ lt('Personalization', '个性化') }}</div>
+                <h3>{{ lt('AI Coach Mode', 'AI 教练模式') }}</h3>
+            </div>
+        </div>
+        <p class="card-muted">{{ lt('Choose how strict or supportive your coaching tone should be. This mode applies to all AI analyses.', '选择建议风格偏激进、均衡或鼓励。此模式会应用到所有 AI 分析。') }}</p>
+        <div class="coach-mode-controls">
+            <label for="coach-mode-select">{{ lt('Coach style', '教练风格') }}</label>
+            <select id="coach-mode-select" class="input">
+                <option value="balanced">{{ lt('Balanced', '均衡') }}</option>
+                <option value="aggressive">{{ lt('Aggressive', '激进') }}</option>
+                <option value="supportive">{{ lt('Supportive', '鼓励') }}</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="card coach-plan-card">
+        <div class="section-head">
+            <div>
+                <div class="section-label">{{ lt('Differentiator', '核心差异化') }}</div>
+                <h3>{{ lt('AI Coach Focus Plan', 'AI 教练焦点计划') }}</h3>
+            </div>
+            <div class="coach-score-badge">
+                <span>{{ lt('Coach Score', '教练评分') }}</span>
+                <strong>{{ coach_plan.coach_score }}</strong>
+            </div>
+        </div>
+        <div class="coach-plan-grid">
+            <div>
+                <h4>{{ lt('Current Strengths', '当前优势') }}</h4>
+                <ul>
+                    {% for item in coach_plan.strengths %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div>
+                <h4>{{ lt('Priority Improvements', '优先提升项') }}</h4>
+                <ul>
+                    {% for item in coach_plan.focus_areas %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="coach-next-goal">
+            <strong>{{ lt('Actionable next-game goal:', '下局可执行目标：') }}</strong>
+            <span>{{ coach_plan.next_game_goal }}</span>
+        </div>
+    </div>
+
+    <div class="card trend-snapshot-card">
+        <div class="section-head">
+            <div>
+                <div class="section-label">{{ lt('Progress Tracking', '进展追踪') }}</div>
+                <h3>{{ lt('Performance Trend Snapshot', '表现趋势快照') }}</h3>
+            </div>
+        </div>
+        <p class="trend-headline">{{ trend_snapshot.headline }}</p>
+        <ul class="trend-signal-list">
+            {% for signal in trend_snapshot.signals %}
+            <li>{{ signal }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
     <div class="card matches-card">
         <div class="section-head">
             <div>
@@ -61,12 +135,13 @@
             <p class="card-muted">{{ lt('Stream AI coaching inline without leaving the dashboard.', '无需离开仪表盘即可实时查看 AI 建议。') }}</p>
         </div>
 
-        <div class="match-filter-bar" id="match-filter-bar">
-            <button class="filter-btn active" data-queue="">{{ lt('All', '全部') }}</button>
-            <button class="filter-btn" data-queue="Ranked Solo">{{ queue_label('Ranked Solo') }}</button>
-            <button class="filter-btn" data-queue="Ranked Flex">{{ queue_label('Ranked Flex') }}</button>
-            <button class="filter-btn" data-queue="Normal Draft,Normal Blind">{{ lt('Normal', '匹配') }}</button>
+        <div class="match-filter-bar" id="match-filter-bar" role="tablist" aria-orientation="horizontal" aria-label="{{ lt('Filter matches by queue', '按队列筛选对局') }}">
+            <button type="button" class="filter-btn active" id="queue-filter-all" data-queue="" role="tab" aria-selected="true" aria-controls="match-list" tabindex="0" data-label-base="{{ lt('All', '全部') }}">{{ lt('All', '全部') }}<span class="filter-count-badge" aria-hidden="true">0</span></button>
+            <button type="button" class="filter-btn" id="queue-filter-ranked-solo" data-queue="Ranked Solo" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1" data-label-base="{{ queue_label('Ranked Solo') }}">{{ queue_label('Ranked Solo') }}<span class="filter-count-badge" aria-hidden="true">0</span></button>
+            <button type="button" class="filter-btn" id="queue-filter-ranked-flex" data-queue="Ranked Flex" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1" data-label-base="{{ queue_label('Ranked Flex') }}">{{ queue_label('Ranked Flex') }}<span class="filter-count-badge" aria-hidden="true">0</span></button>
+            <button type="button" class="filter-btn" id="queue-filter-normal" data-queue="Normal Draft,Normal Blind" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1" data-label-base="{{ lt('Normal', '匹配') }}">{{ lt('Normal', '匹配') }}<span class="filter-count-badge" aria-hidden="true">0</span></button>
         </div>
+        <p class="match-filter-summary" id="match-filter-summary" role="status" aria-live="polite" aria-atomic="true"></p>
 
         <div id="match-list">
         </div>
