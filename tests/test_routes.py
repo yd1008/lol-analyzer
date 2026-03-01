@@ -53,6 +53,14 @@ class TestLandingPage:
         assert b'class="step step-future"' in resp.data
         assert b'class="hero-panel-art"' in resp.data
 
+    def test_landing_copy_is_polished_for_next_game_focus(self, client):
+        resp = client.get("/")
+        assert resp.status_code == 200
+        body = resp.data.decode()
+        assert "what to change next." in body
+        assert "next queue" not in body
+        assert "next game" in body
+
 
 class TestRegister:
     def test_register_page_loads(self, client):
