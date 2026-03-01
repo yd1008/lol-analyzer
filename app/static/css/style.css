@@ -42,6 +42,15 @@
     --btn-active-bg: #121512;
     --btn-active-text: #f7f8f4;
     --hero-badge-bg: #edf6f2;
+    --hero-primary-bg: #101412;
+    --hero-primary-hover: #1f2a25;
+    --hero-primary-text: #f6f7f2;
+    --hero-secondary-bg: color-mix(in srgb, var(--bg-card) 84%, var(--surface-soft-overlay) 16%);
+    --hero-secondary-hover: color-mix(in srgb, var(--bg-card) 68%, var(--surface-soft-overlay) 32%);
+    --hero-secondary-border: color-mix(in srgb, var(--accent) 28%, var(--surface-outline) 72%);
+    --hero-secondary-text: var(--text-primary);
+    --hero-tertiary-text: var(--accent);
+    --hero-tertiary-hover: var(--link-hover);
     --hero-emphasis: #1b6f5d;
     --step-number-bg: #f0f2ec;
     --step-number-text: #4f5750;
@@ -147,6 +156,15 @@
     --btn-primary-text: #050607;
     --btn-active-bg: #17191d;
     --btn-active-text: #f3f4f6;
+    --hero-primary-bg: #f3f4f6;
+    --hero-primary-hover: #f7f8fc;
+    --hero-primary-text: #050607;
+    --hero-secondary-bg: color-mix(in srgb, var(--bg-card) 74%, var(--surface-soft-overlay) 26%);
+    --hero-secondary-hover: color-mix(in srgb, var(--bg-card) 62%, var(--surface-soft-overlay) 38%);
+    --hero-secondary-border: color-mix(in srgb, var(--accent) 34%, var(--surface-outline) 66%);
+    --hero-secondary-text: var(--text-primary);
+    --hero-tertiary-text: var(--link-hover);
+    --hero-tertiary-hover: var(--accent);
     --flash-success-bg: rgba(103, 210, 155, 0.16);
     --flash-success-border: rgba(103, 210, 155, 0.38);
     --flash-success-text: #b9f6d6;
@@ -2389,6 +2407,71 @@ h4,
     overflow-wrap: anywhere;
 }
 
+.hero-toolbar,
+.hero-cta-toolbar {
+    position: relative;
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid var(--surface-outline);
+    border-radius: 14px;
+    background: linear-gradient(150deg, var(--surface-soft-overlay), transparent);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-toolbar:focus-within,
+.hero-cta-toolbar:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.hero-copy .hero-primary-cta {
+    background: var(--hero-primary-bg);
+    border-color: var(--hero-primary-bg);
+    color: var(--hero-primary-text);
+    font-weight: 750;
+}
+
+.hero-copy .hero-primary-cta:hover {
+    background: var(--hero-primary-hover);
+    border-color: var(--hero-primary-hover);
+}
+
+.hero-copy .hero-secondary-cta {
+    background: var(--hero-secondary-bg);
+    border-color: var(--hero-secondary-border);
+    color: var(--hero-secondary-text);
+}
+
+.hero-copy .hero-secondary-cta:hover {
+    background: var(--hero-secondary-hover);
+    border-color: var(--hero-secondary-border);
+}
+
+.hero-copy .hero-tertiary-link {
+    color: var(--hero-tertiary-text);
+}
+
+.hero-copy .hero-tertiary-link:hover {
+    color: var(--hero-tertiary-hover);
+}
+
+.hero-cta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.hero-help-line {
+    margin: 4px 0 0;
+    max-width: 34ch;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+}
+
 .hero-panel-art {
     margin: 10px 0 14px;
     border: 1px solid var(--accent-border-subtle);
@@ -2808,7 +2891,20 @@ h4,
         grid-template-columns: 1fr;
         gap: 10px;
     }
-    .hero-copy .hero-cta-helper {
+    .hero-copy .hero-toolbar {
+        position: sticky;
+        top: 4px;
+        z-index: 5;
+    }
+
+    .hero-copy .hero-toolbar:focus-within {
+        border-color: var(--accent);
+        box-shadow:
+            0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent),
+            0 8px 18px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+
+    .hero-copy .hero-help-line {
         display: block;
         width: 100%;
         max-width: min(100%, 30ch);
@@ -2817,6 +2913,7 @@ h4,
         font-size: 0.76rem;
         line-height: 1.4;
     }
+
     .hero-copy .hero-token-line {
         width: 100%;
         padding-right: 0;
@@ -2831,6 +2928,7 @@ h4,
     .position-badge {
         max-width: min(38vw, 11ch);
     }
+
     .hero-command-strip { grid-template-columns: 1fr; }
     .hero-copy .cta-buttons .btn { width: 100%; }
     .hero-copy .hero-primary-cta,
