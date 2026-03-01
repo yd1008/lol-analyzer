@@ -2555,6 +2555,64 @@ h4,
 .glyph-track:nth-child(2) { width: 88%; animation-delay: -0.65s; }
 .glyph-track:nth-child(3) { width: 76%; animation-delay: -1.2s; }
 
+.hero-future-ribbon {
+    position: relative;
+    margin: 10px 0 12px;
+    border: 1px solid var(--accent-border-subtle);
+    border-radius: 12px;
+    padding: 8px 8px 7px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    background:
+        radial-gradient(130% 200% at 15% 20%, var(--surface-overlay), transparent 64%),
+        linear-gradient(155deg, var(--surface-soft-overlay) 0%, var(--bg-card) 78%);
+    overflow: hidden;
+}
+
+.hero-future-ribbon::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 10px;
+    border: 1px solid var(--surface-outline);
+    pointer-events: none;
+    opacity: 0.42;
+    background: linear-gradient(90deg, transparent 0%, transparent 24%, var(--accent-border-subtle) 52%, transparent 80%, transparent 100%);
+    animation: aiSweep 1.6s linear infinite;
+}
+
+.hero-ribbon-glow {
+    position: absolute;
+    right: -22%;
+    top: 7px;
+    width: 64%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-soft) 48%, transparent 100%);
+    border-radius: 999px;
+    opacity: 0.76;
+    animation: aiSweep 2.2s linear infinite;
+    pointer-events: none;
+}
+
+.hero-ribbon-label {
+    position: relative;
+    z-index: 1;
+    border: 1px solid var(--surface-outline);
+    background: var(--surface-soft-overlay);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    padding: 5px 8px;
+    font-size: 0.68rem;
+    line-height: 1.05;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
 .hero-signal-grid {
     display: grid;
     gap: 8px;

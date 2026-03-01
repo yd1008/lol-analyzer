@@ -52,6 +52,10 @@ class TestLandingPage:
         assert b'class="feature-card feature-card-future"' in resp.data
         assert b'class="step step-future"' in resp.data
         assert b'class="hero-panel-art"' in resp.data
+        assert b'class="hero-metric-glyph"' in resp.data
+        assert b'class="glyph-track"' in resp.data
+        assert b'class="hero-future-ribbon"' in resp.data
+        assert b'class="hero-ribbon-label"' in resp.data
 
     def test_landing_copy_is_polished_for_next_game_focus(self, client):
         resp = client.get("/")

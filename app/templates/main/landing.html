@@ -74,6 +74,12 @@
                 <span class="glyph-track"></span>
                 <span class="glyph-track"></span>
             </div>
+            <div class="hero-future-ribbon" aria-hidden="true">
+                <span class="hero-ribbon-glow"></span>
+                <span class="hero-ribbon-label">{{ lt('Signal Sync', '信号同步') }}</span>
+                <span class="hero-ribbon-label">{{ lt('Replay Memory', '对局记忆') }}</span>
+                <span class="hero-ribbon-label">{{ lt('Action Lens', '行动视角') }}</span>
+            </div>
             {% if current_user.is_authenticated %}
             <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">{{ lt('Go to Setup', '前往设置') }}</a>
             {% else %}
