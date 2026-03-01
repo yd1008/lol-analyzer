@@ -2533,9 +2533,9 @@ h4,
 }
 
 .hero-cta-toolbar {
-    position: relative;
     display: grid;
     gap: 10px;
+    margin-top: 8px;
     width: min(100%, 45ch);
     padding: 10px 10px 12px;
     border: 1px solid color-mix(in srgb, var(--accent-border-subtle) 76%, transparent);
@@ -2545,6 +2545,7 @@ h4,
 
 .hero-cta-toolbar:focus-within {
     box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 5px color-mix(in srgb, var(--accent) 20%, transparent);
+}
 }
 
 .hero-cta-buttons {
@@ -3165,7 +3166,6 @@ h4,
         font-size: 0.76rem;
         line-height: 1.4;
     }
-
     .hero-copy .hero-token-line {
         width: 100%;
         padding-right: 0;
@@ -3175,7 +3175,6 @@ h4,
 
     .hero-copy .cta-buttons .btn,
     .hero-copy .hero-cta-buttons .btn { width: 100%; }
-
     .hero-copy .hero-primary-cta,
     .hero-copy .hero-cta-buttons .btn-primary,
     .hero-copy .cta-buttons .btn-primary {
@@ -3188,7 +3187,6 @@ h4,
     .hero-copy .cta-buttons .btn-secondary {
         display: none;
     }
-
     .hero-copy .hero-signal-pill,
     .hero-copy .signal-pill {
         width: 100%;
