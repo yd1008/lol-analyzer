@@ -763,27 +763,31 @@ textarea:focus-visible {
     box-shadow: 0 0 0 var(--hero-cta-ring-offset) var(--accent-soft);
 }
 
-.signal-row {
-    margin-top: 16px;
-}
-
-.hero-tertiary-link {
-    color: var(--accent);
-    font-weight: 700;
-    text-underline-offset: 2px;
-}
-
 .hero-token-line {
     width: min(100%, 42rem);
+    max-width: 100%;
     padding-right: clamp(0px, 1vw, 8px);
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .hero-token-line > * {
     min-width: 0;
 }
 
+.hero-token-line .signal-row {
+    margin-top: 16px;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    gap: 8px;
+}
+
 .hero-token-line .signal-pill,
 .hero-token-line .hero-signal-pill {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
     overflow-wrap: anywhere;
 }
 
@@ -3168,6 +3172,7 @@ h4,
     }
     .hero-copy .hero-token-line {
         width: 100%;
+        max-width: 100%;
         padding-right: 0;
     }
 
@@ -3189,7 +3194,7 @@ h4,
     }
     .hero-copy .hero-signal-pill,
     .hero-copy .signal-pill {
-        width: 100%;
+        max-width: 100%;
         justify-content: flex-start;
         text-transform: none;
         letter-spacing: 0.04em;
