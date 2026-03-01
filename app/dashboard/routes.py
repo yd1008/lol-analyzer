@@ -733,7 +733,7 @@ def api_ai_analysis(match_db_id):
                 'trace_id': trace_id,
                 'language': language,
                 'focus': focus,
-                'persisted': True,
+                'persisted': cache_read_enabled,
             }), 200
         status = _ai_error_status(error)
         return jsonify({'error': public_error, 'trace_id': trace_id, 'language': language, 'focus': focus}), status
@@ -849,7 +849,7 @@ def api_ai_analysis_stream(match_db_id):
                         'trace_id': trace_id,
                         'language': language,
                         'focus': focus,
-                        'persisted': True,
+                        'persisted': cache_read_enabled,
                     })
                 else:
                     yield _ndjson_line({
@@ -881,7 +881,7 @@ def api_ai_analysis_stream(match_db_id):
                 'trace_id': trace_id,
                 'language': language,
                 'focus': focus,
-                'persisted': True,
+                'persisted': cache_read_enabled,
             })
         else:
             yield _ndjson_line({
