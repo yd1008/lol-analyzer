@@ -2533,24 +2533,73 @@ h4,
 }
 
 .hero-cta-toolbar {
+    position: relative;
     display: grid;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 10px;
+    width: min(100%, 45ch);
+    padding: 10px 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--accent-border-subtle) 76%, transparent);
+    border-radius: 14px;
+    background: var(--surface-soft-overlay);
+}
+
+.hero-cta-toolbar:focus-within {
+    box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 5px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .hero-cta-buttons {
     display: flex;
-    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
+    width: 100%;
 }
 
-.hero-help-line {
-    margin: 4px 0 0;
+.hero-cta-toolbar .hero-primary-cta {
+    background: var(--hero-primary-bg);
+    color: var(--hero-primary-text);
+    border-color: color-mix(in srgb, var(--hero-primary-text) 18%, transparent);
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+
+.hero-cta-toolbar .hero-primary-cta:hover,
+.hero-cta-toolbar .hero-primary-cta:focus-visible {
+    background: var(--hero-primary-hover);
+}
+
+.hero-cta-toolbar .hero-secondary-cta {
+    border-color: color-mix(in srgb, var(--hero-secondary-border) 86%, transparent);
+    background: var(--hero-secondary-bg);
+    color: var(--hero-secondary-text);
+}
+
+.hero-cta-toolbar .hero-secondary-cta:hover,
+.hero-cta-toolbar .hero-secondary-cta:focus-visible {
+    background: var(--hero-secondary-hover);
+}
+
+.hero-cta-helper {
+    margin: 0;
     max-width: 34ch;
     font-size: 0.78rem;
     color: var(--text-secondary);
     letter-spacing: 0.01em;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.hero-cta-helper .hero-tertiary-link {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 700;
+    color: var(--hero-tertiary-text);
+}
+
+.hero-cta-helper .hero-tertiary-link:hover,
+.hero-cta-helper .hero-tertiary-link:focus-visible {
+    color: var(--hero-tertiary-hover);
 }
 
 .hero-panel-art {
@@ -3107,8 +3156,8 @@ h4,
         gap: 10px;
     }
 
-    .hero-copy .hero-help-line {
-        display: block;
+    .hero-copy .hero-cta-helper {
+        display: flex;
         width: 100%;
         max-width: min(100%, 30ch);
         margin-top: 2px;
@@ -3116,13 +3165,17 @@ h4,
         font-size: 0.76rem;
         line-height: 1.4;
     }
+
     .hero-copy .hero-token-line {
         width: 100%;
         padding-right: 0;
     }
+
     .hero-command-strip { grid-template-columns: 1fr; }
+
     .hero-copy .cta-buttons .btn,
     .hero-copy .hero-cta-buttons .btn { width: 100%; }
+
     .hero-copy .hero-primary-cta,
     .hero-copy .hero-cta-buttons .btn-primary,
     .hero-copy .cta-buttons .btn-primary {
@@ -3133,9 +3186,9 @@ h4,
     .hero-copy .hero-secondary-cta,
     .hero-copy .hero-cta-buttons .btn-secondary,
     .hero-copy .cta-buttons .btn-secondary {
-        padding: 10px 14px;
-        font-size: 0.85rem;
+        display: none;
     }
+
     .hero-copy .hero-signal-pill,
     .hero-copy .signal-pill {
         width: 100%;
@@ -3145,6 +3198,7 @@ h4,
         white-space: normal;
         line-height: 1.35;
     }
+
     .workflow-track-future { gap: 10px; }
     .workflow-rhythm-grid,
     .feature-rhythm-grid,
