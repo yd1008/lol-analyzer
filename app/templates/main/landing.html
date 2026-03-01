@@ -13,7 +13,7 @@
         <div class="hero-copy hero-surface">
             <div class="hero-badge">{{ lt('Built For Deliberate Improvement', '为有意识提升而生') }}</div>
             <h1>{{ lt('Review every match with ', '用') }}<em>{{ lt('clarity', '清晰') }}</em>{{ lt(', not noise', '而非噪音复盘每场对局') }}</h1>
-            <p>{{ lt('Track what happened, why it happened, and what to change next queue. LaneScope turns each game into a concise coaching workflow.', '追踪发生了什么、为什么会发生，以及下一局要改什么。LaneScope 将每场对局整理成简洁可执行的复盘流程。') }}</p>
+            <p>{{ lt('Track what happened, why it happened, and what to change next. LaneScope turns each match into a concise coaching workflow for your next game.', '追踪发生了什么、为什么会发生，以及下一局要改什么。LaneScope 将每场对局整理成简洁可执行的复盘流程。') }}</p>
             <div class="hero-command-strip hero-command-grid" role="group" aria-label="{{ lt('Live analysis highlights', '实时分析亮点') }}">
                 <div class="hero-command-group">
                     <div class="hero-command-label">{{ lt('Game Start', '对局前') }}</div>
@@ -29,7 +29,7 @@
                     </div>
                 </div>
             </div>
-            <div class="hero-cta-toolbar">
+            <div class="hero-cta-rail">
                 <div class="cta-buttons hero-mobile-stack">
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary hero-primary-cta" aria-describedby="landing-cta-support">{{ lt('Open Dashboard', '打开仪表盘') }}</a>
