@@ -28,6 +28,7 @@ class TestLandingPage:
     def test_landing_has_mobile_stack_hooks_for_hero_actions(self, client):
         resp = client.get("/")
         assert resp.status_code == 200
+        assert b'class="hero-cta-rail"' in resp.data
         assert b'class="cta-buttons hero-mobile-stack"' in resp.data
         assert b'class="btn btn-primary hero-primary-cta" aria-describedby="landing-cta-support"' in resp.data
         assert b'class="btn btn-secondary hero-secondary-cta"' in resp.data
@@ -52,6 +53,10 @@ class TestLandingPage:
         assert b'class="feature-card feature-card-future"' in resp.data
         assert b'class="step step-future"' in resp.data
         assert b'class="hero-panel-art"' in resp.data
+        assert b'class="hero-metric-glyph"' in resp.data
+        assert b'class="glyph-track"' in resp.data
+        assert b'class="hero-future-ribbon"' in resp.data
+        assert b'class="hero-ribbon-label"' in resp.data
 
     def test_landing_copy_is_polished_for_next_game_focus(self, client):
         resp = client.get("/")
