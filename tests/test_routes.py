@@ -28,6 +28,7 @@ class TestLandingPage:
     def test_landing_has_mobile_stack_hooks_for_hero_actions(self, client):
         resp = client.get("/")
         assert resp.status_code == 200
+        assert b'class="hero-cta-rail"' in resp.data
         assert b'class="cta-buttons hero-mobile-stack"' in resp.data
         assert b'class="btn btn-primary hero-primary-cta" aria-describedby="landing-cta-support"' in resp.data
         assert b'class="btn btn-secondary hero-secondary-cta"' in resp.data
