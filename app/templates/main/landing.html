@@ -69,6 +69,11 @@
             <div class="hero-panel-art" aria-hidden="true">
                 <span></span><span></span><span></span>
             </div>
+            <div class="hero-metric-glyph" aria-hidden="true">
+                <span class="glyph-track"></span>
+                <span class="glyph-track"></span>
+                <span class="glyph-track"></span>
+            </div>
             {% if current_user.is_authenticated %}
             <a href="{{ url_for('dashboard.settings') }}" class="btn btn-primary btn-sm">{{ lt('Go to Setup', '前往设置') }}</a>
             {% else %}

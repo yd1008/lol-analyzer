@@ -2508,6 +2508,53 @@ h4,
 .hero-panel-art span:nth-child(2) { width: 72%; }
 .hero-panel-art span:nth-child(3) { width: 84%; }
 
+.hero-metric-glyph {
+    margin: 6px 0 8px;
+    border: 1px solid var(--accent-border-subtle);
+    border-radius: 10px;
+    padding: 8px;
+    min-height: 38px;
+    display: grid;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-soft-overlay);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-metric-glyph::before,
+.hero-metric-glyph::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+}
+
+.hero-metric-glyph::before {
+    top: 11px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-border-subtle) 46%, transparent 100%);
+}
+
+.hero-metric-glyph::after {
+    bottom: 11px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-border-subtle) 46%, transparent 100%);
+}
+
+.glyph-track {
+    display: block;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent-bg-soft) 0%, var(--accent-soft) 50%, var(--accent-bg-soft) 100%);
+    background-size: 200% 100%;
+    animation: aiShimmer 1.9s linear infinite;
+}
+
+.glyph-track:nth-child(1) { width: 96%; }
+.glyph-track:nth-child(2) { width: 88%; animation-delay: -0.65s; }
+.glyph-track:nth-child(3) { width: 76%; animation-delay: -1.2s; }
+
 .hero-signal-grid {
     display: grid;
     gap: 8px;
