@@ -230,6 +230,17 @@ document.addEventListener('DOMContentLoaded', function () {
         {key: 'kda', label: metricTxt('kda', 'KDA')},
     ];
 
+    function setMatchListLoadingState() {
+        if (!matchList) return;
+        matchList.innerHTML =
+            '<div class=\"loading-indicator\" style=\"display:flex;\" role=\"status\" aria-live=\"polite\">' +
+                '<span class=\"loading-spinner\" aria-hidden=\"true\"></span>' +
+                '<span class=\"loading-text\">' +
+                    escapeHtml(txt('loadingMatches', 'Loading matches...')) +
+                '</span>' +
+            '</div>';
+    }
+
     function escapeHtml(str) {
         var div = document.createElement('div');
         div.textContent = str || '';
@@ -973,6 +984,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+        setMatchListLoadingState();
+
         var url = '/dashboard/api/matches?offset=0&limit=10';
         if (queue) url += '&queue=' + encodeURIComponent(queue);
 
@@ -987,6 +1000,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 setFilterBadgeCount(sourceBtn, data.total);
             })
             .catch(function () {
+                if (matchList) {
+                    matchList.innerHTML =
+                        '<div class=\"empty-state\">' +
+                            '<p>' + escapeHtml(txt('loadFailed', 'Unable to load matches right now.')) + '</p>' +
+                        '</div>';
+                }
                 if (loadMoreBtn) {
                     loadMoreBtn.disabled = false;
                     loadMoreBtn.textContent = txt('loadMore', 'Load More');
