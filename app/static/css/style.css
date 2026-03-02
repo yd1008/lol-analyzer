@@ -769,6 +769,9 @@ textarea:focus-visible {
     padding-right: clamp(0px, 1vw, 8px);
     overflow: hidden;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .hero-token-line > * {
@@ -776,19 +779,30 @@ textarea:focus-visible {
 }
 
 .hero-token-line .signal-row {
-    margin-top: 16px;
     width: 100%;
     max-width: 100%;
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: clamp(8px, 1.4vw, 10px);
+    align-items: stretch;
+}
+
+.hero-token-line .signal-row.hero-mobile-stack {
+    margin-top: 0;
+}
+
+.hero-token-line .hero-token {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .hero-token-line .signal-pill,
 .hero-token-line .hero-signal-pill {
-    flex: 1 1 auto;
     min-width: 0;
-    max-width: 100%;
-    overflow-wrap: anywhere;
+    width: auto;
 }
 
 .signal-pill {
