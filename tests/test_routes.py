@@ -37,7 +37,7 @@ class TestLandingPage:
         assert b'class="hero-cta-helper" id="landing-cta-support" data-helper-role="secondary-path"' in resp.data
         assert b'class="hero-tertiary-link hero-cta-helper-link"' in resp.data
         assert b'class="hero-token-line"' in resp.data
-        assert b'class="signal-row hero-mobile-stack"' in resp.data
+        assert b'class="signal-row hero-signal hero-mobile-stack"' in resp.data
         assert b'class="signal-pill hero-signal-pill hero-token"' in resp.data
         assert b'class="features-grid feature-min-grid feature-rhythm-grid"' in resp.data
         assert b'class="steps steps-rhythm-grid"' in resp.data

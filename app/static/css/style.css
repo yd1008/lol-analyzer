@@ -736,10 +736,12 @@ textarea:focus-visible {
 }
 
 .cta-buttons,
-.signal-row {
+.signal-row,
+.hero-signal {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: clamp(0.25rem, 1vw, 0.6rem);
+    max-width: 100%;
 }
 
 .hero-cta-rail {
@@ -778,12 +780,10 @@ textarea:focus-visible {
     min-width: 0;
 }
 
-.hero-token-line .signal-row {
+.hero-token-line .signal-row,
+.hero-token-line .hero-signal {
     width: 100%;
     max-width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(8px, 1.4vw, 10px);
     align-items: stretch;
 }
 
@@ -791,7 +791,9 @@ textarea:focus-visible {
     margin-top: 0;
 }
 
-.hero-token-line .hero-token {
+.hero-token-line .signal-pill.hero-token,
+.signal-row .hero-signal-pill.hero-token,
+.signal-pill.hero-token {
     flex: 0 1 auto;
     min-width: 0;
     max-width: 100%;
@@ -803,6 +805,10 @@ textarea:focus-visible {
 .hero-token-line .hero-signal-pill {
     min-width: 0;
     width: auto;
+}
+
+.hero-token-line .hero-signal-pill {
+    max-width: 100%;
 }
 
 .signal-pill {
