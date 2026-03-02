@@ -2564,6 +2564,10 @@ h4,
 .hero-cta-toolbar:focus-within {
     box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 5px color-mix(in srgb, var(--accent) 20%, transparent);
 }
+
+.hero-cta-track {
+    display: flex;
+    width: 100%;
 }
 
 .hero-cta-buttons {
@@ -2572,7 +2576,6 @@ h4,
     align-items: center;
     width: 100%;
 }
-
 .hero-cta-toolbar .hero-primary-cta {
     background: var(--hero-primary-bg);
     color: var(--hero-primary-text);
@@ -2609,7 +2612,8 @@ h4,
     flex-wrap: wrap;
 }
 
-.hero-cta-helper .hero-tertiary-link {
+.hero-cta-helper .hero-tertiary-link,
+.hero-cta-helper .hero-cta-helper-link {
     text-decoration: underline;
     text-underline-offset: 2px;
     font-weight: 700;
@@ -2617,7 +2621,9 @@ h4,
 }
 
 .hero-cta-helper .hero-tertiary-link:hover,
-.hero-cta-helper .hero-tertiary-link:focus-visible {
+.hero-cta-helper .hero-tertiary-link:focus-visible,
+.hero-cta-helper .hero-cta-helper-link:hover,
+.hero-cta-helper .hero-cta-helper-link:focus-visible {
     color: var(--hero-tertiary-hover);
 }
 
@@ -3173,6 +3179,10 @@ h4,
         display: grid;
         grid-template-columns: 1fr;
         gap: 10px;
+    }
+
+    .hero-copy .hero-cta-track {
+        width: 100%;
     }
 
     .hero-copy .hero-cta-helper {
