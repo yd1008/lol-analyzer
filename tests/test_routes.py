@@ -31,8 +31,8 @@ class TestLandingPage:
         assert b'class="hero-cta-rail"' in resp.data
         assert b'class="hero-cta-toolbar"' in resp.data
         assert b'class="hero-cta-buttons cta-buttons hero-mobile-stack"' in resp.data
-        assert b'class="btn btn-primary hero-primary-cta" aria-describedby="landing-cta-support"' in resp.data
-        assert b'class="btn btn-secondary hero-secondary-cta"' in resp.data
+        assert b'id="hero-primary-cta" class="btn btn-primary hero-primary-cta" aria-describedby="landing-cta-support"' in resp.data
+        assert b'id="hero-secondary-cta" class="btn btn-secondary hero-secondary-cta"' in resp.data
         assert b'class="hero-cta-helper" id="landing-cta-support" data-helper-role="secondary-path"' in resp.data
         assert b'class="hero-tertiary-link"' in resp.data
         assert b'class="hero-token-line"' in resp.data
