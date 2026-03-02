@@ -135,7 +135,6 @@ lol_analyzer_config.json
 
 # App database
 *.db
-instance/
 
 # IDEs
 .vscode/
