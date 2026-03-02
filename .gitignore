@@ -152,6 +152,9 @@ memory/
 _ci_logs/
 _pr_worktrees/
 lol-analyzer-work/
+_worker_worktrees/
+_workers/
+_tmp/
 
 # Temp review/diff outputs
 temp_pr*_diff.txt
