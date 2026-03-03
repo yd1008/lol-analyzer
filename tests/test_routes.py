@@ -1,6 +1,7 @@
 ﻿"""Tests for auth and basic routes."""
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 from app.dashboard.routes import sync_recent_matches
@@ -246,6 +247,14 @@ class TestDashboardAccess:
         assert b'role="tab"' in resp.data
         assert b'data-queue="" role="tab" aria-selected="true" aria-controls="match-list" tabindex="0"' in resp.data
         assert b'data-queue="Ranked Solo" role="tab" aria-selected="false" aria-controls="match-list" tabindex="-1"' in resp.data
+        assert b'"showingMatchesInQueue"' in resp.data
+
+    def test_dashboard_queue_filter_keyboard_contracts_in_frontend_js(self):
+        js = Path("app/static/js/main.js").read_text(encoding="utf-8")
+        assert "e.key === 'Enter'" in js
+        assert "e.key === ' '" in js
+        assert "e.key === 'ArrowRight'" in js
+        assert "showingMatchesInQueue" in js
 
 
 class TestSyncRecentMatches:

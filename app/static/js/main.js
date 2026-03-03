@@ -879,7 +879,14 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function setMatchFilterSummary(displayed, total) {
+    function resolveActiveFilterLabel() {
+        if (!filterBar) return '';
+        var activeButton = filterBar.querySelector('.filter-btn[aria-selected="true"]') || filterBar.querySelector('.filter-btn.active');
+        if (!activeButton) return '';
+        return (activeButton.getAttribute('data-label-base') || activeButton.textContent || '').trim();
+    }
+
+    function setMatchFilterSummary(displayed, total, queueLabel) {
         if (!filterSummary) return;
         var displayedCount = Number(displayed);
         var totalCount = Number(total);
@@ -889,10 +896,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!Number.isFinite(totalCount) || totalCount < displayedCount) {
             totalCount = displayedCount;
         }
-        var template = txt('showingMatches', 'Showing {displayed} of {total} matches');
+        var label = (queueLabel || resolveActiveFilterLabel() || txt('all', 'All')).trim();
+        var template = txt('showingMatchesInQueue', 'Showing {displayed} of {total} matches in {queue}');
+        if (template.indexOf('{queue}') < 0) {
+            template = txt('showingMatches', 'Showing {displayed} of {total} matches')
+                .replace('{displayed}', String(displayedCount))
+                .replace('{total}', String(totalCount));
+            filterSummary.textContent = template;
+            return;
+        }
         filterSummary.textContent = template
             .replace('{displayed}', String(displayedCount))
-            .replace('{total}', String(totalCount));
+            .replace('{total}', String(totalCount))
+            .replace('{queue}', label);
     }
 
     function normalizeBadgeCount(total) {
@@ -1099,11 +1115,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
 
+            function activateQueueFilter(btn, focus) {
+                if (!btn) return;
+                setActiveQueueFilter(btn, focus);
+                filterByQueue(btn.getAttribute('data-queue'), btn);
+            }
+
             filterBar.addEventListener('click', function (e) {
                 var btn = e.target.closest('.filter-btn');
                 if (!btn) return;
-                setActiveQueueFilter(btn, false);
-                filterByQueue(btn.getAttribute('data-queue'), btn);
+                activateQueueFilter(btn, false);
             });
 
             filterBar.addEventListener('keydown', function (e) {
@@ -1112,6 +1133,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 var buttons = Array.prototype.slice.call(filterBar.querySelectorAll('.filter-btn'));
                 var currentIndex = buttons.indexOf(current);
                 if (currentIndex < 0) return;
+
+                if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                    e.preventDefault();
+                    activateQueueFilter(current, false);
+                    return;
+                }
 
                 var nextIndex = currentIndex;
                 if (e.key === 'ArrowRight') {
@@ -1128,8 +1155,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 e.preventDefault();
                 var next = buttons[nextIndex];
-                setActiveQueueFilter(next, true);
-                filterByQueue(next.getAttribute('data-queue'), next);
+                activateQueueFilter(next, true);
             });
         }
 
